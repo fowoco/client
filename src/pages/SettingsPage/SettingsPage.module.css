@@ -1,0 +1,242 @@
+.headline {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.description {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.tabs {
+  display: flex;
+  gap: 32px;
+  margin-top: 24px;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.tab {
+  padding: 0 0 12px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.tabActive {
+  color: var(--brand-primary);
+  font-weight: 500;
+  border-bottom-color: var(--brand-primary);
+}
+
+.cardRow {
+  display: grid;
+  grid-template-columns: 480px 1fr;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.card {
+  padding: 21px 23px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.cardBadge {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--brand-primary);
+}
+
+.policyName {
+  margin: 20px 0 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.policyDescription {
+  margin: 0 0 20px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.modeRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.modePill {
+  padding: 7px 18px;
+  background: var(--fowoco-teal-50);
+  border-radius: var(--fowoco-radius-999);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--brand-primary);
+}
+
+.modeNote {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.policyWarning {
+  margin: 24px 0 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--status-critical);
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 16px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.summaryValue {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.summaryValueWarning {
+  color: var(--status-warning);
+}
+
+.membersCard {
+  margin-top: 16px;
+  padding: 19px 23px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
+}
+
+.membersHeader {
+  display: flex;
+  justify-content: space-between;
+  margin: 24px 0 8px;
+  padding: 0 16px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.memberRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 9px 16px;
+  border-radius: var(--fowoco-radius-4);
+}
+
+.memberRowShaded {
+  background: var(--surface-subtle);
+}
+
+.memberIdentity {
+  flex: 1;
+}
+
+.memberName {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.memberRole {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.memberApproval {
+  width: 220px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.memberApprovalActive {
+  color: var(--brand-primary);
+}
+
+.toggle {
+  width: 42px;
+  height: 24px;
+  border-radius: var(--fowoco-radius-999);
+  border: none;
+  background: var(--border-default);
+  position: relative;
+  cursor: pointer;
+}
+
+.toggleOn {
+  background: var(--brand-primary);
+}
+
+.toggleThumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--fowoco-white);
+  transition: transform 0.15s ease;
+}
+
+.toggleOn .toggleThumb {
+  transform: translateX(18px);
+}
+
+.memberStatus {
+  width: 140px;
+  font-size: 12px;
+}
+
+.memberStatusActive {
+  color: var(--fowoco-green-600);
+}
+
+.memberStatusPending {
+  color: var(--status-warning);
+}
+
+.inviteLink {
+  margin-top: 12px;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--brand-primary);
+  cursor: pointer;
+}
+
+.footnote {
+  margin: 24px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}

@@ -3,6 +3,9 @@ import { AppLayout } from './components/layout/AppLayout'
 import { CaseDetailPage } from './pages/CaseDetailPage/CaseDetailPage'
 import { CreateWorkPage } from './pages/CreateWorkPage/CreateWorkPage'
 import { DashboardPage } from './pages/DashboardPage/DashboardPage'
+import { LinkExpiredPage } from './pages/LinkExpiredPage/LinkExpiredPage'
+import { LinkRequestPage } from './pages/LinkRequestPage/LinkRequestPage'
+import { LinkUploadPage } from './pages/LinkUploadPage/LinkUploadPage'
 import { LoginPage } from './pages/LoginPage/LoginPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { ReviewWorkPage } from './pages/ReviewWorkPage/ReviewWorkPage'
@@ -44,8 +47,7 @@ export const router = createBrowserRouter([
       { path: '/settings', element: <SettingsPage /> },
     ],
   },
-  {
-    path: '/worker-portal',
-    element: <PlaceholderPage title="근로자 모바일 안내" issueUrl={`${REPO}/1`} />,
-  },
+  { path: '/worker-portal', element: <LinkRequestPage /> },
+  { path: '/worker-portal/upload', element: <LinkUploadPage /> },
+  { path: '/worker-portal/expired', element: <LinkExpiredPage /> },
 ])

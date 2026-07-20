@@ -21,7 +21,7 @@ export const PREPARED_DRAFT = {
   rows: [
     { label: '대상', value: '근로자 3명' },
     { label: '기한', value: '금요일' },
-    { label: '담당자', value: '김민지' },
+    { label: '담당자', value: '김경민' },
     { label: '필수 단계', value: '5개' },
     { label: '승인', value: '필요' },
     { label: '완료 증빙', value: '서류 상태 기록' },

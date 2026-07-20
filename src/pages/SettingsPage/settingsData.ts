@@ -37,7 +37,7 @@ export interface Member {
 export const MEMBERS: Member[] = [
   { id: 'M-1', name: '이수진', role: 'OWNER', approval: 'canApprove', status: '활성' },
   { id: 'M-2', name: '박서준', role: 'HR_MANAGER', approval: 'canApprove', status: '활성' },
-  { id: 'M-3', name: '김민지', role: 'HR_STAFF', approval: 'requestOnly', status: '활성' },
+  { id: 'M-3', name: '김경민', role: 'HR_STAFF', approval: 'requestOnly', status: '활성' },
   { id: 'M-4', name: '정하늘', role: 'HR_STAFF', approval: 'requestOnly', status: '초대 중' },
 ]
 

@@ -7,7 +7,7 @@ describe('LinkExpiredPage', () => {
     render(<LinkExpiredPage />)
 
     expect(screen.getByText('이 링크는 만료되었습니다.')).toBeInTheDocument()
-    expect(screen.getByText('한빛정밀 인사팀 · 김민지')).toBeInTheDocument()
+    expect(screen.getByText('한빛정밀 인사팀 · 김경민')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '재발급 요청 문구 복사' })).toBeInTheDocument()
   })
 })

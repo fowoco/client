@@ -16,7 +16,7 @@ describe('SettingsPage', () => {
     const user = userEvent.setup()
     render(<SettingsPage />)
 
-    const toggle = screen.getByRole('switch', { name: '김민지 승인 권한' })
+    const toggle = screen.getByRole('switch', { name: '김경민 승인 권한' })
     expect(toggle).toHaveAttribute('aria-checked', 'false')
 
     await user.click(toggle)

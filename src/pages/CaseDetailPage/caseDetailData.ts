@@ -3,7 +3,7 @@
 export const CASE_HEADER = {
   title: '응웬반A 체류연장 준비',
   badges: ['승인 대기', 'HR 직접 요청'],
-  meta: 'D-12 · 담당 김민지 · 체류 · 연결 근로자 1명 · 출입국 관련 기관',
+  meta: 'D-12 · 담당 김경민 · 체류 · 연결 근로자 1명 · 출입국 관련 기관',
 }
 
 export const CASE_TABS = ['현재 단계', '체크리스트', '문서', '소통', '활동이력']

@@ -26,7 +26,7 @@ export function LinkExpiredPage() {
 
       <p className={styles.sectionLabel}>담당자에게 요청하는 방법</p>
       <div className={styles.contactCard}>
-        <p className={styles.contactName}>한빛정밀 인사팀 · 김민지</p>
+        <p className={styles.contactName}>한빛정밀 인사팀 · 김경민</p>
         <p className={styles.contactBody}>기존에 안내를 받은 문자 또는 메신저로 요청하세요.</p>
       </div>
 

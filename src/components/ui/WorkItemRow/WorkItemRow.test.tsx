@@ -10,7 +10,7 @@ describe('WorkItemRow', () => {
     render(
       <WorkItemRow
         title="응웬반A 체류연장 준비"
-        meta="D-12 · 승인 대기 · 담당 김민지"
+        meta="D-12 · 승인 대기 · 담당 김경민"
         nextAction="다음 · 요청문 승인"
         onClick={onClick}
       />,

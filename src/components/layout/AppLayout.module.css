@@ -1,0 +1,46 @@
+.shell {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  grid-template-rows: auto 1fr;
+  min-height: 100svh;
+}
+
+.header {
+  grid-column: 1 / -1;
+  padding: 24px 32px;
+  border-bottom: 2px solid var(--color-primary);
+}
+
+.logo {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--color-primary);
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  border-right: 2px solid var(--color-primary);
+}
+
+.navLink {
+  padding: 16px 8px;
+  border: 1px solid var(--color-primary);
+  border-radius: 12px;
+  text-align: center;
+  font-weight: 700;
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.navLinkActive {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.content {
+  padding: 32px;
+}

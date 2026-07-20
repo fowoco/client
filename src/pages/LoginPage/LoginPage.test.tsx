@@ -4,35 +4,19 @@ import { describe, expect, it } from 'vitest'
 import { LoginPage } from './LoginPage'
 
 describe('LoginPage', () => {
-  it('defaults to the 현장관리자 role tab', () => {
+  it('renders the product promise and agent trace', () => {
     render(<LoginPage />)
-    expect(screen.getByRole('tab', { name: '현장관리자' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    )
+    expect(screen.getByText('업무를 시작하세요')).toBeInTheDocument()
+    expect(screen.getByText('03 HR 검토와 승인')).toBeInTheDocument()
   })
 
-  it('switches the active role tab on click', async () => {
-    const user = userEvent.setup()
-    render(<LoginPage />)
-
-    await user.click(screen.getByRole('tab', { name: 'HR' }))
-
-    expect(screen.getByRole('tab', { name: 'HR' })).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByRole('tab', { name: '현장관리자' })).toHaveAttribute(
-      'aria-selected',
-      'false',
-    )
-  })
-
-  it('disables the submit button until every field has a value', async () => {
+  it('disables the submit button until email and password have a value', async () => {
     const user = userEvent.setup()
     render(<LoginPage />)
 
     const submit = screen.getByRole('button', { name: '로그인' })
     expect(submit).toBeDisabled()
 
-    await user.type(screen.getByLabelText('사업장 코드'), 'FW-0001')
     await user.type(screen.getByLabelText('이메일'), 'hr@fowoco.com')
     await user.type(screen.getByLabelText('비밀번호'), 'password123')
 

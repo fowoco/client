@@ -1,0 +1,147 @@
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 24px;
+  align-items: start;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.banner {
+  padding: 24px;
+  background: #f1fbfa;
+  border: 2px solid var(--color-primary);
+  border-radius: 20px;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+}
+
+.statCard {
+  padding: 16px;
+  background: #fff;
+  border: 3px solid var(--stat-color, var(--color-primary));
+  border-radius: 20px;
+  text-align: center;
+}
+
+.statLabel {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.statValue {
+  font-size: 40px;
+  font-weight: 800;
+  color: var(--stat-color, var(--color-primary));
+}
+
+.statUnit {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.section {
+  padding: 24px;
+  background: #f1fbfa;
+  border: 1px solid var(--color-primary);
+  border-radius: 20px;
+}
+
+.sectionTitle {
+  margin: 0 0 16px;
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.taskGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.taskCard {
+  padding: 24px 16px;
+  background: #fff;
+  border: 1px solid var(--color-primary);
+  border-radius: 20px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.loopBanner {
+  padding: 24px;
+  background: #f1fbfa;
+  border: 1px solid var(--color-text);
+  border-radius: 20px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.agentPanel {
+  padding: 20px;
+  background: #fff;
+  border: 1px solid var(--color-primary);
+  border-radius: 20px;
+}
+
+.agentPanelTitle {
+  margin: 0 0 16px;
+  font-size: 18px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.agentCard {
+  padding: 16px;
+  background: #f1fffc;
+  border: 1px solid #008660;
+  border-radius: 20px;
+}
+
+.agentBadge {
+  display: inline-block;
+  margin-bottom: 12px;
+  padding: 4px 10px;
+  background: #fff1ce;
+  border: 1px solid #ffda7d;
+  border-radius: 5px;
+  font-size: 12px;
+  color: #81290c;
+}
+
+.agentCardTitle {
+  margin: 0 0 4px;
+  font-weight: 700;
+}
+
+.agentCardDetail {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.agentAction {
+  padding: 8px 16px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}

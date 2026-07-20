@@ -1,5 +1,11 @@
 import type { WorkItemUrgency } from '../../components/ui/WorkItemRow/WorkItemRow'
 
+// TODO(backend): 이 파일의 상수는 데모용 목데이터. 실제 연동 시 아래 엔드포인트로 대체
+// - GET /api/dashboard/work-items -> TODAY_WORK_ITEMS
+// - GET /api/dashboard/upcoming-timeline -> UPCOMING_TIMELINE
+// - GET /api/dashboard/approval-queue -> APPROVAL_QUEUE
+// - GET /api/dashboard/agent-summary -> AGENT_SUMMARY
+
 export interface WorkItem {
   id: string
   title: string

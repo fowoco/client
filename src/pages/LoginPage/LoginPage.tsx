@@ -11,6 +11,7 @@ export function LoginPage() {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    // TODO(backend): POST /api/auth/login { email, password } -> 세션/토큰 저장 후 /dashboard 이동
   }
 
   return (

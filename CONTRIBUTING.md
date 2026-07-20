@@ -17,5 +17,6 @@
 - 서버 상태는 React Query, 화면 전용 상태만 Zustand
 - ESLint + Prettier, Vitest로 정상·오류·경계 사례 검증
 - 컴포넌트는 단일 책임, 과도하게 커지면 분리 제안
+- 백엔드 API가 아직 없는 화면은 목데이터로 구현하고, 연동 지점에 `// TODO(backend): <메서드> <경로> -> <설명>` 주석을 남긴다
 
 자세한 배경은 [`docs/FRONTEND_STACK_DECISION.md`](docs/FRONTEND_STACK_DECISION.md)와 [`docs/SCREEN_CATALOG.md`](docs/SCREEN_CATALOG.md)를 참고합니다.

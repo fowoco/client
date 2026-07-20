@@ -4,6 +4,12 @@
   font-family: var(--font-sans);
 }
 
+@media (max-width: 860px) {
+  .page {
+    flex-direction: column;
+  }
+}
+
 .promo {
   flex: 0 0 420px;
   padding: 52px 56px;
@@ -11,6 +17,21 @@
   color: var(--fowoco-white);
   display: flex;
   flex-direction: column;
+}
+
+@media (max-width: 860px) {
+  .promo {
+    flex: 0 0 auto;
+    padding: 32px 24px;
+  }
+
+  .kicker {
+    margin-top: 24px;
+  }
+
+  .trace {
+    margin-top: 24px;
+  }
 }
 
 .brand {
@@ -76,6 +97,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 32px 24px;
   background: var(--surface-default);
 }
 

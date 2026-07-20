@@ -41,6 +41,12 @@
   margin-top: 20px;
 }
 
+@media (max-width: 960px) {
+  .cardRow {
+    grid-template-columns: 1fr;
+  }
+}
+
 .card {
   padding: 21px 23px;
   background: var(--surface-default);
@@ -128,9 +134,15 @@
 .membersCard {
   margin-top: 16px;
   padding: 19px 23px;
+  overflow-x: auto;
   background: var(--surface-default);
   border: 1px solid var(--border-default);
   border-radius: var(--fowoco-radius-8);
+}
+
+.membersHeader,
+.memberRow {
+  min-width: 560px;
 }
 
 .membersHeader {

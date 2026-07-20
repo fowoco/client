@@ -1,26 +1,22 @@
 :root {
-  --color-primary: #008c89;
-  --color-text: #1a1a1a;
-  --color-text-muted: #4d4d4d;
-  --color-placeholder: #d9d9d9;
-  --color-bg: #fff;
-  --font-sans: 'Nanum Gothic', system-ui, 'Segoe UI', Roboto, sans-serif;
-
   font-family: var(--font-sans);
-  color: var(--color-text);
-  background: var(--color-bg);
+  color: var(--text-primary);
+  background: var(--surface-page);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
+  overflow-x: hidden;
 }
 
 #root {

@@ -27,6 +27,10 @@ export function SettingsPage() {
     )
   }
 
+  function handleInviteMember() {
+    // TODO(backend): POST /api/settings/members/invite { email, role } -> 구성원 초대 발송
+  }
+
   return (
     <div>
       <h1 className={styles.headline}>회사의 승인과 데이터 정책을 관리합니다.</h1>
@@ -133,7 +137,7 @@ export function SettingsPage() {
           </div>
         ))}
 
-        <button type="button" className={styles.inviteLink}>
+        <button type="button" className={styles.inviteLink} onClick={handleInviteMember}>
           ＋ 구성원 초대
         </button>
       </div>

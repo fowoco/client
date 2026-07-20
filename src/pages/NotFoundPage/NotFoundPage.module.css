@@ -1,0 +1,31 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 100svh;
+  padding: 24px;
+  text-align: center;
+  font-family: var(--font-sans);
+}
+
+.title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.body {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.link {
+  margin-top: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--brand-primary);
+}

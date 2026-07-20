@@ -7,6 +7,7 @@ import { LinkExpiredPage } from './pages/LinkExpiredPage/LinkExpiredPage'
 import { LinkRequestPage } from './pages/LinkRequestPage/LinkRequestPage'
 import { LinkUploadPage } from './pages/LinkUploadPage/LinkUploadPage'
 import { LoginPage } from './pages/LoginPage/LoginPage'
+import { NotFoundPage } from './pages/NotFoundPage/NotFoundPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { ReviewWorkPage } from './pages/ReviewWorkPage/ReviewWorkPage'
 import { SettingsPage } from './pages/SettingsPage/SettingsPage'
@@ -16,9 +17,10 @@ import { WorkListPage } from './pages/WorkListPage/WorkListPage'
 const REPO = 'https://github.com/fowoco/client/issues'
 
 export const router = createBrowserRouter([
-  { path: '/', element: <LoginPage /> },
+  { path: '/', element: <LoginPage />, errorElement: <NotFoundPage /> },
   {
     element: <AppLayout />,
+    errorElement: <NotFoundPage />,
     children: [
       { path: '/dashboard', element: <DashboardPage /> },
       { path: '/workers', element: <WorkerListPage /> },
@@ -50,4 +52,5 @@ export const router = createBrowserRouter([
   { path: '/worker-portal', element: <LinkRequestPage /> },
   { path: '/worker-portal/upload', element: <LinkUploadPage /> },
   { path: '/worker-portal/expired', element: <LinkExpiredPage /> },
+  { path: '*', element: <NotFoundPage /> },
 ])

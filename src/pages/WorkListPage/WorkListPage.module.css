@@ -36,12 +36,19 @@
 
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   gap: 16px;
   margin-top: 24px;
 }
 
+@media (max-width: 720px) {
+  .tabs {
+    overflow-x: auto;
+  }
+}
+
 .search {
-  flex: 1;
+  flex: 1 1 240px;
   max-width: 520px;
   height: 48px;
   padding: 0 15px;

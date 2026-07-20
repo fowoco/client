@@ -23,6 +23,18 @@ export function WorkerListPage() {
 
   const selectedWorker = WORKERS.find((worker) => worker.id === selectedId) ?? WORKERS[0]
 
+  function handleViewAllWorkers() {
+    // TODO(backend): GET /api/workers?page= -> 전체 근로자 페이지네이션
+  }
+
+  function handleOpenTask() {
+    // TODO(backend): GET /api/work-items/:id -> 해당 업무 상세로 이동
+  }
+
+  function handleShowMoreDetail() {
+    // TODO(backend): GET /api/workers/:id/full -> 기본정보·서류·안내이력 상세
+  }
+
   return (
     <div>
       <h1 className={styles.headline}>체류·서류 확인이 필요한 근로자 {WORKERS.length}명</h1>
@@ -74,7 +86,7 @@ export function WorkerListPage() {
             </button>
           ))}
 
-          <button type="button" className={styles.viewAll}>
+          <button type="button" className={styles.viewAll} onClick={handleViewAllWorkers}>
             전체 근로자 보기 →
           </button>
         </div>
@@ -107,6 +119,7 @@ export function WorkerListPage() {
                   <button
                     type="button"
                     className={`${styles.taskLink} ${TASK_LINK_CLASS[task.linkTone]}`}
+                    onClick={handleOpenTask}
                   >
                     열기 →
                   </button>
@@ -132,7 +145,7 @@ export function WorkerListPage() {
             ))}
           </div>
 
-          <button type="button" className={styles.moreLink}>
+          <button type="button" className={styles.moreLink} onClick={handleShowMoreDetail}>
             기본정보·서류·안내이력 더 보기 ▾
           </button>
         </div>

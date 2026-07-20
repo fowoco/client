@@ -15,12 +15,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
   gap: 16px;
   margin-top: 24px;
   padding: 15px 19px;
   background: var(--surface-default);
   border: 1px solid var(--border-default);
   border-radius: var(--fowoco-radius-8);
+  font-family: inherit;
+  cursor: pointer;
 }
 
 .commandPlaceholder {
@@ -42,6 +45,18 @@
   gap: 16px;
   margin-top: 16px;
   align-items: stretch;
+}
+
+@media (max-width: 720px) {
+  .summaryRow {
+    grid-template-columns: 1fr;
+  }
+
+  .commandInput {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
 }
 
 .approvalCard {

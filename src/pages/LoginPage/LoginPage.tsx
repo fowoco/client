@@ -14,6 +14,10 @@ export function LoginPage() {
     // TODO(backend): POST /api/auth/login { email, password } -> 세션/토큰 저장 후 /dashboard 이동
   }
 
+  function handleForgotPassword() {
+    // TODO(backend): POST /api/auth/password-reset { email } -> 재설정 메일 발송
+  }
+
   return (
     <div className={styles.page}>
       <aside className={styles.promo}>
@@ -80,7 +84,11 @@ export function LoginPage() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
-            <button type="button" className={styles.forgotPassword}>
+            <button
+              type="button"
+              className={styles.forgotPassword}
+              onClick={handleForgotPassword}
+            >
               비밀번호를 잊으셨나요?
             </button>
           </div>

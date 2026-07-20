@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import { AgentSummary } from '../../components/ui/AgentSummary/AgentSummary'
 import { WorkItemRow } from '../../components/ui/WorkItemRow/WorkItemRow'
 import styles from './DashboardPage.module.css'
@@ -9,6 +10,8 @@ import {
 } from './dashboardData'
 
 export function DashboardPage() {
+  const navigate = useNavigate()
+
   return (
     <div>
       <h1 className={styles.headline}>
@@ -18,12 +21,16 @@ export function DashboardPage() {
         Agent가 기한·필수정보·응답 상태를 확인해 지금 볼 업무만 정리했습니다.
       </p>
 
-      <div className={styles.commandInput}>
+      <button
+        type="button"
+        className={styles.commandInput}
+        onClick={() => navigate('/tasks/new')}
+      >
         <span className={styles.commandPlaceholder}>
           무엇을 준비해야 하나요? 자연어로 요청하거나 파일을 가져오세요.
         </span>
         <span className={styles.commandShortcut}>⌘ 업무 생성</span>
-      </div>
+      </button>
 
       <div className={styles.summaryRow}>
         <AgentSummary
@@ -40,7 +47,7 @@ export function DashboardPage() {
             <br />
             {APPROVAL_QUEUE.oldestValue}
           </p>
-          <button type="button" className={styles.approvalLink}>
+          <button type="button" className={styles.approvalLink} onClick={() => navigate('/tasks')}>
             검토하기 →
           </button>
         </div>
@@ -59,6 +66,7 @@ export function DashboardPage() {
             meta={item.meta}
             nextAction={item.nextAction}
             urgency={item.urgency}
+            onClick={() => navigate(`/tasks/${item.id}`)}
           />
         ))}
       </div>

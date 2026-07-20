@@ -4,6 +4,12 @@
   font-family: var(--font-sans);
 }
 
+@media (max-width: 768px) {
+  .shell {
+    flex-direction: column;
+  }
+}
+
 .sidebar {
   flex: 0 0 208px;
   display: flex;
@@ -11,6 +17,24 @@
   padding: 28px 20px;
   background: var(--brand-dark);
   color: var(--fowoco-white);
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    flex: 0 0 auto;
+    padding: 16px;
+  }
+
+  .kicker,
+  .help {
+    display: none;
+  }
+
+  .nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
 }
 
 .brand {
@@ -68,8 +92,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 64px;
-  padding: 0 32px;
+  gap: 12px;
+  min-height: 64px;
+  padding: 12px 32px;
   background: var(--surface-default);
   border-bottom: 1px solid var(--border-default);
 }
@@ -82,4 +107,15 @@
 .content {
   flex: 1;
   padding: 32px;
+}
+
+@media (max-width: 768px) {
+  .topBar {
+    padding: 12px 16px;
+    flex-wrap: wrap;
+  }
+
+  .content {
+    padding: 16px;
+  }
 }

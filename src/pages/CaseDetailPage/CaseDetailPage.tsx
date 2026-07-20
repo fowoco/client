@@ -40,13 +40,25 @@ export function CaseDetailPage() {
     // TODO(backend): POST /api/work-items/:id/approval-request -> 승인 대기 상태로 전환
   }
 
+  function handleMoreActions() {
+    // TODO(backend): GET /api/work-items/:id/actions -> 취소·담당자 변경 등 메뉴 항목 구성
+  }
+
+  function handleExpandContext() {
+    // TODO(backend): GET /api/work-items/:id/context -> 근거·문서·활동 상세 목록
+  }
+
+  function handleSaveDraft() {
+    // TODO(backend): PATCH /api/work-items/:id/draft -> 현재 입력 상태 저장
+  }
+
   return (
     <div>
       <div className={styles.topBar}>
         <Link to="/tasks" className={styles.back}>
           ← 업무함
         </Link>
-        <button type="button" className={styles.more}>
+        <button type="button" className={styles.more} onClick={handleMoreActions}>
           더보기 ···
         </button>
       </div>
@@ -90,7 +102,7 @@ export function CaseDetailPage() {
               </span>
             ))}
           </p>
-          <button type="button" className={styles.contextLink}>
+          <button type="button" className={styles.contextLink} onClick={handleExpandContext}>
             펼쳐 보기 →
           </button>
         </div>
@@ -151,7 +163,7 @@ export function CaseDetailPage() {
 
       <div className={styles.actionDock}>
         <span className={styles.nextStep}>{ACTION_DOCK.nextStep}</span>
-        <button type="button" className={styles.draftSave}>
+        <button type="button" className={styles.draftSave} onClick={handleSaveDraft}>
           {ACTION_DOCK.draftSaveLabel}
         </button>
         <Button onClick={handleRequestApproval}>{ACTION_DOCK.approveLabel}</Button>

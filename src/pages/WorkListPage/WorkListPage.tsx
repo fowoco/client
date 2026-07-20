@@ -15,6 +15,14 @@ export function WorkListPage() {
     return WORK_ITEMS.filter((item) => item.title.toLowerCase().includes(normalized))
   }, [query])
 
+  function handleAdvancedFilter() {
+    // TODO(backend): GET /api/work-items/filters -> 고급 필터 옵션 목록
+  }
+
+  function handleViewAll() {
+    // TODO(backend): GET /api/work-items?tab=&page= -> 전체 업무 페이지네이션
+  }
+
   return (
     <div>
       <h1 className={styles.headline}>먼저 처리할 5건을 다음 행동 순서로 정리했습니다.</h1>
@@ -51,7 +59,7 @@ export function WorkListPage() {
         <select className={styles.filter} aria-label="마감 필터" defaultValue="30">
           <option value="30">마감 · 30일</option>
         </select>
-        <button type="button" className={styles.advancedFilter}>
+        <button type="button" className={styles.advancedFilter} onClick={handleAdvancedFilter}>
           고급 필터 7개 ▾
         </button>
       </div>
@@ -78,7 +86,7 @@ export function WorkListPage() {
         <span className={styles.footerText}>
           {TOTAL_WORK_COUNT}개 중 우선 업무 {WORK_ITEMS.length}개 표시
         </span>
-        <button type="button" className={styles.footerLink}>
+        <button type="button" className={styles.footerLink} onClick={handleViewAll}>
           전체 업무 보기 →
         </button>
       </div>

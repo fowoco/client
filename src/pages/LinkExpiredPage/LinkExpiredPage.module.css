@@ -1,0 +1,103 @@
+.iconWrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 30px;
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 104px;
+  height: 104px;
+  background: var(--fowoco-red-50);
+  border-radius: 50%;
+  font-size: 42px;
+  font-weight: 700;
+  color: var(--fowoco-red-600);
+}
+
+.headline {
+  margin: 30px 0 0;
+  font-size: 24px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--text-primary);
+}
+
+.subtext {
+  margin: 12px 0 0;
+  font-size: 16px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.reasonCard {
+  margin-top: 30px;
+  padding: 16px 20px;
+  background: var(--surface-subtle);
+  border-radius: var(--fowoco-radius-8);
+}
+
+.reasonTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.reasonBody {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--text-secondary);
+}
+
+.sectionLabel {
+  margin: 30px 0 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.contactCard {
+  margin-top: 12px;
+  padding: 15px 19px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
+}
+
+.contactName {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.contactBody {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.copyButton {
+  width: 100%;
+  height: 52px;
+  margin-top: 30px;
+  background: var(--brand-primary);
+  border: none;
+  border-radius: var(--fowoco-radius-6);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--fowoco-white);
+  cursor: pointer;
+}
+
+.footnote {
+  margin: 12px 0 0;
+  font-size: 12px;
+  text-align: center;
+  line-height: 20px;
+  color: var(--text-secondary);
+}

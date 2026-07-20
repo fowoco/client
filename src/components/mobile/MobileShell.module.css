@@ -1,0 +1,64 @@
+.page {
+  display: flex;
+  justify-content: center;
+  min-height: 100svh;
+  background: var(--surface-page);
+  font-family: var(--font-sans);
+}
+
+.frame {
+  width: 100%;
+  max-width: 390px;
+  background: var(--surface-page);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  height: 72px;
+  padding: 0 20px;
+  background: var(--surface-default);
+  border-bottom: 1px solid var(--border-default);
+}
+
+.back {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 0;
+  margin-right: 14px;
+}
+
+.title {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.brand {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--brand-primary);
+}
+
+.right {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.expiredBadge {
+  padding: 6px 14px;
+  background: var(--fowoco-red-50);
+  border-radius: var(--fowoco-radius-999);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fowoco-red-600);
+}
+
+.content {
+  padding: 24px 20px 40px;
+}

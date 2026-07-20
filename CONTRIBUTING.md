@@ -11,6 +11,9 @@
 5. CI(lint·format·test) 통과 후 Ready for review 전환
 6. 리뷰 반영 후 Squash 또는 Rebase merge
 
+> `fowoco-client`는 `fowoco/knowledge`의 공통 컨벤션 중 "병합 후 원격 브랜치 자동 삭제"를 따르지 않는다.
+> 화면별 작업 이력을 브랜치로 남기기 위해 **병합 후에도 브랜치를 삭제하지 않는다.**
+
 ## 프론트엔드 코드 기준
 
 - React 18 + TypeScript strict mode, `any` 금지

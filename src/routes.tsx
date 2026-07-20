@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom'
 import { AppLayout } from './components/layout/AppLayout'
+import { CreateWorkPage } from './pages/CreateWorkPage/CreateWorkPage'
 import { DashboardPage } from './pages/DashboardPage/DashboardPage'
 import { LoginPage } from './pages/LoginPage/LoginPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
@@ -28,6 +29,7 @@ export const router = createBrowserRouter([
         element: <PlaceholderPage title="서류관리 / OCR" issueUrl={`${REPO}/1`} />,
       },
       { path: '/tasks', element: <WorkListPage /> },
+      { path: '/tasks/new', element: <CreateWorkPage /> },
       {
         path: '/agent',
         element: <PlaceholderPage title="Agent 패널" issueUrl={`${REPO}/1`} />,

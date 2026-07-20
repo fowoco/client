@@ -1,9 +1,11 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { Button } from '../ui/Button/Button'
 import styles from './AppLayout.module.css'
 import { NAV_ITEMS } from './navItems'
 
 export function AppLayout() {
+  const navigate = useNavigate()
+
   return (
     <div className={styles.shell}>
       <aside className={styles.sidebar}>
@@ -33,7 +35,7 @@ export function AppLayout() {
         <header className={styles.topBar}>
           {/* TODO(backend): GET /api/me -> 사업장명·담당자명 표시로 교체 */}
           <p className={styles.workspace}>한빛정밀 · 김민지 HR</p>
-          <Button>＋ 업무 만들기</Button>
+          <Button onClick={() => navigate('/tasks/new')}>＋ 업무 만들기</Button>
         </header>
 
         <main className={styles.content}>

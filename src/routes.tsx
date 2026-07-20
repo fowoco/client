@@ -1,10 +1,11 @@
 import { createBrowserRouter } from 'react-router-dom'
+import { LoginPage } from './pages/LoginPage/LoginPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 
 const REPO = 'https://github.com/fowoco/client/issues'
 
 export const router = createBrowserRouter([
-  { path: '/', element: <PlaceholderPage title="로그인" issueUrl={`${REPO}/5`} /> },
+  { path: '/', element: <LoginPage /> },
   { path: '/dashboard', element: <PlaceholderPage title="HR 대시보드" issueUrl={`${REPO}/6`} /> },
   {
     path: '/workers',

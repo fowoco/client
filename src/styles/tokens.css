@@ -1,6 +1,8 @@
 :root {
   --brand-primary: #07847f;
+  --brand-dark: #075e5b;
 
+  --surface-page: #f6f8f8;
   --surface-default: #fff;
   --surface-subtle: #eef4f4;
   --border-default: #dce5e4;
@@ -10,6 +12,7 @@
 
   --fowoco-white: #fff;
   --fowoco-teal-50: #eef4f4;
+  --fowoco-teal-100: #d8eceb;
   --fowoco-violet-50: #f4f0ff;
   --fowoco-violet-600: #7657c8;
   --fowoco-red-50: #fff1f1;

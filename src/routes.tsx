@@ -6,6 +6,7 @@ import { DashboardPage } from './pages/DashboardPage/DashboardPage'
 import { LoginPage } from './pages/LoginPage/LoginPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { ReviewWorkPage } from './pages/ReviewWorkPage/ReviewWorkPage'
+import { SettingsPage } from './pages/SettingsPage/SettingsPage'
 import { WorkerListPage } from './pages/WorkerListPage/WorkerListPage'
 import { WorkListPage } from './pages/WorkListPage/WorkListPage'
 
@@ -40,10 +41,7 @@ export const router = createBrowserRouter([
         path: '/tickets',
         element: <PlaceholderPage title="티켓 관리" issueUrl={`${REPO}/1`} />,
       },
-      {
-        path: '/settings',
-        element: <PlaceholderPage title="설정" issueUrl={`${REPO}/1`} />,
-      },
+      { path: '/settings', element: <SettingsPage /> },
     ],
   },
   {

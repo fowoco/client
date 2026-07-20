@@ -1,0 +1,117 @@
+.headline {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.description {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.tabs {
+  display: flex;
+  gap: 32px;
+  margin-top: 24px;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.tab {
+  padding: 0 0 12px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.tabActive {
+  color: var(--brand-primary);
+  font-weight: 500;
+  border-bottom-color: var(--brand-primary);
+}
+
+.toolbar {
+  display: flex;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.search {
+  flex: 1;
+  max-width: 520px;
+  height: 48px;
+  padding: 0 15px;
+  font-size: 14px;
+  font-family: inherit;
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
+}
+
+.filter {
+  width: 180px;
+  height: 48px;
+  padding: 0 15px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text-primary);
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
+}
+
+.advancedFilter {
+  margin-left: auto;
+  align-self: center;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.columnHeader {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 24px;
+  padding: 0 20px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding: 16px 19px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
+}
+
+.footerText {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.footerLink {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--brand-primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+}

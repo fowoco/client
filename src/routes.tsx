@@ -3,6 +3,7 @@ import { AppLayout } from './components/layout/AppLayout'
 import { DashboardPage } from './pages/DashboardPage/DashboardPage'
 import { LoginPage } from './pages/LoginPage/LoginPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
+import { WorkListPage } from './pages/WorkListPage/WorkListPage'
 
 const REPO = 'https://github.com/fowoco/client/issues'
 
@@ -26,10 +27,7 @@ export const router = createBrowserRouter([
         path: '/documents',
         element: <PlaceholderPage title="서류관리 / OCR" issueUrl={`${REPO}/1`} />,
       },
-      {
-        path: '/tasks',
-        element: <PlaceholderPage title="업무 카드 보드" issueUrl={`${REPO}/1`} />,
-      },
+      { path: '/tasks', element: <WorkListPage /> },
       {
         path: '/agent',
         element: <PlaceholderPage title="Agent 패널" issueUrl={`${REPO}/1`} />,

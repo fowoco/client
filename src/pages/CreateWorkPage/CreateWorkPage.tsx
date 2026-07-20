@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button/Button'
 import styles from './CreateWorkPage.module.css'
 import {
@@ -11,6 +11,7 @@ import {
 } from './createWorkData'
 
 export function CreateWorkPage() {
+  const navigate = useNavigate()
   const [mode, setMode] = useState<InputModeId>('nl')
   const [request, setRequest] = useState('')
 
@@ -19,7 +20,8 @@ export function CreateWorkPage() {
   }
 
   function handleAnalyze() {
-    // TODO(backend): POST /api/work-items/analyze { mode, request } -> 분류·필수정보 확인 결과로 REVIEW-001 이동
+    // TODO(backend): POST /api/work-items/analyze { mode, request } -> 분류·필수정보 확인 결과 반영
+    navigate('/tasks/new/review')
   }
 
   return (

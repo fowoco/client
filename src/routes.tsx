@@ -4,6 +4,7 @@ import { CreateWorkPage } from './pages/CreateWorkPage/CreateWorkPage'
 import { DashboardPage } from './pages/DashboardPage/DashboardPage'
 import { LoginPage } from './pages/LoginPage/LoginPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
+import { ReviewWorkPage } from './pages/ReviewWorkPage/ReviewWorkPage'
 import { WorkListPage } from './pages/WorkListPage/WorkListPage'
 
 const REPO = 'https://github.com/fowoco/client/issues'
@@ -30,6 +31,7 @@ export const router = createBrowserRouter([
       },
       { path: '/tasks', element: <WorkListPage /> },
       { path: '/tasks/new', element: <CreateWorkPage /> },
+      { path: '/tasks/new/review', element: <ReviewWorkPage /> },
       {
         path: '/agent',
         element: <PlaceholderPage title="Agent 패널" issueUrl={`${REPO}/1`} />,

@@ -1,0 +1,257 @@
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: -32px -32px 0;
+  padding: 19px 32px;
+  background: var(--surface-default);
+  border-bottom: 1px solid var(--border-default);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.back {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.draftSave {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.headerRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-top: 40px;
+}
+
+.headline {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-primary);
+  max-width: 900px;
+}
+
+.description {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.analysisStatus {
+  flex-shrink: 0;
+  padding: 9px 20px;
+  background: var(--fowoco-amber-50);
+  border-radius: var(--fowoco-radius-999);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fowoco-amber-600);
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 1fr 384px;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.left {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card {
+  padding: 21px 23px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.cardBadge {
+  margin: 8px 0 20px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fowoco-violet-600);
+}
+
+.fieldGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.fieldGridTwo {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.fieldLabel {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.fieldValue {
+  padding: 9px 15px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
+}
+
+.cardLinks {
+  display: flex;
+  gap: 24px;
+  margin-top: 20px;
+}
+
+.cardLink {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--brand-primary);
+  cursor: pointer;
+}
+
+.missingCard {
+  padding: 20px 24px;
+  background: var(--fowoco-amber-50);
+  border-radius: var(--fowoco-radius-8);
+}
+
+.missingTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--fowoco-amber-600);
+}
+
+.missingQuestion {
+  margin: 8px 0 16px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.missingSelect {
+  width: 100%;
+  height: 48px;
+  padding: 0 15px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--status-warning);
+  background: var(--surface-default);
+  border: 1px solid var(--status-warning);
+  border-radius: var(--fowoco-radius-6);
+}
+
+.missingWarning {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--status-warning);
+}
+
+.draftPanel {
+  padding: 21px 23px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
+}
+
+.draftTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.draftBadge {
+  margin: 8px 0 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--brand-primary);
+}
+
+.draftHeadline {
+  margin: 0 0 20px;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 30px;
+  color: var(--text-primary);
+}
+
+.draftRow {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  font-size: 12px;
+}
+
+.draftRowLabel {
+  color: var(--text-secondary);
+}
+
+.draftRowValue {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.draftLink {
+  display: block;
+  margin-top: 16px;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--brand-primary);
+  cursor: pointer;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 24px;
+  margin-top: 24px;
+}
+
+.editRequest {
+  background: none;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.footnote {
+  margin: 24px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}

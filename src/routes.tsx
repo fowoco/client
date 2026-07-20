@@ -1,0 +1,36 @@
+import { createBrowserRouter } from 'react-router-dom'
+import { PlaceholderPage } from './pages/PlaceholderPage'
+
+const REPO = 'https://github.com/fowoco/client/issues'
+
+export const router = createBrowserRouter([
+  { path: '/', element: <PlaceholderPage title="로그인" issueUrl={`${REPO}/5`} /> },
+  { path: '/dashboard', element: <PlaceholderPage title="HR 대시보드" issueUrl={`${REPO}/6`} /> },
+  {
+    path: '/workers',
+    element: <PlaceholderPage title="근로자 목록 관리" issueUrl={`${REPO}/7`} />,
+  },
+  {
+    path: '/workers/:workerId',
+    element: (
+      <PlaceholderPage title="근로자 상세 / 계약 및 체류 관리" issueUrl={`${REPO}/8`} />
+    ),
+  },
+  {
+    path: '/documents',
+    element: <PlaceholderPage title="서류관리 / OCR" issueUrl={`${REPO}/9`} />,
+  },
+  {
+    path: '/tasks',
+    element: <PlaceholderPage title="업무 카드 보드" issueUrl={`${REPO}/10`} />,
+  },
+  {
+    path: '/agent',
+    element: <PlaceholderPage title="Agent 패널" issueUrl={`${REPO}/11`} />,
+  },
+  { path: '/tickets', element: <PlaceholderPage title="티켓 관리" issueUrl={`${REPO}/12`} /> },
+  {
+    path: '/worker-portal',
+    element: <PlaceholderPage title="근로자 모바일 안내" issueUrl={`${REPO}/13`} />,
+  },
+])

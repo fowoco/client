@@ -1,0 +1,35 @@
+:root {
+  --brand-primary: #07847f;
+
+  --surface-default: #fff;
+  --surface-subtle: #eef4f4;
+  --border-default: #dce5e4;
+
+  --text-primary: #172b2d;
+  --text-secondary: #5f6f72;
+
+  --fowoco-white: #fff;
+  --fowoco-teal-50: #eef4f4;
+  --fowoco-violet-50: #f4f0ff;
+  --fowoco-violet-600: #7657c8;
+  --fowoco-red-50: #fff1f1;
+  --fowoco-red-600: #d84a4a;
+  --fowoco-amber-50: #fff7e8;
+  --fowoco-amber-600: #d79222;
+  --fowoco-green-50: #ecf8f1;
+  --fowoco-green-600: #2c8a5b;
+
+  --status-critical: #d84a4a;
+
+  --fowoco-spacing-4: 4px;
+  --fowoco-spacing-8: 8px;
+  --fowoco-spacing-12: 12px;
+  --fowoco-spacing-16: 16px;
+  --fowoco-spacing-24: 24px;
+
+  --fowoco-radius-6: 6px;
+  --fowoco-radius-8: 8px;
+  --fowoco-radius-999: 999px;
+
+  --font-sans: 'Noto Sans KR', system-ui, 'Segoe UI', Roboto, sans-serif;
+}

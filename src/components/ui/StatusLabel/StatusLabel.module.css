@@ -1,0 +1,41 @@
+.label {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--fowoco-spacing-4) var(--fowoco-spacing-8);
+  border-radius: var(--fowoco-radius-999);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.neutral {
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+}
+
+.info {
+  background: var(--fowoco-teal-50);
+  color: var(--brand-primary);
+}
+
+.success {
+  background: var(--fowoco-green-50);
+  color: var(--fowoco-green-600);
+}
+
+.warning {
+  background: var(--fowoco-amber-50);
+  color: var(--fowoco-amber-600);
+}
+
+.critical {
+  background: var(--fowoco-red-50);
+  color: var(--fowoco-red-600);
+}
+
+.agent {
+  background: var(--fowoco-violet-50);
+  color: var(--fowoco-violet-600);
+}

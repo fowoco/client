@@ -1,0 +1,30 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: var(--fowoco-spacing-8) var(--fowoco-spacing-16);
+  border-radius: var(--fowoco-radius-6);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 22px;
+  cursor: pointer;
+}
+
+.primary {
+  background: var(--brand-primary);
+  color: var(--fowoco-white);
+  border: none;
+}
+
+.secondary {
+  background: var(--surface-default);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+}
+
+.button:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}

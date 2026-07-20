@@ -1,0 +1,115 @@
+.header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+.registerButton {
+  padding: 12px 24px;
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 800;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.toolbarBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #f5fffd;
+  border: 2px solid #000;
+  border-radius: 5px;
+}
+
+.searchInput {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  font-family: inherit;
+  outline: none;
+}
+
+.filterButton {
+  background: none;
+  border: none;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  background: #fbf5e4;
+  border-radius: 5px;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 24px;
+  background: #f1fbfa;
+  border: 1px solid #021a15;
+  border-radius: 24px;
+  text-align: left;
+}
+
+.checkboxLabel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.checkbox {
+  width: 32px;
+  height: 32px;
+}
+
+.info {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font-weight: 800;
+}
+
+.name {
+  font-size: 18px;
+}
+
+.meta {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.status {
+  padding: 6px 16px;
+  border-radius: 20px;
+  border: 1px solid #021a15;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.statusOk {
+  background: #eafbf0;
+}
+
+.statusWarn {
+  background: #fff1ce;
+}

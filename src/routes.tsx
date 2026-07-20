@@ -3,6 +3,7 @@ import { AppLayout } from './components/layout/AppLayout'
 import { DashboardPage } from './pages/DashboardPage/DashboardPage'
 import { LoginPage } from './pages/LoginPage/LoginPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
+import { WorkerListPage } from './pages/WorkerListPage/WorkerListPage'
 
 const REPO = 'https://github.com/fowoco/client/issues'
 
@@ -12,10 +13,7 @@ export const router = createBrowserRouter([
     element: <AppLayout />,
     children: [
       { path: '/dashboard', element: <DashboardPage /> },
-      {
-        path: '/workers',
-        element: <PlaceholderPage title="근로자 목록 관리" issueUrl={`${REPO}/7`} />,
-      },
+      { path: '/workers', element: <WorkerListPage /> },
       {
         path: '/workers/:workerId',
         element: (

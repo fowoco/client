@@ -1,0 +1,320 @@
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: -32px -32px 0;
+  padding: 19px 32px;
+  background: var(--surface-default);
+  border-bottom: 1px solid var(--border-default);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.back,
+.more {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 34px;
+}
+
+.title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.badge {
+  padding: 5px 14px;
+  border-radius: var(--fowoco-radius-999);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.badgeWarning {
+  background: var(--fowoco-amber-50);
+  color: var(--fowoco-amber-600);
+}
+
+.badgeInfo {
+  background: var(--fowoco-teal-50);
+  color: var(--brand-primary);
+}
+
+.meta {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.tabs {
+  display: flex;
+  gap: 32px;
+  margin-top: 18px;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.tab {
+  padding: 0 0 12px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.tabActive {
+  color: var(--brand-primary);
+  font-weight: 500;
+  border-bottom-color: var(--brand-primary);
+}
+
+.summaryRow {
+  display: grid;
+  grid-template-columns: 1fr 162px;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.contextCard {
+  padding: 19px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
+}
+
+.contextLabel {
+  margin: 0 0 16px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.contextValues {
+  margin: 0 0 24px;
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 26px;
+}
+
+.contextLink {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--brand-primary);
+  cursor: pointer;
+}
+
+.panelRow {
+  display: grid;
+  grid-template-columns: 760px 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.workflowCard,
+.gatesCard {
+  padding: 15px 23px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
+}
+
+.workflowHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.workflowNote {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.stepList {
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+}
+
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.stepMarkerCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stepCircle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.stepCircleDone {
+  background: var(--fowoco-green-50);
+  color: var(--fowoco-green-600);
+}
+
+.stepCirclePending {
+  background: var(--fowoco-amber-50);
+  color: var(--fowoco-amber-600);
+}
+
+.stepCircleLocked,
+.stepCircleWaiting {
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+}
+
+.connector {
+  width: 2px;
+  flex: 1;
+  min-height: 24px;
+  background: var(--border-default);
+}
+
+.connectorDone {
+  background: var(--fowoco-green-600);
+}
+
+.stepBody {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 24px;
+}
+
+.stepTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.stepActor {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.stepStatus {
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.stepStatusDone {
+  color: var(--fowoco-green-600);
+}
+
+.stepStatusPending {
+  color: var(--fowoco-amber-600);
+}
+
+.stepStatusLocked,
+.stepStatusWaiting {
+  color: var(--text-secondary);
+}
+
+.gatesDescription {
+  margin: 12px 0 20px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.gateRow {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.gateValue {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.gateValueWarning {
+  color: var(--status-warning);
+}
+
+.gateValueCritical {
+  color: var(--status-critical);
+}
+
+.gateBlocked {
+  margin-top: 8px;
+  padding: 12px 16px;
+  background: var(--fowoco-red-50);
+  border-radius: var(--fowoco-radius-6);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fowoco-red-600);
+}
+
+.actionDock {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-top: 24px;
+  padding: 12px 19px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
+}
+
+.nextStep {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.draftSave {
+  background: none;
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.footnote {
+  margin: 24px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}

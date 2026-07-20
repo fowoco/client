@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom'
 import { AppLayout } from './components/layout/AppLayout'
+import { CaseDetailPage } from './pages/CaseDetailPage/CaseDetailPage'
 import { CreateWorkPage } from './pages/CreateWorkPage/CreateWorkPage'
 import { DashboardPage } from './pages/DashboardPage/DashboardPage'
 import { LoginPage } from './pages/LoginPage/LoginPage'
@@ -32,6 +33,7 @@ export const router = createBrowserRouter([
       { path: '/tasks', element: <WorkListPage /> },
       { path: '/tasks/new', element: <CreateWorkPage /> },
       { path: '/tasks/new/review', element: <ReviewWorkPage /> },
+      { path: '/tasks/:caseId', element: <CaseDetailPage /> },
       {
         path: '/agent',
         element: <PlaceholderPage title="Agent 패널" issueUrl={`${REPO}/1`} />,

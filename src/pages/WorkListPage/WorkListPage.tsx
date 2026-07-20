@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { WorkItemRow } from '../../components/ui/WorkItemRow/WorkItemRow'
 import styles from './WorkListPage.module.css'
 import { TOTAL_WORK_COUNT, WORK_ITEMS, WORK_TABS } from './workListData'
 
 export function WorkListPage() {
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState(WORK_TABS[0].id)
   const [query, setQuery] = useState('')
 
@@ -67,6 +69,7 @@ export function WorkListPage() {
             meta={item.meta}
             nextAction={item.nextAction}
             urgency={item.urgency}
+            onClick={() => navigate(`/tasks/${item.id}`)}
           />
         ))}
       </div>

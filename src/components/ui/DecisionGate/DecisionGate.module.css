@@ -1,0 +1,45 @@
+.gate {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fowoco-spacing-8);
+  padding: var(--fowoco-spacing-16);
+  border-radius: var(--fowoco-radius-8);
+  font-family: var(--font-sans);
+}
+
+.locked {
+  background: var(--fowoco-red-50);
+}
+
+.ready {
+  background: var(--fowoco-amber-50);
+}
+
+.approved {
+  background: var(--fowoco-green-50);
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 22px;
+}
+
+.titleLocked {
+  color: var(--fowoco-red-600);
+}
+
+.titleReady {
+  color: var(--fowoco-amber-600);
+}
+
+.titleApproved {
+  color: var(--fowoco-green-600);
+}
+
+.body {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 21px;
+  color: var(--text-secondary);
+}

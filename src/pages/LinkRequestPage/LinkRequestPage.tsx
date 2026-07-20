@@ -6,6 +6,10 @@ import { LINK_REQUEST } from './linkRequestData'
 export function LinkRequestPage() {
   const navigate = useNavigate()
 
+  function handleAskQuestion() {
+    // TODO(backend): POST /api/links/:token/questions -> HR 담당자에게 문의 전달
+  }
+
   return (
     <MobileShell right={<span>보안 링크</span>}>
       <div className={styles.expiryNotice}>
@@ -31,7 +35,7 @@ export function LinkRequestPage() {
       </div>
 
       <div className={styles.actions}>
-        <button type="button" className={styles.secondary}>
+        <button type="button" className={styles.secondary} onClick={handleAskQuestion}>
           질문이 있습니다
         </button>
         <button

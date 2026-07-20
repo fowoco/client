@@ -26,7 +26,13 @@ export function AppLayout() {
           ))}
         </nav>
 
-        <button type="button" className={styles.help}>
+        <button
+          type="button"
+          className={styles.help}
+          onClick={() => {
+            // TODO(backend): GET /api/help -> 도움말 콘텐츠 표시
+          }}
+        >
           ? 도움말
         </button>
       </aside>

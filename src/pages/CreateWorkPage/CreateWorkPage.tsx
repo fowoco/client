@@ -24,13 +24,21 @@ export function CreateWorkPage() {
     navigate('/tasks/new/review')
   }
 
+  function handleSaveDraft() {
+    // TODO(backend): PATCH /api/work-items/draft -> 현재 입력 상태 저장
+  }
+
+  function handleLinkWorker() {
+    // TODO(backend): GET /api/workers?q= -> 근로자 검색·연결 피커
+  }
+
   return (
     <div>
       <div className={styles.topBar}>
         <Link to="/tasks" className={styles.back}>
           ← 업무함
         </Link>
-        <button type="button" className={styles.draftSave}>
+        <button type="button" className={styles.draftSave} onClick={handleSaveDraft}>
           임시 저장
         </button>
       </div>
@@ -90,7 +98,7 @@ export function CreateWorkPage() {
             <span className={styles.contextValue}>없음</span>
           </div>
 
-          <button type="button" className={styles.linkWorker}>
+          <button type="button" className={styles.linkWorker} onClick={handleLinkWorker}>
             ＋ 근로자 연결
           </button>
         </div>

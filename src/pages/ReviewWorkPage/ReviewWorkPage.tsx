@@ -1,15 +1,37 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button/Button'
 import styles from './ReviewWorkPage.module.css'
 import { MISSING_INFO, PREPARED_DRAFT, UNDERSTOOD_REQUEST } from './reviewWorkData'
 
 export function ReviewWorkPage() {
+  const navigate = useNavigate()
   const [institution, setInstitution] = useState('')
   const canCreate = institution !== ''
 
   function handleCreate() {
-    // TODO(backend): POST /api/work-items { ...UNDERSTOOD_REQUEST, institution } -> WORK-001로 이동
+    // TODO(backend): POST /api/work-items { ...UNDERSTOOD_REQUEST, institution } -> 생성 후 WORK-001로 이동
+    navigate('/tasks')
+  }
+
+  function handleSaveDraft() {
+    // TODO(backend): PATCH /api/work-items/draft -> 현재 입력 상태 저장
+  }
+
+  function handleViewOriginal() {
+    // TODO(backend): GET /api/work-items/draft/original -> 원문 텍스트 표시
+  }
+
+  function handleViewEvidence() {
+    // TODO(backend): GET /api/work-items/draft/evidence -> 분석 근거 표시
+  }
+
+  function handleEditDraft() {
+    // TODO(backend): PATCH /api/work-items/draft/content -> 초안 내용 직접 수정
+  }
+
+  function handlePreviewChecklist() {
+    // TODO(backend): GET /api/procedures/:id/checklist -> 체크리스트 미리보기
   }
 
   return (
@@ -18,7 +40,7 @@ export function ReviewWorkPage() {
         <Link to="/tasks/new" className={styles.back}>
           ← 업무 생성
         </Link>
-        <button type="button" className={styles.draftSave}>
+        <button type="button" className={styles.draftSave} onClick={handleSaveDraft}>
           초안 저장
         </button>
       </div>
@@ -66,10 +88,10 @@ export function ReviewWorkPage() {
             </div>
 
             <div className={styles.cardLinks}>
-              <button type="button" className={styles.cardLink}>
+              <button type="button" className={styles.cardLink} onClick={handleViewOriginal}>
                 원문 보기 ▾
               </button>
-              <button type="button" className={styles.cardLink}>
+              <button type="button" className={styles.cardLink} onClick={handleViewEvidence}>
                 근거 보기 ▾
               </button>
             </div>
@@ -114,10 +136,10 @@ export function ReviewWorkPage() {
             </div>
           ))}
 
-          <button type="button" className={styles.draftLink}>
+          <button type="button" className={styles.draftLink} onClick={handleEditDraft}>
             초안 내용 수정
           </button>
-          <button type="button" className={styles.draftLink}>
+          <button type="button" className={styles.draftLink} onClick={handlePreviewChecklist}>
             체크리스트 미리보기 ▾
           </button>
         </aside>

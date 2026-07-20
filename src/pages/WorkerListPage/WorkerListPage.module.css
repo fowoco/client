@@ -13,6 +13,7 @@
 
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 16px;
   margin-top: 24px;
@@ -20,6 +21,8 @@
 
 .search {
   width: 520px;
+  max-width: 100%;
+  flex: 1 1 240px;
   height: 48px;
   padding: 0 15px;
   font-size: 14px;
@@ -53,6 +56,12 @@
   gap: 16px;
   margin-top: 16px;
   align-items: start;
+}
+
+@media (max-width: 960px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
 }
 
 .listPanel {

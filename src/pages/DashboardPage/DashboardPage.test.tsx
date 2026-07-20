@@ -1,29 +1,25 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { DashboardPage } from './DashboardPage'
-import { DASHBOARD_STATS, TASK_BOARD_PREVIEW } from './dashboardData'
+import { AGENT_SUMMARY, TODAY_WORK_ITEMS, UPCOMING_TIMELINE } from './dashboardData'
 
 describe('DashboardPage', () => {
-  it('renders every stat card with its count', () => {
+  it('renders the agent summary', () => {
     render(<DashboardPage />)
+    expect(screen.getByText(AGENT_SUMMARY.headline)).toBeInTheDocument()
+  })
 
-    for (const stat of DASHBOARD_STATS) {
-      expect(screen.getByText(stat.label)).toBeInTheDocument()
+  it('renders every work item row', () => {
+    render(<DashboardPage />)
+    for (const item of TODAY_WORK_ITEMS) {
+      expect(screen.getByText(item.title)).toBeInTheDocument()
     }
   })
 
-  it('renders the task board preview cards', () => {
+  it('renders the upcoming timeline', () => {
     render(<DashboardPage />)
-
-    for (const task of TASK_BOARD_PREVIEW) {
-      expect(screen.getByText(task.title)).toBeInTheDocument()
+    for (const item of UPCOMING_TIMELINE) {
+      expect(screen.getByText(item)).toBeInTheDocument()
     }
-  })
-
-  it('renders the agent recommendation panel', () => {
-    render(<DashboardPage />)
-
-    expect(screen.getByText('FOWOCO Agent 추천')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '안내문 생성하기' })).toBeInTheDocument()
   })
 })

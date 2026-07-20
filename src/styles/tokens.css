@@ -23,13 +23,16 @@
   --fowoco-green-600: #2c8a5b;
 
   --status-critical: #d84a4a;
+  --status-warning: #d79222;
 
   --fowoco-spacing-4: 4px;
   --fowoco-spacing-8: 8px;
   --fowoco-spacing-12: 12px;
   --fowoco-spacing-16: 16px;
+  --fowoco-spacing-20: 20px;
   --fowoco-spacing-24: 24px;
 
+  --fowoco-radius-4: 4px;
   --fowoco-radius-6: 6px;
   --fowoco-radius-8: 8px;
   --fowoco-radius-999: 999px;

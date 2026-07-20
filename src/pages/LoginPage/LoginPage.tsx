@@ -1,17 +1,32 @@
 import { useState, type FormEvent } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button/Button'
+import { DEMO_ACCOUNT, useAuthStore } from '../../store/authStore'
 import { AGENT_TRACE_STEPS } from './agentTrace'
 import styles from './LoginPage.module.css'
 
 export function LoginPage() {
+  const navigate = useNavigate()
+  const login = useAuthStore((state) => state.login)
+  const [searchParams] = useSearchParams()
+  const justSignedUp = searchParams.get('signup') === 'success'
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
 
   const canSubmit = email.trim() !== '' && password.trim() !== ''
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    // TODO(backend): POST /api/auth/login { email, password } -> 세션/토큰 저장 후 /dashboard 이동
+    setError('')
+
+    const success = login(email, password)
+    if (success) {
+      navigate('/dashboard')
+    } else {
+      setError('이메일 또는 비밀번호가 올바르지 않습니다.')
+    }
   }
 
   function handleForgotPassword() {
@@ -58,6 +73,12 @@ export function LoginPage() {
             오늘 처리할 업무와 Agent가 준비한 다음 행동을 확인합니다.
           </p>
 
+          {justSignedUp && (
+            <p className={styles.successBanner}>
+              회원가입이 완료되었습니다. 로그인해 주세요.
+            </p>
+          )}
+
           <div className={styles.field}>
             <label className={styles.label} htmlFor="email">
               이메일
@@ -93,13 +114,24 @@ export function LoginPage() {
             </button>
           </div>
 
+          {error && <p className={styles.errorMessage}>{error}</p>}
+
           <Button type="submit" className={styles.submit} disabled={!canSubmit}>
             로그인
           </Button>
 
+          <p className={styles.signupPrompt}>
+            계정이 없으신가요?{' '}
+            <Link to="/signup" className={styles.signupLink}>
+              회원가입
+            </Link>
+          </p>
+
           <div className={styles.notice}>
             <p className={styles.noticeTitle}>데모 계정으로 시작합니다</p>
             <p className={styles.noticeBody}>
+              {DEMO_ACCOUNT.email} / {DEMO_ACCOUNT.password}
+              <br />
               실제 개인정보나 외부 발송 없이 대표 업무 흐름을 체험할 수 있습니다.
             </p>
           </div>

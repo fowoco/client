@@ -24,14 +24,6 @@
     flex: 0 0 auto;
     padding: 32px 24px;
   }
-
-  .kicker {
-    margin-top: 24px;
-  }
-
-  .trace {
-    margin-top: 24px;
-  }
 }
 
 .brand {
@@ -45,6 +37,12 @@
   font-size: 12px;
   font-weight: 500;
   color: var(--fowoco-teal-100);
+}
+
+@media (max-width: 860px) {
+  .kicker {
+    margin-top: 24px;
+  }
 }
 
 .headline {
@@ -61,33 +59,32 @@
   color: var(--fowoco-teal-100);
 }
 
-.trace {
+.benefits {
   margin-top: auto;
-  padding: 21px 23px;
-  border: 1px solid var(--brand-dark);
-  border-radius: var(--fowoco-radius-8);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.traceTitle {
-  margin: 0 0 12px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--fowoco-teal-100);
-}
-
-.traceStep {
-  margin: 0;
-  padding: 6px 0;
+.benefitRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
   font-size: 14px;
   color: var(--fowoco-teal-100);
 }
 
-.traceStepActive {
-  color: var(--fowoco-white);
+.benefitDot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  margin-top: 8px;
+  border-radius: 50%;
+  background: var(--brand-primary);
 }
 
 .disclaimer {
-  margin: 16px 0 0;
+  margin: 24px 0 0;
   font-size: 12px;
   color: var(--fowoco-teal-100);
 }
@@ -119,8 +116,20 @@
   color: var(--text-secondary);
 }
 
+.fieldRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 420px) {
+  .fieldRow {
+    grid-template-columns: 1fr;
+  }
+}
+
 .field {
-  margin-top: 24px;
+  margin-top: 20px;
 }
 
 .label {
@@ -141,16 +150,14 @@
   border-radius: var(--fowoco-radius-6);
 }
 
-.forgotPassword {
-  display: block;
-  margin-top: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--brand-primary);
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
+.inputError {
+  border-color: var(--fowoco-red-600);
+}
+
+.fieldError {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--fowoco-red-600);
 }
 
 .errorMessage {
@@ -163,53 +170,22 @@
   color: var(--fowoco-red-600);
 }
 
-.successBanner {
-  margin: 20px 0 0;
-  padding: 12px 16px;
-  background: var(--fowoco-green-50);
-  border-radius: var(--fowoco-radius-6);
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--fowoco-green-600);
-}
-
 .submit {
   width: 100%;
   height: 48px;
   margin-top: 28px;
 }
 
-.signupPrompt {
+.loginPrompt {
   margin: 16px 0 0;
   font-size: 13px;
   text-align: center;
   color: var(--text-secondary);
 }
 
-.signupLink {
+.loginLink {
   font-weight: 500;
   color: var(--brand-primary);
-}
-
-.notice {
-  margin-top: 20px;
-  padding: 18px 24px;
-  background: var(--surface-subtle);
-  border-radius: var(--fowoco-radius-8);
-}
-
-.noticeTitle {
-  margin: 0 0 8px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.noticeBody {
-  margin: 0;
-  font-size: 13px;
-  line-height: 20px;
-  color: var(--text-secondary);
 }
 
 .terms {

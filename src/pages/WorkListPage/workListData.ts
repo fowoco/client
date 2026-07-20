@@ -27,7 +27,7 @@ export const WORK_ITEMS: WorkListItem[] = [
   {
     id: 'WI-1',
     title: '응웬반A 체류연장 준비',
-    meta: 'D-12 · 승인 대기 · 체류 · 김민지',
+    meta: 'D-12 · 승인 대기 · 체류 · 김경민',
     nextAction: '다음 · 요청문 승인',
     urgency: 'warning',
   },

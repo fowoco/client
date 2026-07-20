@@ -1,4 +1,5 @@
 import { createBrowserRouter } from 'react-router-dom'
+import { RequireAuth } from './components/auth/RequireAuth'
 import { AppLayout } from './components/layout/AppLayout'
 import { CaseDetailPage } from './pages/CaseDetailPage/CaseDetailPage'
 import { CreateWorkPage } from './pages/CreateWorkPage/CreateWorkPage'
@@ -11,6 +12,7 @@ import { NotFoundPage } from './pages/NotFoundPage/NotFoundPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { ReviewWorkPage } from './pages/ReviewWorkPage/ReviewWorkPage'
 import { SettingsPage } from './pages/SettingsPage/SettingsPage'
+import { SignupPage } from './pages/SignupPage/SignupPage'
 import { WorkerListPage } from './pages/WorkerListPage/WorkerListPage'
 import { WorkListPage } from './pages/WorkListPage/WorkListPage'
 
@@ -18,35 +20,41 @@ const REPO = 'https://github.com/fowoco/client/issues'
 
 export const router = createBrowserRouter([
   { path: '/', element: <LoginPage />, errorElement: <NotFoundPage /> },
+  { path: '/signup', element: <SignupPage />, errorElement: <NotFoundPage /> },
   {
-    element: <AppLayout />,
+    element: <RequireAuth />,
     errorElement: <NotFoundPage />,
     children: [
-      { path: '/dashboard', element: <DashboardPage /> },
-      { path: '/workers', element: <WorkerListPage /> },
       {
-        path: '/workers/:workerId',
-        element: (
-          <PlaceholderPage title="근로자 상세 / 계약 및 체류 관리" issueUrl={`${REPO}/8`} />
-        ),
+        element: <AppLayout />,
+        children: [
+          { path: '/dashboard', element: <DashboardPage /> },
+          { path: '/workers', element: <WorkerListPage /> },
+          {
+            path: '/workers/:workerId',
+            element: (
+              <PlaceholderPage title="근로자 상세 / 계약 및 체류 관리" issueUrl={`${REPO}/8`} />
+            ),
+          },
+          {
+            path: '/documents',
+            element: <PlaceholderPage title="서류관리 / OCR" issueUrl={`${REPO}/1`} />,
+          },
+          { path: '/tasks', element: <WorkListPage /> },
+          { path: '/tasks/new', element: <CreateWorkPage /> },
+          { path: '/tasks/new/review', element: <ReviewWorkPage /> },
+          { path: '/tasks/:caseId', element: <CaseDetailPage /> },
+          {
+            path: '/agent',
+            element: <PlaceholderPage title="Agent 패널" issueUrl={`${REPO}/1`} />,
+          },
+          {
+            path: '/tickets',
+            element: <PlaceholderPage title="티켓 관리" issueUrl={`${REPO}/1`} />,
+          },
+          { path: '/settings', element: <SettingsPage /> },
+        ],
       },
-      {
-        path: '/documents',
-        element: <PlaceholderPage title="서류관리 / OCR" issueUrl={`${REPO}/1`} />,
-      },
-      { path: '/tasks', element: <WorkListPage /> },
-      { path: '/tasks/new', element: <CreateWorkPage /> },
-      { path: '/tasks/new/review', element: <ReviewWorkPage /> },
-      { path: '/tasks/:caseId', element: <CaseDetailPage /> },
-      {
-        path: '/agent',
-        element: <PlaceholderPage title="Agent 패널" issueUrl={`${REPO}/1`} />,
-      },
-      {
-        path: '/tickets',
-        element: <PlaceholderPage title="티켓 관리" issueUrl={`${REPO}/1`} />,
-      },
-      { path: '/settings', element: <SettingsPage /> },
     ],
   },
   { path: '/worker-portal', element: <LinkRequestPage /> },

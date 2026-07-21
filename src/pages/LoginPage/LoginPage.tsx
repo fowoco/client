@@ -39,9 +39,9 @@ export function LoginPage() {
         <p className={styles.brand}>FOWOCO</p>
         <p className={styles.kicker}>GUIDED AGENTIC OPERATIONS</p>
         <h1 className={styles.headline}>
-          복잡한 행정업무를
+          회사의 업무 방식을
           <br />
-          확인 가능한 다음 행동으로
+          FOWOCO에 등록하세요
         </h1>
         <p className={styles.subtext}>
           Agent가 기한·서류·승인 조건을 먼저 확인합니다.

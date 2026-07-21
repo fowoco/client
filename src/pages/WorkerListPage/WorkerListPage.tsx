@@ -25,6 +25,8 @@ const DEADLINE_OPTIONS = [
   { value: '90', label: '기한 · 90일' },
 ]
 
+const PRIORITY_COUNT = 5
+
 export function WorkerListPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -32,8 +34,11 @@ export function WorkerListPage() {
   const status = useAsyncDemoData(WORKERS.length === 0)
   const [query, setQuery] = useState('')
   const [deadlineFilter, setDeadlineFilter] = useState('90')
+  const [showAll, setShowAll] = useState(false)
 
-  const visibleWorkers = useMemo(() => {
+  const isDefaultView = query.trim() === '' && deadlineFilter === '90'
+
+  const filteredWorkers = useMemo(() => {
     const normalized = query.trim().toLowerCase()
     return WORKERS.filter((worker) => {
       const matchesQuery =
@@ -47,11 +52,15 @@ export function WorkerListPage() {
     })
   }, [query, deadlineFilter])
 
+  const visibleWorkers =
+    isDefaultView && !showAll ? filteredWorkers.slice(0, PRIORITY_COUNT) : filteredWorkers
+
   const selectedWorker = WORKERS.find((worker) => worker.id === workerId) ?? WORKERS[0]
   const selectedDeadlineTier = getUrgencyTier(selectedWorker.deadlineDays)
 
   function handleViewAllWorkers() {
-    // TODO(backend): GET /api/workers?page= -> 전체 근로자 페이지네이션
+    // TODO(backend): GET /api/workers?page= -> 실제 서버 페이지네이션으로 대체
+    setShowAll(true)
   }
 
   function handleOpenTask() {
@@ -64,7 +73,7 @@ export function WorkerListPage() {
 
   return (
     <div>
-      <h1 className={styles.headline}>체류·서류 확인이 필요한 근로자 {WORKERS.length}명</h1>
+      <h1 className={styles.headline}>체류·서류 확인이 필요한 근로자 {visibleWorkers.length}명</h1>
       <p className={styles.description}>
         기한과 진행 중인 업무를 먼저 보여주며, 개인정보는 필요한 범위에서만 확인합니다.
       </p>
@@ -152,9 +161,11 @@ export function WorkerListPage() {
               ))
             )}
 
-            <button type="button" className={styles.viewAll} onClick={handleViewAllWorkers}>
-              전체 근로자 보기 →
-            </button>
+            {isDefaultView && !showAll && (
+              <button type="button" className={styles.viewAll} onClick={handleViewAllWorkers}>
+                전체 근로자 보기 →
+              </button>
+            )}
           </div>
 
           <div className={styles.detailPanel}>

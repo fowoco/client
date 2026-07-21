@@ -26,6 +26,8 @@ const DUE_OPTIONS = [
   { value: '90', label: '마감 · 90일' },
 ]
 
+const PRIORITY_COUNT = 5
+
 export function WorkListPage() {
   const navigate = useNavigate()
   const status = useAsyncDemoData(WORK_ITEMS.length === 0)
@@ -33,8 +35,12 @@ export function WorkListPage() {
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [dueFilter, setDueFilter] = useState('30')
+  const [showAll, setShowAll] = useState(false)
 
-  const visibleItems = useMemo(() => {
+  const isDefaultView =
+    activeTab === 'all' && query.trim() === '' && statusFilter === 'all' && dueFilter === '30'
+
+  const filteredItems = useMemo(() => {
     const normalized = query.trim().toLowerCase()
     return WORK_ITEMS.filter((item) => {
       const matchesQuery = !normalized || item.title.toLowerCase().includes(normalized)
@@ -45,12 +51,16 @@ export function WorkListPage() {
     })
   }, [query, activeTab, statusFilter, dueFilter])
 
+  const visibleItems =
+    isDefaultView && !showAll ? filteredItems.slice(0, PRIORITY_COUNT) : filteredItems
+
   function handleAdvancedFilter() {
     // TODO(backend): GET /api/work-items/filters -> 고급 필터 옵션 목록
   }
 
   function handleViewAll() {
-    // TODO(backend): GET /api/work-items?tab=&page= -> 전체 업무 페이지네이션
+    // TODO(backend): GET /api/work-items?tab=&page= -> 실제 서버 페이지네이션으로 대체
+    setShowAll(true)
   }
 
   return (
@@ -164,11 +174,15 @@ export function WorkListPage() {
 
           <div className={styles.footer}>
             <span className={styles.footerText}>
-              {TOTAL_WORK_COUNT}개 중 우선 업무 {WORK_ITEMS.length}개 표시
+              {isDefaultView && !showAll
+                ? `${TOTAL_WORK_COUNT}개 중 우선 업무 ${visibleItems.length}개 표시`
+                : `${TOTAL_WORK_COUNT}개 중 ${visibleItems.length}개 표시`}
             </span>
-            <button type="button" className={styles.footerLink} onClick={handleViewAll}>
-              전체 업무 보기 →
-            </button>
+            {isDefaultView && !showAll && (
+              <button type="button" className={styles.footerLink} onClick={handleViewAll}>
+                전체 업무 보기 →
+              </button>
+            )}
           </div>
         </>
       )}

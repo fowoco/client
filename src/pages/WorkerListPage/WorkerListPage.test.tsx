@@ -18,14 +18,27 @@ function renderPage(demoState = 'success', initialPath = `/workers?demoState=${d
 }
 
 describe('WorkerListPage', () => {
-  it('renders every worker row and defaults to the first worker detail', () => {
+  it('renders the first 5 priority worker rows and defaults to the first worker detail', () => {
     renderPage()
+
+    for (const worker of WORKERS.slice(0, 5)) {
+      expect(screen.getAllByText(worker.name).length).toBeGreaterThan(0)
+    }
+    expect(screen.queryByText(WORKERS[5].name)).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: WORKERS[0].name })).toBeInTheDocument()
+    expect(screen.getByText(WORKERS[0].currentTasks[0].title)).toBeInTheDocument()
+  })
+
+  it('shows every worker after clicking "전체 근로자 보기"', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByRole('button', { name: '전체 근로자 보기 →' }))
 
     for (const worker of WORKERS) {
       expect(screen.getAllByText(worker.name).length).toBeGreaterThan(0)
     }
-    expect(screen.getByRole('heading', { name: WORKERS[0].name })).toBeInTheDocument()
-    expect(screen.getByText(WORKERS[0].currentTasks[0].title)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '전체 근로자 보기 →' })).not.toBeInTheDocument()
   })
 
   it('filters workers by search query', async () => {

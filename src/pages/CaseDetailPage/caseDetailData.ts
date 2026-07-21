@@ -70,3 +70,58 @@ export const ACTION_DOCK = {
   approveLabel: '승인 요청',
   footnote: '승인 전에는 근로자 전달과 완료 처리가 차단됩니다. Agent는 승인자가 될 수 없습니다.',
 }
+
+export interface CaseChecklistItem {
+  id: string
+  label: string
+  done: boolean
+}
+
+export const CASE_CHECKLIST: CaseChecklistItem[] = [
+  { id: 'chk-1', label: '여권 사본 확인', done: true },
+  { id: 'chk-2', label: '체류연장 신청서 서명', done: true },
+  { id: 'chk-3', label: '출입국 접수번호 입력', done: true },
+  { id: 'chk-4', label: '근로자 서명 확인', done: false },
+  { id: 'chk-5', label: '완료 증빙 첨부', done: false },
+]
+
+export type CaseDocumentStatus = 'missing' | 'pending' | 'done'
+
+export interface CaseDocument {
+  id: string
+  name: string
+  status: CaseDocumentStatus
+  updatedAt: string
+}
+
+export const CASE_DOCUMENTS: CaseDocument[] = [
+  { id: 'doc-1', name: '여권 사본', status: 'done', updatedAt: '07.18' },
+  { id: 'doc-2', name: '체류연장 신청서', status: 'pending', updatedAt: '07.19' },
+  { id: 'doc-3', name: '출입국 접수증', status: 'missing', updatedAt: '미제출' },
+]
+
+export interface CaseCommunicationEntry {
+  id: string
+  time: string
+  actor: string
+  message: string
+}
+
+export const CASE_COMMUNICATION: CaseCommunicationEntry[] = [
+  { id: 'comm-1', time: '오늘 09:12', actor: 'Agent', message: '여권 사본 요청문 초안을 준비했습니다.' },
+  { id: 'comm-2', time: '어제 17:40', actor: '김경민', message: '근로자에게 서류 제출 안내 문자를 발송했습니다.' },
+  { id: 'comm-3', time: '어제 09:05', actor: '응웬반A', message: '서류를 준비 중이라고 답장했습니다.' },
+]
+
+export interface CaseActivityEntry {
+  date: string
+  label: string
+  highlighted: boolean
+}
+
+export const CASE_ACTIVITY: CaseActivityEntry[] = [
+  { date: '07.20', label: 'Agent가 체류연장 요청문 초안을 작성함', highlighted: true },
+  { date: '07.19', label: 'HR이 근로자 안내문 검토를 요청함', highlighted: false },
+  { date: '07.18', label: '보유서류와 필요서류 비교 완료', highlighted: false },
+  { date: '07.15', label: '체류만료일과 대상 확인', highlighted: false },
+]

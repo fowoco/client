@@ -1,6 +1,7 @@
 import { createBrowserRouter } from 'react-router-dom'
 import { RequireAuth } from './components/auth/RequireAuth'
 import { AppLayout } from './components/layout/AppLayout'
+import { AgentLogPage } from './pages/AgentLogPage/AgentLogPage'
 import { CaseDetailPage } from './pages/CaseDetailPage/CaseDetailPage'
 import { CreateWorkPage } from './pages/CreateWorkPage/CreateWorkPage'
 import { DashboardPage } from './pages/DashboardPage/DashboardPage'
@@ -37,10 +38,7 @@ export const router = createBrowserRouter([
           { path: '/tasks/new', element: <CreateWorkPage /> },
           { path: '/tasks/new/review', element: <ReviewWorkPage /> },
           { path: '/tasks/:caseId', element: <CaseDetailPage /> },
-          {
-            path: '/agent',
-            element: <PlaceholderPage title="Agent 패널" issueUrl={`${REPO}/1`} />,
-          },
+          { path: '/agent', element: <AgentLogPage /> },
           {
             path: '/tickets',
             element: <PlaceholderPage title="티켓 관리" issueUrl={`${REPO}/1`} />,

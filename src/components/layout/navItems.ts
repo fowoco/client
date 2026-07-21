@@ -8,5 +8,6 @@ export const NAV_ITEMS: NavItem[] = [
   { label: '업무함', to: '/tasks' },
   { label: '근로자', to: '/workers' },
   { label: '서류', to: '/documents' },
+  { label: 'Agent', to: '/agent' },
   { label: '설정', to: '/settings' },
 ]

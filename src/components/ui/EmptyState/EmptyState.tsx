@@ -6,7 +6,7 @@ export interface EmptyStateProps {
   kind?: EmptyStateKind
   title: string
   body: string
-  actionLabel: string
+  actionLabel?: string
   onAction?: () => void
 }
 
@@ -16,13 +16,15 @@ export function EmptyState({ kind = 'empty', title, body, actionLabel, onAction 
     <div className={styles.state}>
       <p className={`${styles.title} ${isError ? styles.titleError : ''}`}>{title}</p>
       <p className={styles.body}>{body}</p>
-      <button
-        type="button"
-        className={`${styles.action} ${isError ? styles.actionError : ''}`}
-        onClick={onAction}
-      >
-        {actionLabel}
-      </button>
+      {actionLabel && (
+        <button
+          type="button"
+          className={`${styles.action} ${isError ? styles.actionError : ''}`}
+          onClick={onAction}
+        >
+          {actionLabel}
+        </button>
+      )}
     </div>
   )
 }

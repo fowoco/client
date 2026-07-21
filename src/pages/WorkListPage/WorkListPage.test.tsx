@@ -5,9 +5,9 @@ import { describe, expect, it } from 'vitest'
 import { WorkListPage } from './WorkListPage'
 import { WORK_ITEMS, WORK_TABS } from './workListData'
 
-function renderPage() {
+function renderPage(demoState = 'success') {
   render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[`/tasks?demoState=${demoState}`]}>
       <WorkListPage />
     </MemoryRouter>,
   )
@@ -35,6 +35,15 @@ describe('WorkListPage', () => {
     expect(screen.queryByText('응웬반A 체류연장 준비')).not.toBeInTheDocument()
   })
 
+  it('shows an empty state when a search has no matches', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.type(screen.getByLabelText('업무 검색'), '존재하지않는검색어')
+
+    expect(screen.getByText('검색 결과가 없습니다')).toBeInTheDocument()
+  })
+
   it('switches the active tab on click', async () => {
     const user = userEvent.setup()
     renderPage()
@@ -43,5 +52,15 @@ describe('WorkListPage', () => {
     await user.click(mineTab)
 
     expect(mineTab).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('shows a loading state', () => {
+    renderPage('loading')
+    expect(screen.getByText('업무 목록을 불러오는 중입니다')).toBeInTheDocument()
+  })
+
+  it('shows an error state with a retry action', () => {
+    renderPage('error')
+    expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument()
   })
 })

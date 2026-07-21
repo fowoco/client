@@ -50,6 +50,14 @@
   color: var(--brand-primary);
 }
 
+.stateWrap {
+  margin-top: 24px;
+}
+
+.searchEmpty {
+  padding: 16px;
+}
+
 .workspace {
   display: grid;
   grid-template-columns: 520px 1fr;

@@ -26,6 +26,12 @@
   font-size: 13px;
   color: var(--text-secondary);
   cursor: pointer;
+  transition: color var(--fowoco-motion-fast) var(--fowoco-easing-standard),
+    border-color var(--fowoco-motion-fast) var(--fowoco-easing-standard);
+}
+
+.tab:hover {
+  color: var(--text-primary);
 }
 
 .tabActive {

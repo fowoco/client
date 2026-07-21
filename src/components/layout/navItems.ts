@@ -9,5 +9,6 @@ export const NAV_ITEMS: NavItem[] = [
   { label: '근로자', to: '/workers' },
   { label: '서류', to: '/documents' },
   { label: 'Agent', to: '/agent' },
+  { label: '티켓', to: '/tickets' },
   { label: '설정', to: '/settings' },
 ]

@@ -1,0 +1,64 @@
+.section {
+  margin-bottom: 20px;
+}
+
+.section:last-child {
+  margin-bottom: 0;
+}
+
+.sectionTitle {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.flowList {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.flowItem {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.faqItem {
+  padding: 10px 0;
+  border-top: 1px solid var(--border-default);
+}
+
+.faqItem:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.faqQuestion {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.faqAnswer {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--text-secondary);
+}
+
+.demoAccount {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--brand-primary);
+}
+
+.demoNote {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}

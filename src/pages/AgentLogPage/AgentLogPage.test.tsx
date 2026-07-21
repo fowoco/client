@@ -37,6 +37,18 @@ describe('AgentLogPage', () => {
     expect(screen.queryByText(AGENT_LOGS[1].description)).not.toBeInTheDocument()
   })
 
+  it('filters logs by period', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    const trigger = screen.getByRole('button', { name: '기간 필터' })
+    await user.click(trigger)
+    await user.click(screen.getByRole('option', { name: '기간 · 오늘' }))
+
+    expect(screen.getByText(AGENT_LOGS[0].description)).toBeInTheDocument()
+    expect(screen.queryByText(AGENT_LOGS[4].description)).not.toBeInTheDocument()
+  })
+
   it('navigates to the related work item on click', async () => {
     const user = userEvent.setup()
     renderPage()

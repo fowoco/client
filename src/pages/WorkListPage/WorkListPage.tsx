@@ -1,11 +1,14 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { WorkItemRow } from '../../components/ui/WorkItemRow/WorkItemRow'
+import { useAsyncDemoData } from '../../hooks/useAsyncDemoData'
 import styles from './WorkListPage.module.css'
 import { TOTAL_WORK_COUNT, WORK_ITEMS, WORK_TABS } from './workListData'
 
 export function WorkListPage() {
   const navigate = useNavigate()
+  const status = useAsyncDemoData(WORK_ITEMS.length === 0)
   const [activeTab, setActiveTab] = useState(WORK_TABS[0].id)
   const [query, setQuery] = useState('')
 
@@ -64,32 +67,72 @@ export function WorkListPage() {
         </button>
       </div>
 
-      <div className={styles.columnHeader}>
-        <span>업무</span>
-        <span>다음 행동</span>
-      </div>
+      {status === 'loading' && (
+        <div className={styles.stateWrap}>
+          <EmptyState kind="loading" title="업무 목록을 불러오는 중입니다" body="잠시만 기다려 주세요." />
+        </div>
+      )}
 
-      <div className={styles.list}>
-        {visibleItems.map((item) => (
-          <WorkItemRow
-            key={item.id}
-            title={item.title}
-            meta={item.meta}
-            nextAction={item.nextAction}
-            urgency={item.urgency}
-            onClick={() => navigate(`/tasks/${item.id}`)}
+      {status === 'error' && (
+        <div className={styles.stateWrap}>
+          <EmptyState
+            kind="error"
+            title="업무 목록을 불러오지 못했습니다"
+            body="네트워크 상태를 확인한 뒤 다시 시도해 주세요."
+            actionLabel="다시 시도"
+            onAction={() => navigate('/tasks', { replace: true })}
           />
-        ))}
-      </div>
+        </div>
+      )}
 
-      <div className={styles.footer}>
-        <span className={styles.footerText}>
-          {TOTAL_WORK_COUNT}개 중 우선 업무 {WORK_ITEMS.length}개 표시
-        </span>
-        <button type="button" className={styles.footerLink} onClick={handleViewAll}>
-          전체 업무 보기 →
-        </button>
-      </div>
+      {status === 'empty' && (
+        <div className={styles.stateWrap}>
+          <EmptyState
+            kind="empty"
+            title="등록된 업무가 없습니다"
+            body="새 요청을 입력하거나 파일을 가져와 업무를 만들어 보세요."
+            actionLabel="업무 만들기"
+            onAction={() => navigate('/tasks/new')}
+          />
+        </div>
+      )}
+
+      {status === 'success' && (
+        <>
+          <div className={styles.columnHeader}>
+            <span>업무</span>
+            <span>다음 행동</span>
+          </div>
+
+          {visibleItems.length === 0 ? (
+            <div className={styles.stateWrap}>
+              <EmptyState kind="empty" title="검색 결과가 없습니다" body="다른 검색어로 다시 시도해 보세요." />
+            </div>
+          ) : (
+            <div className={styles.list}>
+              {visibleItems.map((item) => (
+                <WorkItemRow
+                  key={item.id}
+                  title={item.title}
+                  meta={item.meta}
+                  nextAction={item.nextAction}
+                  urgency={item.urgency}
+                  onClick={() => navigate(`/tasks/${item.id}`)}
+                />
+              ))}
+            </div>
+          )}
+
+          <div className={styles.footer}>
+            <span className={styles.footerText}>
+              {TOTAL_WORK_COUNT}개 중 우선 업무 {WORK_ITEMS.length}개 표시
+            </span>
+            <button type="button" className={styles.footerLink} onClick={handleViewAll}>
+              전체 업무 보기 →
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 }

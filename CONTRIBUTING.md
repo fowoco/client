@@ -21,5 +21,6 @@
 - ESLint + Prettier, Vitest로 정상·오류·경계 사례 검증
 - 컴포넌트는 단일 책임, 과도하게 커지면 분리 제안
 - 백엔드 API가 아직 없는 화면은 목데이터로 구현하고, 연동 지점에 `// TODO(backend): <메서드> <경로> -> <설명>` 주석을 남긴다
+- 목록/현황성 데이터를 보여주는 화면은 `useAsyncDemoData`(`src/hooks/useAsyncDemoData.ts`)로 loading·empty·error 상태를 먼저 표현하고, `EmptyState` 컴포넌트로 렌더링한다. URL에 `?demoState=loading|empty|error`를 붙이면 해당 상태를 강제로 미리볼 수 있다. 백엔드 연동 시 이 훅을 React Query의 `useQuery`로 교체한다
 
 자세한 배경은 [`docs/FRONTEND_STACK_DECISION.md`](docs/FRONTEND_STACK_DECISION.md)와 [`docs/SCREEN_CATALOG.md`](docs/SCREEN_CATALOG.md)를 참고합니다.

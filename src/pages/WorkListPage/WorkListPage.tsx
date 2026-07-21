@@ -4,6 +4,7 @@ import { Dropdown } from '../../components/ui/Dropdown/Dropdown'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { WorkItemRow, type WorkItemUrgency } from '../../components/ui/WorkItemRow/WorkItemRow'
 import { useAsyncDemoData } from '../../hooks/useAsyncDemoData'
+import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { getUrgencyTier } from '../../utils/urgency'
 import styles from './WorkListPage.module.css'
 import { TOTAL_WORK_COUNT, WORK_ITEMS, WORK_TABS, type WorkTabId } from './workListData'
@@ -36,12 +37,16 @@ export function WorkListPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [dueFilter, setDueFilter] = useState('30')
   const [showAll, setShowAll] = useState(false)
+  const debouncedQuery = useDebouncedValue(query)
 
   const isDefaultView =
-    activeTab === 'all' && query.trim() === '' && statusFilter === 'all' && dueFilter === '30'
+    activeTab === 'all' &&
+    debouncedQuery.trim() === '' &&
+    statusFilter === 'all' &&
+    dueFilter === '30'
 
   const filteredItems = useMemo(() => {
-    const normalized = query.trim().toLowerCase()
+    const normalized = debouncedQuery.trim().toLowerCase()
     return WORK_ITEMS.filter((item) => {
       const matchesQuery = !normalized || item.title.toLowerCase().includes(normalized)
       const matchesTab = activeTab === 'all' || item.tabIds.includes(activeTab as WorkTabId)
@@ -49,7 +54,7 @@ export function WorkListPage() {
       const matchesDue = item.dueDays <= Number(dueFilter)
       return matchesQuery && matchesTab && matchesStatus && matchesDue
     })
-  }, [query, activeTab, statusFilter, dueFilter])
+  }, [debouncedQuery, activeTab, statusFilter, dueFilter])
 
   const visibleItems =
     isDefaultView && !showAll ? filteredItems.slice(0, PRIORITY_COUNT) : filteredItems

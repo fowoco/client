@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
@@ -31,8 +31,10 @@ describe('DocumentListPage', () => {
 
     await user.type(screen.getByLabelText('서류 검색'), '표준근로계약서')
 
+    await waitFor(() => {
+      expect(screen.queryByText('수라즈C')).not.toBeInTheDocument()
+    })
     expect(screen.getByText('쩐티B')).toBeInTheDocument()
-    expect(screen.queryByText('수라즈C')).not.toBeInTheDocument()
   })
 
   it('filters documents by tab', async () => {
@@ -51,7 +53,7 @@ describe('DocumentListPage', () => {
 
     await user.type(screen.getByLabelText('서류 검색'), '존재하지않는검색어')
 
-    expect(screen.getByText('검색 결과가 없습니다')).toBeInTheDocument()
+    expect(await screen.findByText('검색 결과가 없습니다')).toBeInTheDocument()
   })
 
   it('shows a loading state', () => {

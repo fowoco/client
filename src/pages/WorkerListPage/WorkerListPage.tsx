@@ -4,6 +4,7 @@ import { Dropdown } from '../../components/ui/Dropdown/Dropdown'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import { useAsyncDemoData } from '../../hooks/useAsyncDemoData'
+import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { getUrgencyTier, URGENCY_TONE } from '../../utils/urgency'
 import styles from './WorkerListPage.module.css'
 import { TOTAL_WORKER_COUNT, WORKERS } from './workerListData'
@@ -35,11 +36,12 @@ export function WorkerListPage() {
   const [query, setQuery] = useState('')
   const [deadlineFilter, setDeadlineFilter] = useState('90')
   const [showAll, setShowAll] = useState(false)
+  const debouncedQuery = useDebouncedValue(query)
 
-  const isDefaultView = query.trim() === '' && deadlineFilter === '90'
+  const isDefaultView = debouncedQuery.trim() === '' && deadlineFilter === '90'
 
   const filteredWorkers = useMemo(() => {
-    const normalized = query.trim().toLowerCase()
+    const normalized = debouncedQuery.trim().toLowerCase()
     return WORKERS.filter((worker) => {
       const matchesQuery =
         !normalized ||
@@ -50,7 +52,7 @@ export function WorkerListPage() {
         worker.deadlineDays === null || worker.deadlineDays <= Number(deadlineFilter)
       return matchesQuery && matchesDeadline
     })
-  }, [query, deadlineFilter])
+  }, [debouncedQuery, deadlineFilter])
 
   const visibleWorkers =
     isDefaultView && !showAll ? filteredWorkers.slice(0, PRIORITY_COUNT) : filteredWorkers

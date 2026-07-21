@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
@@ -47,8 +47,10 @@ describe('WorkerListPage', () => {
 
     await user.type(screen.getByLabelText('근로자 검색'), '네팔')
 
+    await waitFor(() => {
+      expect(screen.queryByText('쩐티B')).not.toBeInTheDocument()
+    })
     expect(screen.getByText('수라즈C')).toBeInTheDocument()
-    expect(screen.queryByText('쩐티B')).not.toBeInTheDocument()
   })
 
   it('shows an empty state when a search has no matches', async () => {
@@ -57,7 +59,7 @@ describe('WorkerListPage', () => {
 
     await user.type(screen.getByLabelText('근로자 검색'), '존재하지않는이름')
 
-    expect(screen.getByText('표시할 근로자가 없습니다')).toBeInTheDocument()
+    expect(await screen.findByText('표시할 근로자가 없습니다')).toBeInTheDocument()
   })
 
   it('switches the detail panel when a different worker is selected', async () => {

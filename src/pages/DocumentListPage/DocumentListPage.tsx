@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import { useAsyncDemoData } from '../../hooks/useAsyncDemoData'
+import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import styles from './DocumentListPage.module.css'
 import {
   DOCUMENT_STATUS_LABEL,
@@ -23,10 +24,11 @@ export function DocumentListPage() {
   const status = useAsyncDemoData(DOCUMENTS.length === 0)
   const [activeTab, setActiveTab] = useState(DOCUMENT_TABS[0].id)
   const [query, setQuery] = useState('')
+  const debouncedQuery = useDebouncedValue(query)
 
   const visibleDocuments = useMemo(() => {
     const tabStatus = TAB_STATUS[activeTab]
-    const normalized = query.trim().toLowerCase()
+    const normalized = debouncedQuery.trim().toLowerCase()
 
     return DOCUMENTS.filter((document) => {
       const matchesTab = tabStatus === null || document.status === tabStatus
@@ -36,7 +38,7 @@ export function DocumentListPage() {
         document.docType.toLowerCase().includes(normalized)
       return matchesTab && matchesQuery
     })
-  }, [activeTab, query])
+  }, [activeTab, debouncedQuery])
 
   function handleReviewDocument() {
     // TODO(backend): GET /api/documents/:id -> 서류 상세 확인 화면으로 이동

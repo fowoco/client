@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
@@ -45,8 +45,10 @@ describe('WorkListPage', () => {
 
     await user.type(screen.getByLabelText('업무 검색'), '기숙사')
 
+    await waitFor(() => {
+      expect(screen.queryByText('응웬반A 체류연장 준비')).not.toBeInTheDocument()
+    })
     expect(screen.getByText('월간 기숙사 점검 결과 정리')).toBeInTheDocument()
-    expect(screen.queryByText('응웬반A 체류연장 준비')).not.toBeInTheDocument()
   })
 
   it('shows an empty state when a search has no matches', async () => {
@@ -55,7 +57,7 @@ describe('WorkListPage', () => {
 
     await user.type(screen.getByLabelText('업무 검색'), '존재하지않는검색어')
 
-    expect(screen.getByText('표시할 업무가 없습니다')).toBeInTheDocument()
+    expect(await screen.findByText('표시할 업무가 없습니다')).toBeInTheDocument()
   })
 
   it('filters work items when a different tab is selected', async () => {

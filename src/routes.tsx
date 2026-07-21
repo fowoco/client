@@ -4,6 +4,7 @@ import { AppLayout } from './components/layout/AppLayout'
 import { CaseDetailPage } from './pages/CaseDetailPage/CaseDetailPage'
 import { CreateWorkPage } from './pages/CreateWorkPage/CreateWorkPage'
 import { DashboardPage } from './pages/DashboardPage/DashboardPage'
+import { DocumentListPage } from './pages/DocumentListPage/DocumentListPage'
 import { LinkExpiredPage } from './pages/LinkExpiredPage/LinkExpiredPage'
 import { LinkRequestPage } from './pages/LinkRequestPage/LinkRequestPage'
 import { LinkUploadPage } from './pages/LinkUploadPage/LinkUploadPage'
@@ -31,10 +32,7 @@ export const router = createBrowserRouter([
           { path: '/dashboard', element: <DashboardPage /> },
           { path: '/workers', element: <WorkerListPage /> },
           { path: '/workers/:workerId', element: <WorkerListPage /> },
-          {
-            path: '/documents',
-            element: <PlaceholderPage title="서류관리 / OCR" issueUrl={`${REPO}/1`} />,
-          },
+          { path: '/documents', element: <DocumentListPage /> },
           { path: '/tasks', element: <WorkListPage /> },
           { path: '/tasks/new', element: <CreateWorkPage /> },
           { path: '/tasks/new/review', element: <ReviewWorkPage /> },

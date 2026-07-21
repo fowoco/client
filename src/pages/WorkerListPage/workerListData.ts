@@ -1,4 +1,5 @@
 // TODO(backend): GET /api/workers?deadline=90d&q= -> WORKERS 대체
+// 백엔드 연동 전까지는 deadlineDays 기준으로 클라이언트에서 직접 필터링한다.
 // TODO(backend): GET /api/workers/:id -> 선택된 근로자의 currentTasks/timeline 대체
 
 export interface WorkerTask {
@@ -22,6 +23,8 @@ export interface Worker {
   phone: string
   deadlineLabel: string
   deadlineHighlighted: boolean
+  /** null이면 임박한 기한이 없어 기한 필터 값과 무관하게 항상 표시한다. */
+  deadlineDays: number | null
   note: string
   currentTasks: WorkerTask[]
   timeline: WorkerTimelineEntry[]
@@ -37,6 +40,7 @@ export const WORKERS: Worker[] = [
     phone: '010-****-3182',
     deadlineLabel: 'D-12 체류',
     deadlineHighlighted: true,
+    deadlineDays: 12,
     note: '진행 업무 2건',
     currentTasks: [
       { title: '체류연장 준비', detail: '승인 대기 · D-12', linkTone: 'warning' },
@@ -58,6 +62,7 @@ export const WORKERS: Worker[] = [
     phone: '010-****-2091',
     deadlineLabel: 'D-21 서류',
     deadlineHighlighted: true,
+    deadlineDays: 21,
     note: '서류 누락 1건',
     currentTasks: [{ title: '외국인등록증 사본 제출 요청', detail: '오늘 · 근로자 응답 대기', linkTone: 'warning' }],
     timeline: [{ date: '07.19', label: '서류 미제출 안내 발송', highlighted: true }],
@@ -71,6 +76,7 @@ export const WORKERS: Worker[] = [
     phone: '010-****-7745',
     deadlineLabel: 'D-35 체류',
     deadlineHighlighted: true,
+    deadlineDays: 35,
     note: '응답 대기 1건',
     currentTasks: [{ title: '체류연장 안내 응답 대기', detail: '오늘 · 근로자 응답 대기', linkTone: 'warning' }],
     timeline: [{ date: '07.15', label: '체류연장 안내 발송', highlighted: true }],
@@ -84,6 +90,7 @@ export const WORKERS: Worker[] = [
     phone: '010-****-5510',
     deadlineLabel: 'D-62 체류',
     deadlineHighlighted: true,
+    deadlineDays: 62,
     note: '진행 업무 없음',
     currentTasks: [],
     timeline: [{ date: '06.28', label: '입사 서류 확인 완료', highlighted: false }],
@@ -97,6 +104,7 @@ export const WORKERS: Worker[] = [
     phone: '010-****-6623',
     deadlineLabel: '정상',
     deadlineHighlighted: false,
+    deadlineDays: null,
     note: '교육 일정 1건',
     currentTasks: [{ title: '신규 교육 일정 확정', detail: 'D-4 · 담당자 미배정', linkTone: 'warning' }],
     timeline: [{ date: '07.10', label: '교육 일정 등록', highlighted: false }],

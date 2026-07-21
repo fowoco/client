@@ -113,23 +113,6 @@
   color: var(--status-critical);
 }
 
-.summaryRow {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 16px;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.summaryValue {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.summaryValueWarning {
-  color: var(--status-warning);
-}
 
 .membersCard {
   margin-top: 16px;

@@ -56,16 +56,6 @@
   color: var(--text-secondary);
 }
 
-.analysisStatus {
-  flex-shrink: 0;
-  padding: 9px 20px;
-  background: var(--fowoco-amber-50);
-  border-radius: var(--fowoco-radius-999);
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--fowoco-amber-600);
-}
-
 .workspace {
   display: grid;
   grid-template-columns: 1fr 384px;
@@ -221,23 +211,6 @@
   font-size: 20px;
   font-weight: 700;
   line-height: 30px;
-  color: var(--text-primary);
-}
-
-.draftRow {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 14px;
-  font-size: 12px;
-}
-
-.draftRowLabel {
-  color: var(--text-secondary);
-}
-
-.draftRowValue {
-  font-size: 13px;
-  font-weight: 500;
   color: var(--text-primary);
 }
 

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
+import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import { useAsyncDemoData } from '../../hooks/useAsyncDemoData'
 import styles from './WorkerListPage.module.css'
 import { TOTAL_WORKER_COUNT, WORKERS } from './workerListData'
@@ -131,7 +132,7 @@ export function WorkerListPage() {
             <div className={styles.detailHeader}>
               <h2 className={styles.detailName}>{selectedWorker.name}</h2>
               {selectedWorker.deadlineHighlighted && (
-                <span className={styles.visaBadge}>{selectedWorker.deadlineLabel}</span>
+                <StatusLabel tone="warning">{selectedWorker.deadlineLabel}</StatusLabel>
               )}
             </div>
             <p className={styles.detailMeta}>

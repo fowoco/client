@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button/Button'
+import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
+import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import styles from './ReviewWorkPage.module.css'
 import { MISSING_INFO, PREPARED_DRAFT, UNDERSTOOD_REQUEST } from './reviewWorkData'
 
@@ -52,7 +54,7 @@ export function ReviewWorkPage() {
             확인이 필요한 정보 1개를 입력하면 실행 가능한 업무 초안이 완성됩니다.
           </p>
         </div>
-        <span className={styles.analysisStatus}>확인 필요 · 1</span>
+        <StatusLabel tone="warning">확인 필요 · 1</StatusLabel>
       </div>
 
       <div className={styles.workspace}>
@@ -130,10 +132,7 @@ export function ReviewWorkPage() {
           </p>
 
           {PREPARED_DRAFT.rows.map((row) => (
-            <div key={row.label} className={styles.draftRow}>
-              <span className={styles.draftRowLabel}>{row.label}</span>
-              <span className={styles.draftRowValue}>{row.value}</span>
-            </div>
+            <DetailRow key={row.label} label={row.label} value={row.value} />
           ))}
 
           <button type="button" className={styles.draftLink} onClick={handleEditDraft}>

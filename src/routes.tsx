@@ -11,14 +11,12 @@ import { LinkRequestPage } from './pages/LinkRequestPage/LinkRequestPage'
 import { LinkUploadPage } from './pages/LinkUploadPage/LinkUploadPage'
 import { LoginPage } from './pages/LoginPage/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage/NotFoundPage'
-import { PlaceholderPage } from './pages/PlaceholderPage'
 import { ReviewWorkPage } from './pages/ReviewWorkPage/ReviewWorkPage'
 import { SettingsPage } from './pages/SettingsPage/SettingsPage'
 import { SignupPage } from './pages/SignupPage/SignupPage'
+import { TicketListPage } from './pages/TicketListPage/TicketListPage'
 import { WorkerListPage } from './pages/WorkerListPage/WorkerListPage'
 import { WorkListPage } from './pages/WorkListPage/WorkListPage'
-
-const REPO = 'https://github.com/fowoco/client/issues'
 
 export const router = createBrowserRouter([
   { path: '/', element: <LoginPage />, errorElement: <NotFoundPage /> },
@@ -39,10 +37,7 @@ export const router = createBrowserRouter([
           { path: '/tasks/new/review', element: <ReviewWorkPage /> },
           { path: '/tasks/:caseId', element: <CaseDetailPage /> },
           { path: '/agent', element: <AgentLogPage /> },
-          {
-            path: '/tickets',
-            element: <PlaceholderPage title="티켓 관리" issueUrl={`${REPO}/1`} />,
-          },
+          { path: '/tickets', element: <TicketListPage /> },
           { path: '/settings', element: <SettingsPage /> },
         ],
       },

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
 import styles from './SettingsPage.module.css'
 import {
   APPROVAL_POLICY,
@@ -73,16 +74,7 @@ export function SettingsPage() {
         <div className={styles.card}>
           <h2 className={styles.cardTitle}>{POLICY_SUMMARY.title}</h2>
           {POLICY_SUMMARY.rows.map((row) => (
-            <div key={row.label} className={styles.summaryRow}>
-              <span>{row.label}</span>
-              <span
-                className={`${styles.summaryValue} ${
-                  row.tone === 'warning' ? styles.summaryValueWarning : ''
-                }`}
-              >
-                {row.value}
-              </span>
-            </div>
+            <DetailRow key={row.label} label={row.label} value={row.value} tone={row.tone} />
           ))}
         </div>
       </div>

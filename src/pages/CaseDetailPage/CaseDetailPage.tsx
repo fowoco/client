@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AgentSummary } from '../../components/ui/AgentSummary/AgentSummary'
 import { Button } from '../../components/ui/Button/Button'
+import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
+import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import styles from './CaseDetailPage.module.css'
 import {
   ACTION_DOCK,
@@ -26,11 +28,6 @@ const STEP_STATUS_CLASS: Record<StepStatus, string> = {
   pending: styles.stepStatusPending,
   locked: styles.stepStatusLocked,
   waiting: styles.stepStatusWaiting,
-}
-
-const GATE_TONE_CLASS = {
-  warning: styles.gateValueWarning,
-  critical: styles.gateValueCritical,
 }
 
 export function CaseDetailPage() {
@@ -65,8 +62,8 @@ export function CaseDetailPage() {
 
       <div className={styles.headerRow}>
         <h1 className={styles.title}>{CASE_HEADER.title}</h1>
-        <span className={`${styles.badge} ${styles.badgeWarning}`}>{CASE_HEADER.badges[0]}</span>
-        <span className={`${styles.badge} ${styles.badgeInfo}`}>{CASE_HEADER.badges[1]}</span>
+        <StatusLabel tone="warning">{CASE_HEADER.badges[0]}</StatusLabel>
+        <StatusLabel tone="info">{CASE_HEADER.badges[1]}</StatusLabel>
       </div>
       <p className={styles.meta}>{CASE_HEADER.meta}</p>
 
@@ -149,12 +146,7 @@ export function CaseDetailPage() {
           <p className={styles.gatesDescription}>{COMPLETION_GATES.description}</p>
 
           {COMPLETION_GATES.rows.map((row) => (
-            <div key={row.label} className={styles.gateRow}>
-              <span>{row.label}</span>
-              <span className={`${styles.gateValue} ${GATE_TONE_CLASS[row.tone]}`}>
-                {row.value}
-              </span>
-            </div>
+            <DetailRow key={row.label} label={row.label} value={row.value} tone={row.tone} />
           ))}
 
           <p className={styles.gateBlocked}>{COMPLETION_GATES.blocked}</p>

@@ -169,15 +169,6 @@
   color: var(--text-primary);
 }
 
-.visaBadge {
-  padding: 6px 16px;
-  background: var(--fowoco-amber-50);
-  border-radius: var(--fowoco-radius-999);
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--fowoco-amber-600);
-}
-
 .detailMeta {
   margin: 12px 0 0;
   font-size: 13px;

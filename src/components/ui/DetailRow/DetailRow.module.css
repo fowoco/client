@@ -1,0 +1,36 @@
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--fowoco-spacing-16);
+  margin-bottom: var(--fowoco-spacing-16);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.row:last-child {
+  margin-bottom: 0;
+}
+
+.label {
+  flex-shrink: 0;
+}
+
+.value {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.valueWarning {
+  color: var(--status-warning);
+}
+
+.valueCritical {
+  color: var(--status-critical);
+}
+
+.valueSuccess {
+  color: var(--fowoco-green-600);
+}

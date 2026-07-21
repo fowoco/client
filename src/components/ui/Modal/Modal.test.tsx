@@ -1,7 +1,22 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { Modal } from './Modal'
+
+function TriggerAndModal() {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)}>
+        열기
+      </button>
+      <Modal open={open} onClose={() => setOpen(false)} title="테스트">
+        내용
+      </Modal>
+    </>
+  )
+}
 
 describe('Modal', () => {
   it('renders nothing when closed', () => {
@@ -74,5 +89,18 @@ describe('Modal', () => {
 
     await user.click(screen.getByText('내용'))
     expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('restores focus to the trigger element after closing', async () => {
+    const user = userEvent.setup()
+    render(<TriggerAndModal />)
+
+    const trigger = screen.getByRole('button', { name: '열기' })
+    await user.click(trigger)
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '닫기' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
   })
 })

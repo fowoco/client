@@ -50,12 +50,14 @@ export function SettingsPage() {
       </p>
 
       <div className={styles.tabs} role="tablist" aria-label="설정 탭">
-        {SETTINGS_TABS.map((tab) => (
+        {SETTINGS_TABS.map((tab, index) => (
           <button
             key={tab}
+            id={`settings-tab-${index}`}
             type="button"
             role="tab"
             aria-selected={activeTab === tab}
+            aria-controls={`settings-panel-${index}`}
             className={`${styles.tab} ${activeTab === tab ? styles.tabActive : ''}`}
             onClick={() => setActiveTab(tab)}
           >
@@ -65,7 +67,7 @@ export function SettingsPage() {
       </div>
 
       {activeTab === SETTINGS_TABS[0] && (
-        <>
+        <div id="settings-panel-0" role="tabpanel" aria-labelledby="settings-tab-0">
           <div className={styles.cardRow}>
             <div className={styles.card}>
               <div className={styles.cardHeader}>
@@ -146,11 +148,11 @@ export function SettingsPage() {
               ＋ 구성원 초대
             </button>
           </div>
-        </>
+        </div>
       )}
 
       {activeTab === SETTINGS_TABS[1] && (
-        <div className={styles.tabPanel}>
+        <div id="settings-panel-1" role="tabpanel" aria-labelledby="settings-tab-1" className={styles.tabPanel}>
           {/* TODO(backend): GET /api/settings/security-links -> SECURITY_LINK_POLICY, SECURITY_LINK_HISTORY 대체 */}
           <div className={styles.card}>
             <h2 className={styles.cardTitle}>{SECURITY_LINK_POLICY.title}</h2>
@@ -182,7 +184,7 @@ export function SettingsPage() {
       )}
 
       {activeTab === SETTINGS_TABS[2] && (
-        <div className={styles.tabPanel}>
+        <div id="settings-panel-2" role="tabpanel" aria-labelledby="settings-tab-2" className={styles.tabPanel}>
           {/* TODO(backend): GET /api/settings/completion-evidence -> COMPLETION_EVIDENCE_RULES 대체 */}
           <div className={styles.card}>
             <h2 className={styles.cardTitle}>업무 유형별 완료 증빙</h2>
@@ -199,7 +201,7 @@ export function SettingsPage() {
       )}
 
       {activeTab === SETTINGS_TABS[3] && (
-        <div className={styles.tabPanel}>
+        <div id="settings-panel-3" role="tabpanel" aria-labelledby="settings-tab-3" className={styles.tabPanel}>
           {/* TODO(backend): GET /api/settings/process-steps -> PROCESS_STEP_RULES 대체 */}
           <div className={styles.card}>
             <h2 className={styles.cardTitle}>업무 유형별 승인 단계</h2>
@@ -211,7 +213,7 @@ export function SettingsPage() {
       )}
 
       {activeTab === SETTINGS_TABS[4] && (
-        <div className={styles.tabPanel}>
+        <div id="settings-panel-4" role="tabpanel" aria-labelledby="settings-tab-4" className={styles.tabPanel}>
           {/* TODO(backend): GET /api/settings/data-log -> DATA_LOG_SETTINGS 대체 */}
           <div className={styles.card}>
             <h2 className={styles.cardTitle}>데이터·AI 로그 설정</h2>

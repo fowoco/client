@@ -89,12 +89,14 @@ export function CaseDetailPage() {
       <p className={styles.meta}>{CASE_HEADER.meta}</p>
 
       <div className={styles.tabs} role="tablist" aria-label="업무 상세 탭">
-        {CASE_TABS.map((tab) => (
+        {CASE_TABS.map((tab, index) => (
           <button
             key={tab}
+            id={`case-tab-${index}`}
             type="button"
             role="tab"
             aria-selected={activeTab === tab}
+            aria-controls={`case-panel-${index}`}
             className={`${styles.tab} ${activeTab === tab ? styles.tabActive : ''}`}
             onClick={() => setActiveTab(tab)}
           >
@@ -104,7 +106,7 @@ export function CaseDetailPage() {
       </div>
 
       {activeTab === '현재 단계' && (
-        <>
+        <div id="case-panel-0" role="tabpanel" aria-labelledby="case-tab-0">
           <div className={styles.summaryRow}>
             <AgentSummary
               headline={AGENT_SUMMARY.headline}
@@ -175,11 +177,11 @@ export function CaseDetailPage() {
               <p className={styles.gateBlocked}>{COMPLETION_GATES.blocked}</p>
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {activeTab === '체크리스트' && (
-        <div className={styles.tabPanel}>
+        <div id="case-panel-1" role="tabpanel" aria-labelledby="case-tab-1" className={styles.tabPanel}>
           {/* TODO(backend): GET /api/work-items/:id/checklist -> CASE_CHECKLIST 대체, PATCH로 완료 토글 */}
           <div className={styles.checklist}>
             {CASE_CHECKLIST.map((item) => (
@@ -206,7 +208,7 @@ export function CaseDetailPage() {
       )}
 
       {activeTab === '문서' && (
-        <div className={styles.tabPanel}>
+        <div id="case-panel-2" role="tabpanel" aria-labelledby="case-tab-2" className={styles.tabPanel}>
           {/* TODO(backend): GET /api/work-items/:id/documents -> CASE_DOCUMENTS 대체 */}
           <div className={styles.documentList}>
             {CASE_DOCUMENTS.map((document) => (
@@ -223,7 +225,7 @@ export function CaseDetailPage() {
       )}
 
       {activeTab === '소통' && (
-        <div className={styles.tabPanel}>
+        <div id="case-panel-3" role="tabpanel" aria-labelledby="case-tab-3" className={styles.tabPanel}>
           {/* TODO(backend): GET /api/work-items/:id/communication -> CASE_COMMUNICATION 대체 */}
           <div className={styles.commList}>
             {CASE_COMMUNICATION.map((entry) => (
@@ -238,7 +240,7 @@ export function CaseDetailPage() {
       )}
 
       {activeTab === '활동이력' && (
-        <div className={styles.tabPanel}>
+        <div id="case-panel-4" role="tabpanel" aria-labelledby="case-tab-4" className={styles.tabPanel}>
           {/* TODO(backend): GET /api/work-items/:id/activity -> CASE_ACTIVITY 대체 */}
           <div className={styles.timeline}>
             {CASE_ACTIVITY.map((entry) => (

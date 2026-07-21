@@ -14,11 +14,15 @@ export interface DropdownProps {
   className?: string
 }
 
+let dropdownIdCounter = 0
+
 export function Dropdown({ options, value, onChange, ariaLabel, className }: DropdownProps) {
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const instanceId = useRef(`dropdown-${++dropdownIdCounter}`).current
 
   const selectedIndex = options.findIndex((option) => option.value === value)
   const selectedLabel = options[selectedIndex]?.label ?? ''
@@ -45,9 +49,14 @@ export function Dropdown({ options, value, onChange, ariaLabel, className }: Dro
     setOpen(true)
   }
 
+  function closeListAndRefocusTrigger() {
+    setOpen(false)
+    triggerRef.current?.focus()
+  }
+
   function selectOption(option: DropdownOption) {
     onChange(option.value)
-    setOpen(false)
+    closeListAndRefocusTrigger()
   }
 
   function handleTriggerKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
@@ -60,7 +69,7 @@ export function Dropdown({ options, value, onChange, ariaLabel, className }: Dro
   function handleListKeyDown(event: KeyboardEvent<HTMLUListElement>) {
     if (event.key === 'Escape') {
       event.preventDefault()
-      setOpen(false)
+      closeListAndRefocusTrigger()
     } else if (event.key === 'ArrowDown') {
       event.preventDefault()
       setActiveIndex((index) => Math.min(index + 1, options.length - 1))
@@ -77,12 +86,13 @@ export function Dropdown({ options, value, onChange, ariaLabel, className }: Dro
   return (
     <div ref={wrapperRef} className={`${styles.wrapper} ${className ?? ''}`}>
       <button
+        ref={triggerRef}
         type="button"
         className={`${styles.trigger} ${open ? styles.triggerOpen : ''}`}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={ariaLabel}
-        onClick={() => (open ? setOpen(false) : openList())}
+        onClick={() => (open ? closeListAndRefocusTrigger() : openList())}
         onKeyDown={handleTriggerKeyDown}
       >
         <span className={styles.label}>{selectedLabel}</span>
@@ -97,12 +107,14 @@ export function Dropdown({ options, value, onChange, ariaLabel, className }: Dro
           className={styles.list}
           role="listbox"
           aria-label={ariaLabel}
+          aria-activedescendant={`${instanceId}-option-${activeIndex}`}
           tabIndex={-1}
           onKeyDown={handleListKeyDown}
         >
           {options.map((option, index) => (
             <li key={option.value} role="presentation">
               <button
+                id={`${instanceId}-option-${index}`}
                 type="button"
                 role="option"
                 aria-selected={option.value === value}

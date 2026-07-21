@@ -40,6 +40,13 @@
   border-bottom-color: var(--brand-primary);
 }
 
+.tabPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 20px;
+}
+
 .cardRow {
   display: grid;
   grid-template-columns: 480px 1fr;

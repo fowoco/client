@@ -39,14 +39,14 @@ export function LoginPage() {
         <p className={styles.brand}>FOWOCO</p>
         <p className={styles.kicker}>GUIDED AGENTIC OPERATIONS</p>
         <h1 className={styles.headline}>
-          회사의 업무 방식을
+          회사의 업무방식을
           <br />
-          FOWOCO에 등록하세요
+          FOWOCO에 올리세요
         </h1>
         <p className={styles.subtext}>
-          Agent가 기한·서류·승인 조건을 먼저 확인합니다.
+          Agent가 기한·서류·승인 조건을 먼저 확인
           <br />
-          중요한 결정과 실제 실행은 담당자가 통제합니다.
+          중요한 결정과 실제 실행은 담당자가 통제가능
         </p>
 
         <div className={styles.trace}>

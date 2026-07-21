@@ -37,6 +37,11 @@
   border: none;
   padding: 0;
   cursor: pointer;
+  transition: opacity var(--fowoco-motion-fast) var(--fowoco-easing-standard);
+}
+
+.action:hover {
+  opacity: 0.72;
 }
 
 .actionError {

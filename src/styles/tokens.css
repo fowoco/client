@@ -37,5 +37,19 @@
   --fowoco-radius-8: 8px;
   --fowoco-radius-999: 999px;
 
+  --fowoco-motion-fast: 120ms;
+  --fowoco-motion-base: 200ms;
+  --fowoco-motion-slow: 320ms;
+  --fowoco-easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --fowoco-easing-decelerate: cubic-bezier(0, 0, 0.2, 1);
+
   --font-sans: 'Noto Sans KR', system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --fowoco-motion-fast: 0ms;
+    --fowoco-motion-base: 0ms;
+    --fowoco-motion-slow: 0ms;
+  }
 }

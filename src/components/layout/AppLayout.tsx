@@ -1,8 +1,9 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { Button } from '../ui/Button/Button'
 import styles from './AppLayout.module.css'
 import { NAV_ITEMS } from './navItems'
+import { RouteTransition } from './RouteTransition'
 
 export function AppLayout() {
   const navigate = useNavigate()
@@ -60,7 +61,7 @@ export function AppLayout() {
         </header>
 
         <main className={styles.content}>
-          <Outlet />
+          <RouteTransition />
         </main>
       </div>
     </div>

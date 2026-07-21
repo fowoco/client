@@ -1,7 +1,9 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { ToastViewport } from '../../components/ui/ToastViewport/ToastViewport'
+import { useToastStore } from '../../store/toastStore'
 import { CaseDetailPage } from './CaseDetailPage'
 import {
   CASE_ACTIVITY,
@@ -13,10 +15,15 @@ import {
   CASE_TABS,
 } from './caseDetailData'
 
+beforeEach(() => {
+  useToastStore.setState({ toasts: [] })
+})
+
 function renderPage() {
   render(
     <MemoryRouter>
       <CaseDetailPage />
+      <ToastViewport />
     </MemoryRouter>,
   )
 }
@@ -73,5 +80,23 @@ describe('CaseDetailPage', () => {
   it('renders the blocked completion banner', () => {
     renderPage()
     expect(screen.getByText('완료 처리 불가 · 승인과 증빙 필요')).toBeInTheDocument()
+  })
+
+  it('shows a toast when a draft is saved', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByRole('button', { name: '초안 저장' }))
+
+    expect(screen.getByText('초안을 저장했습니다.')).toBeInTheDocument()
+  })
+
+  it('shows a toast when approval is requested', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByRole('button', { name: '승인 요청' }))
+
+    expect(screen.getByText('승인을 요청했습니다.')).toBeInTheDocument()
   })
 })

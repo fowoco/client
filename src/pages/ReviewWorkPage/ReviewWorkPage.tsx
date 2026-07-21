@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/Button/Button'
 import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
 import { Dropdown } from '../../components/ui/Dropdown/Dropdown'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
+import { useToastStore } from '../../store/toastStore'
 import styles from './ReviewWorkPage.module.css'
 import { MISSING_INFO, PREPARED_DRAFT, UNDERSTOOD_REQUEST } from './reviewWorkData'
 
@@ -16,6 +17,7 @@ export function ReviewWorkPage() {
   const navigate = useNavigate()
   const [institution, setInstitution] = useState('')
   const canCreate = institution !== ''
+  const showToast = useToastStore((state) => state.showToast)
 
   function handleCreate() {
     // TODO(backend): POST /api/work-items { ...UNDERSTOOD_REQUEST, institution } -> 생성 후 WORK-001로 이동
@@ -24,6 +26,7 @@ export function ReviewWorkPage() {
 
   function handleSaveDraft() {
     // TODO(backend): PATCH /api/work-items/draft -> 현재 입력 상태 저장
+    showToast('초안을 저장했습니다.')
   }
 
   function handleViewOriginal() {

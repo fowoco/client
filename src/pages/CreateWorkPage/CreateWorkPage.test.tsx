@@ -1,13 +1,20 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { ToastViewport } from '../../components/ui/ToastViewport/ToastViewport'
+import { useToastStore } from '../../store/toastStore'
 import { CreateWorkPage } from './CreateWorkPage'
+
+beforeEach(() => {
+  useToastStore.setState({ toasts: [] })
+})
 
 function renderPage() {
   render(
     <MemoryRouter>
       <CreateWorkPage />
+      <ToastViewport />
     </MemoryRouter>,
   )
 }
@@ -41,5 +48,14 @@ describe('CreateWorkPage', () => {
     await user.click(fileMode)
 
     expect(fileMode.className).toMatch(/modeCardActive/)
+  })
+
+  it('shows a toast when a draft is saved', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByRole('button', { name: '임시 저장' }))
+
+    expect(screen.getByText('초안을 저장했습니다.')).toBeInTheDocument()
   })
 })

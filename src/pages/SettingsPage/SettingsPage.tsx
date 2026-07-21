@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
+import { useToastStore } from '../../store/toastStore'
 import styles from './SettingsPage.module.css'
 import {
   APPROVAL_POLICY,
@@ -18,23 +19,27 @@ import {
 export function SettingsPage() {
   const [activeTab, setActiveTab] = useState(SETTINGS_TABS[0])
   const [members, setMembers] = useState<Member[]>(MEMBERS)
+  const showToast = useToastStore((state) => state.showToast)
 
   function toggleApproval(id: string) {
     // TODO(backend): PATCH /api/settings/members/:id { canApprove }
+    const member = members.find((current) => current.id === id)
     setMembers((current) =>
-      current.map((member) =>
-        member.id === id
+      current.map((item) =>
+        item.id === id
           ? {
-              ...member,
-              approval: member.approval === 'canApprove' ? 'requestOnly' : 'canApprove',
+              ...item,
+              approval: item.approval === 'canApprove' ? 'requestOnly' : 'canApprove',
             }
-          : member,
+          : item,
       ),
     )
+    if (member) showToast(`${member.name}님의 승인 권한을 변경했습니다.`)
   }
 
   function handleInviteMember() {
     // TODO(backend): POST /api/settings/members/invite { email, role } -> 구성원 초대 발송
+    showToast('구성원 초대를 보냈습니다.')
   }
 
   return (

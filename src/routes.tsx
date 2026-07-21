@@ -30,12 +30,7 @@ export const router = createBrowserRouter([
         children: [
           { path: '/dashboard', element: <DashboardPage /> },
           { path: '/workers', element: <WorkerListPage /> },
-          {
-            path: '/workers/:workerId',
-            element: (
-              <PlaceholderPage title="근로자 상세 / 계약 및 체류 관리" issueUrl={`${REPO}/8`} />
-            ),
-          },
+          { path: '/workers/:workerId', element: <WorkerListPage /> },
           {
             path: '/documents',
             element: <PlaceholderPage title="서류관리 / OCR" issueUrl={`${REPO}/1`} />,

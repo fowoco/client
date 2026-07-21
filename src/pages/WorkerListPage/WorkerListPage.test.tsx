@@ -1,14 +1,17 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { WorkerListPage } from './WorkerListPage'
 import { WORKERS } from './workerListData'
 
-function renderPage(demoState = 'success') {
+function renderPage(demoState = 'success', initialPath = `/workers?demoState=${demoState}`) {
   render(
-    <MemoryRouter initialEntries={[`/workers?demoState=${demoState}`]}>
-      <WorkerListPage />
+    <MemoryRouter initialEntries={[initialPath]}>
+      <Routes>
+        <Route path="/workers" element={<WorkerListPage />} />
+        <Route path="/workers/:workerId" element={<WorkerListPage />} />
+      </Routes>
     </MemoryRouter>,
   )
 }
@@ -69,6 +72,18 @@ describe('WorkerListPage', () => {
   it('shows an error state with a retry action', () => {
     renderPage('error')
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument()
+  })
+
+  it('renders the deep-linked worker as selected when visiting /workers/:workerId', () => {
+    renderPage('success', `/workers/${WORKERS[1].id}?demoState=success`)
+
+    expect(screen.getByRole('heading', { name: WORKERS[1].name })).toBeInTheDocument()
+  })
+
+  it('falls back to the first worker when the workerId is invalid', () => {
+    renderPage('success', '/workers/does-not-exist?demoState=success')
+
+    expect(screen.getByRole('heading', { name: WORKERS[0].name })).toBeInTheDocument()
   })
 
   it('changes the deadline filter selection via the dropdown', async () => {

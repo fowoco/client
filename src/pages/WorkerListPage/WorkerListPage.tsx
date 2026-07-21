@@ -4,12 +4,19 @@ import { Dropdown } from '../../components/ui/Dropdown/Dropdown'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import { useAsyncDemoData } from '../../hooks/useAsyncDemoData'
+import { getUrgencyTier, URGENCY_TONE } from '../../utils/urgency'
 import styles from './WorkerListPage.module.css'
 import { TOTAL_WORKER_COUNT, WORKERS } from './workerListData'
 
 const TASK_LINK_CLASS = {
   warning: styles.taskLinkWarning,
   primary: styles.taskLinkPrimary,
+}
+
+const DEADLINE_TIER_CLASS = {
+  urgent: styles.workerDeadlineUrgent,
+  medium: styles.workerDeadlineMedium,
+  comfortable: styles.workerDeadlineComfortable,
 }
 
 const DEADLINE_OPTIONS = [
@@ -41,6 +48,7 @@ export function WorkerListPage() {
   }, [query, deadlineFilter])
 
   const selectedWorker = WORKERS.find((worker) => worker.id === workerId) ?? WORKERS[0]
+  const selectedDeadlineTier = getUrgencyTier(selectedWorker.deadlineDays)
 
   function handleViewAllWorkers() {
     // TODO(backend): GET /api/workers?page= -> 전체 근로자 페이지네이션
@@ -130,7 +138,7 @@ export function WorkerListPage() {
                     <p className={styles.workerName}>{worker.name}</p>
                     <span
                       className={`${styles.workerDeadline} ${
-                        worker.deadlineHighlighted ? '' : styles.workerDeadlineNormal
+                        DEADLINE_TIER_CLASS[getUrgencyTier(worker.deadlineDays)]
                       }`}
                     >
                       {worker.deadlineLabel}
@@ -152,8 +160,10 @@ export function WorkerListPage() {
           <div className={styles.detailPanel}>
             <div className={styles.detailHeader}>
               <h2 className={styles.detailName}>{selectedWorker.name}</h2>
-              {selectedWorker.deadlineHighlighted && (
-                <StatusLabel tone="warning">{selectedWorker.deadlineLabel}</StatusLabel>
+              {selectedDeadlineTier !== 'comfortable' && (
+                <StatusLabel tone={URGENCY_TONE[selectedDeadlineTier]}>
+                  {selectedWorker.deadlineLabel}
+                </StatusLabel>
               )}
             </div>
             <p className={styles.detailMeta}>

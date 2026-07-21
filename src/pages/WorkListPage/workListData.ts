@@ -1,5 +1,3 @@
-import type { WorkItemUrgency } from '../../components/ui/WorkItemRow/WorkItemRow'
-
 // TODO(backend): GET /api/work-items?tab=&status=&due=&q= -> WORK_TABS, WORK_ITEMS 대체
 // 백엔드 연동 전까지는 tabIds/status/dueDays 기준으로 클라이언트에서 직접 필터링한다.
 
@@ -24,7 +22,6 @@ export interface WorkListItem {
   title: string
   meta: string
   nextAction: string
-  urgency: WorkItemUrgency
   tabIds: WorkTabId[]
   status: WorkItemStatus
   dueDays: number
@@ -36,7 +33,6 @@ export const WORK_ITEMS: WorkListItem[] = [
     title: '응웬반A 체류연장 준비',
     meta: 'D-12 · 승인 대기 · 체류 · 김경민',
     nextAction: '다음 · 요청문 승인',
-    urgency: 'warning',
     tabIds: ['mine', 'my-approval'],
     status: 'pending',
     dueDays: 12,
@@ -46,7 +42,6 @@ export const WORK_ITEMS: WorkListItem[] = [
     title: '외국인등록증 사본 제출 요청',
     meta: '오늘 · 근로자 응답 대기 · 서류',
     nextAction: '다음 · 응답 확인',
-    urgency: 'warning',
     tabIds: ['mine'],
     status: 'waiting-response',
     dueDays: 0,
@@ -56,7 +51,6 @@ export const WORK_ITEMS: WorkListItem[] = [
     title: '7월 외부기관 제출자료 취합',
     meta: 'D-2 · 증빙 필요 · 외부기관 · 박서준',
     nextAction: '다음 · 자료 검토',
-    urgency: 'warning',
     tabIds: ['follow-up'],
     status: 'other',
     dueDays: 2,
@@ -66,7 +60,6 @@ export const WORK_ITEMS: WorkListItem[] = [
     title: '신규 입사자 교육 일정 확정',
     meta: 'D-4 · 담당자 미배정 · 일반행정',
     nextAction: '다음 · 담당자 지정',
-    urgency: 'warning',
     tabIds: ['follow-up'],
     status: 'other',
     dueDays: 4,
@@ -76,7 +69,6 @@ export const WORK_ITEMS: WorkListItem[] = [
     title: '월간 기숙사 점검 결과 정리',
     meta: 'D-7 · 준비 중 · 연결 근로자 없음',
     nextAction: '다음 · 체크리스트',
-    urgency: 'warning',
     tabIds: ['follow-up'],
     status: 'other',
     dueDays: 7,

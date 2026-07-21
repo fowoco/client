@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { WorkerListPage } from './WorkerListPage'
+import styles from './WorkerListPage.module.css'
 import { WORKERS } from './workerListData'
 
 function renderPage(demoState = 'success', initialPath = `/workers?demoState=${demoState}`) {
@@ -100,5 +101,17 @@ describe('WorkerListPage', () => {
     expect(screen.getAllByText('응웬반A').length).toBeGreaterThan(0)
     expect(screen.getByText('솜차이E')).toBeInTheDocument()
     expect(screen.queryByText('아흐메드D')).not.toBeInTheDocument()
+  })
+
+  it('colors the deadline text by urgency tier', () => {
+    renderPage()
+
+    const mediumWorker = WORKERS[1]
+    const comfortableWorker = WORKERS.find((worker) => worker.deadlineDays === null)!
+
+    expect(screen.getByText(mediumWorker.deadlineLabel)).toHaveClass(styles.workerDeadlineMedium)
+    expect(screen.getByText(comfortableWorker.deadlineLabel)).toHaveClass(
+      styles.workerDeadlineComfortable,
+    )
   })
 })

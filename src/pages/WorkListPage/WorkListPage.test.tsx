@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
+import railStyles from '../../components/ui/WorkItemRow/WorkItemRow.module.css'
 import { WorkListPage } from './WorkListPage'
 import { WORK_ITEMS, WORK_TABS } from './workListData'
 
@@ -102,5 +103,19 @@ describe('WorkListPage', () => {
 
     expect(screen.getByText('7월 외부기관 제출자료 취합')).toBeInTheDocument()
     expect(screen.queryByText('응웬반A 체류연장 준비')).not.toBeInTheDocument()
+  })
+
+  it('colors the rail by urgency tier derived from dueDays', () => {
+    renderPage()
+
+    const urgentItem = WORK_ITEMS.find((item) => item.dueDays <= 7)!
+    const mediumItem = WORK_ITEMS.find((item) => item.dueDays > 7)!
+
+    const urgentRail = screen.getByText(urgentItem.title).closest('button')!.querySelector('[aria-hidden="true"]')
+    const mediumRail = screen.getByText(mediumItem.title).closest('button')!.querySelector('[aria-hidden="true"]')
+
+    expect(urgentRail).toHaveClass(railStyles.railCritical)
+    expect(mediumRail).not.toHaveClass(railStyles.railCritical)
+    expect(mediumRail).not.toHaveClass(railStyles.railNeutral)
   })
 })

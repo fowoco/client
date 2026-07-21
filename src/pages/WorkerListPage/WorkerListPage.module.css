@@ -109,11 +109,18 @@
 .workerDeadline {
   font-size: 13px;
   font-weight: 500;
+}
+
+.workerDeadlineUrgent {
+  color: var(--status-critical);
+}
+
+.workerDeadlineMedium {
   color: var(--status-warning);
 }
 
-.workerDeadlineNormal {
-  color: var(--text-secondary);
+.workerDeadlineComfortable {
+  color: var(--fowoco-green-600);
 }
 
 .workerMeta {

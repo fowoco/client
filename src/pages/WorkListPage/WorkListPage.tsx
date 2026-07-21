@@ -2,10 +2,17 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Dropdown } from '../../components/ui/Dropdown/Dropdown'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
-import { WorkItemRow } from '../../components/ui/WorkItemRow/WorkItemRow'
+import { WorkItemRow, type WorkItemUrgency } from '../../components/ui/WorkItemRow/WorkItemRow'
 import { useAsyncDemoData } from '../../hooks/useAsyncDemoData'
+import { getUrgencyTier } from '../../utils/urgency'
 import styles from './WorkListPage.module.css'
 import { TOTAL_WORK_COUNT, WORK_ITEMS, WORK_TABS, type WorkTabId } from './workListData'
+
+const URGENCY_TIER_ROW_CLASS: Record<ReturnType<typeof getUrgencyTier>, WorkItemUrgency> = {
+  urgent: 'critical',
+  medium: 'warning',
+  comfortable: 'neutral',
+}
 
 const STATUS_OPTIONS = [
   { value: 'all', label: '상태 · 전체' },
@@ -148,7 +155,7 @@ export function WorkListPage() {
                   title={item.title}
                   meta={item.meta}
                   nextAction={item.nextAction}
-                  urgency={item.urgency}
+                  urgency={URGENCY_TIER_ROW_CLASS[getUrgencyTier(item.dueDays)]}
                   onClick={() => navigate(`/tasks/${item.id}`)}
                 />
               ))}

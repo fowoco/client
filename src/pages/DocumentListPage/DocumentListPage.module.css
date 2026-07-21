@@ -1,0 +1,154 @@
+.headline {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.description {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.tabs {
+  display: flex;
+  gap: 32px;
+  margin-top: 24px;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.tab {
+  padding: 0 0 12px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color var(--fowoco-motion-fast) var(--fowoco-easing-standard),
+    border-color var(--fowoco-motion-fast) var(--fowoco-easing-standard);
+}
+
+.tab:hover {
+  color: var(--text-primary);
+}
+
+.tabActive {
+  color: var(--brand-primary);
+  font-weight: 500;
+  border-bottom-color: var(--brand-primary);
+}
+
+@media (max-width: 720px) {
+  .tabs {
+    overflow-x: auto;
+  }
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.search {
+  flex: 1 1 240px;
+  max-width: 520px;
+  height: 48px;
+  padding: 0 15px;
+  font-size: 14px;
+  font-family: inherit;
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
+}
+
+.stateWrap {
+  margin-top: 24px;
+}
+
+.columnHeader {
+  display: grid;
+  grid-template-columns: 1fr 120px 120px 88px;
+  align-items: center;
+  gap: 16px;
+  margin-top: 24px;
+  padding: 0 20px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 120px 120px 88px;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
+}
+
+.rowMain {
+  min-width: 0;
+}
+
+.workerName {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.docType {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.submittedAt {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.reviewButton {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--brand-primary);
+  cursor: pointer;
+  justify-self: end;
+}
+
+@media (max-width: 720px) {
+  .columnHeader {
+    display: none;
+  }
+
+  .row {
+    grid-template-columns: 1fr;
+    justify-items: start;
+    gap: 8px;
+  }
+
+  .reviewButton {
+    justify-self: start;
+  }
+}
+
+.footerText {
+  margin: 16px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}

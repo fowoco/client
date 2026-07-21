@@ -15,15 +15,28 @@ function renderPage(demoState = 'success') {
 }
 
 describe('WorkListPage', () => {
-  it('renders every tab and work item', () => {
+  it('renders every tab and the first 5 priority work items', () => {
     renderPage()
 
     for (const tab of WORK_TABS) {
       expect(screen.getByRole('tab', { name: `${tab.label} ${tab.count}` })).toBeInTheDocument()
     }
+    for (const item of WORK_ITEMS.slice(0, 5)) {
+      expect(screen.getByText(item.title)).toBeInTheDocument()
+    }
+    expect(screen.queryByText(WORK_ITEMS[5].title)).not.toBeInTheDocument()
+  })
+
+  it('shows every work item after clicking "전체 업무 보기"', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByRole('button', { name: '전체 업무 보기 →' }))
+
     for (const item of WORK_ITEMS) {
       expect(screen.getByText(item.title)).toBeInTheDocument()
     }
+    expect(screen.queryByRole('button', { name: '전체 업무 보기 →' })).not.toBeInTheDocument()
   })
 
   it('filters work items by search query', async () => {

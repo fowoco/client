@@ -3,18 +3,35 @@ import { Link } from 'react-router-dom'
 import { AgentSummary } from '../../components/ui/AgentSummary/AgentSummary'
 import { Button } from '../../components/ui/Button/Button'
 import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
-import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
+import { StatusLabel, type StatusTone } from '../../components/ui/StatusLabel/StatusLabel'
 import styles from './CaseDetailPage.module.css'
 import {
   ACTION_DOCK,
   AGENT_SUMMARY,
+  CASE_ACTIVITY,
+  CASE_CHECKLIST,
+  CASE_COMMUNICATION,
+  CASE_DOCUMENTS,
   CASE_HEADER,
   CASE_STEPS,
   CASE_TABS,
   COMPLETION_GATES,
   CONTEXT_ACCESS,
+  type CaseDocumentStatus,
   type StepStatus,
 } from './caseDetailData'
+
+const DOCUMENT_STATUS_TONE: Record<CaseDocumentStatus, StatusTone> = {
+  missing: 'critical',
+  pending: 'warning',
+  done: 'success',
+}
+
+const DOCUMENT_STATUS_LABEL: Record<CaseDocumentStatus, string> = {
+  missing: '미제출',
+  pending: '확인 대기',
+  done: '확인 완료',
+}
 
 const STEP_CIRCLE_CLASS: Record<StepStatus, string> = {
   done: styles.stepCircleDone,
@@ -82,76 +99,158 @@ export function CaseDetailPage() {
         ))}
       </div>
 
-      <div className={styles.summaryRow}>
-        <AgentSummary
-          headline={AGENT_SUMMARY.headline}
-          body={AGENT_SUMMARY.body}
-          actionLabel={AGENT_SUMMARY.actionLabel}
-        />
+      {activeTab === '현재 단계' && (
+        <>
+          <div className={styles.summaryRow}>
+            <AgentSummary
+              headline={AGENT_SUMMARY.headline}
+              body={AGENT_SUMMARY.body}
+              actionLabel={AGENT_SUMMARY.actionLabel}
+            />
 
-        <div className={styles.contextCard}>
-          <p className={styles.contextLabel}>{CONTEXT_ACCESS.label}</p>
-          <p className={styles.contextValues}>
-            {CONTEXT_ACCESS.rows.map((row) => (
-              <span key={row.label}>
-                {row.label} {row.value}
-                <br />
-              </span>
-            ))}
-          </p>
-          <button type="button" className={styles.contextLink} onClick={handleExpandContext}>
-            펼쳐 보기 →
-          </button>
-        </div>
-      </div>
-
-      <div className={styles.panelRow}>
-        <div className={styles.workflowCard}>
-          <div className={styles.workflowHeader}>
-            <h2 className={styles.cardTitle}>처리 단계</h2>
-            <p className={styles.workflowNote}>필수 단계 3 / 5 완료</p>
+            <div className={styles.contextCard}>
+              <p className={styles.contextLabel}>{CONTEXT_ACCESS.label}</p>
+              <p className={styles.contextValues}>
+                {CONTEXT_ACCESS.rows.map((row) => (
+                  <span key={row.label}>
+                    {row.label} {row.value}
+                    <br />
+                  </span>
+                ))}
+              </p>
+              <button type="button" className={styles.contextLink} onClick={handleExpandContext}>
+                펼쳐 보기 →
+              </button>
+            </div>
           </div>
 
-          <div className={styles.stepList}>
-            {CASE_STEPS.map((step, index) => (
-              <div key={step.no} className={styles.step}>
-                <div className={styles.stepMarkerCol}>
-                  <span className={`${styles.stepCircle} ${STEP_CIRCLE_CLASS[step.status]}`}>
-                    {step.status === 'done' ? '✓' : step.no}
-                  </span>
-                  {index < CASE_STEPS.length - 1 && (
-                    <span
-                      className={`${styles.connector} ${
-                        step.status === 'done' ? styles.connectorDone : ''
-                      }`}
-                    />
-                  )}
-                </div>
-                <div className={styles.stepBody}>
-                  <div>
-                    <p className={styles.stepTitle}>{step.title}</p>
-                    <p className={styles.stepActor}>{step.actor}</p>
+          <div className={styles.panelRow}>
+            <div className={styles.workflowCard}>
+              <div className={styles.workflowHeader}>
+                <h2 className={styles.cardTitle}>처리 단계</h2>
+                <p className={styles.workflowNote}>필수 단계 3 / 5 완료</p>
+              </div>
+
+              <div className={styles.stepList}>
+                {CASE_STEPS.map((step, index) => (
+                  <div key={step.no} className={styles.step}>
+                    <div className={styles.stepMarkerCol}>
+                      <span className={`${styles.stepCircle} ${STEP_CIRCLE_CLASS[step.status]}`}>
+                        {step.status === 'done' ? '✓' : step.no}
+                      </span>
+                      {index < CASE_STEPS.length - 1 && (
+                        <span
+                          className={`${styles.connector} ${
+                            step.status === 'done' ? styles.connectorDone : ''
+                          }`}
+                        />
+                      )}
+                    </div>
+                    <div className={styles.stepBody}>
+                      <div>
+                        <p className={styles.stepTitle}>{step.title}</p>
+                        <p className={styles.stepActor}>{step.actor}</p>
+                      </div>
+                      <span className={`${styles.stepStatus} ${STEP_STATUS_CLASS[step.status]}`}>
+                        {step.statusLabel}
+                      </span>
+                    </div>
                   </div>
-                  <span className={`${styles.stepStatus} ${STEP_STATUS_CLASS[step.status]}`}>
-                    {step.statusLabel}
-                  </span>
-                </div>
+                ))}
+              </div>
+            </div>
+
+            <div className={styles.gatesCard}>
+              <h2 className={styles.cardTitle}>완료 조건</h2>
+              <p className={styles.gatesDescription}>{COMPLETION_GATES.description}</p>
+
+              {COMPLETION_GATES.rows.map((row) => (
+                <DetailRow key={row.label} label={row.label} value={row.value} tone={row.tone} />
+              ))}
+
+              <p className={styles.gateBlocked}>{COMPLETION_GATES.blocked}</p>
+            </div>
+          </div>
+        </>
+      )}
+
+      {activeTab === '체크리스트' && (
+        <div className={styles.tabPanel}>
+          {/* TODO(backend): GET /api/work-items/:id/checklist -> CASE_CHECKLIST 대체, PATCH로 완료 토글 */}
+          <div className={styles.checklist}>
+            {CASE_CHECKLIST.map((item) => (
+              <div key={item.id} className={styles.checklistRow}>
+                <span
+                  className={`${styles.checklistMark} ${
+                    item.done ? styles.checklistMarkDone : ''
+                  }`}
+                  aria-hidden="true"
+                >
+                  {item.done ? '✓' : ''}
+                </span>
+                <span
+                  className={`${styles.checklistLabel} ${
+                    item.done ? styles.checklistLabelDone : ''
+                  }`}
+                >
+                  {item.label}
+                </span>
               </div>
             ))}
           </div>
         </div>
+      )}
 
-        <div className={styles.gatesCard}>
-          <h2 className={styles.cardTitle}>완료 조건</h2>
-          <p className={styles.gatesDescription}>{COMPLETION_GATES.description}</p>
-
-          {COMPLETION_GATES.rows.map((row) => (
-            <DetailRow key={row.label} label={row.label} value={row.value} tone={row.tone} />
-          ))}
-
-          <p className={styles.gateBlocked}>{COMPLETION_GATES.blocked}</p>
+      {activeTab === '문서' && (
+        <div className={styles.tabPanel}>
+          {/* TODO(backend): GET /api/work-items/:id/documents -> CASE_DOCUMENTS 대체 */}
+          <div className={styles.documentList}>
+            {CASE_DOCUMENTS.map((document) => (
+              <div key={document.id} className={styles.documentRow}>
+                <span className={styles.documentName}>{document.name}</span>
+                <StatusLabel tone={DOCUMENT_STATUS_TONE[document.status]}>
+                  {DOCUMENT_STATUS_LABEL[document.status]}
+                </StatusLabel>
+                <span className={styles.documentUpdatedAt}>{document.updatedAt}</span>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
+      {activeTab === '소통' && (
+        <div className={styles.tabPanel}>
+          {/* TODO(backend): GET /api/work-items/:id/communication -> CASE_COMMUNICATION 대체 */}
+          <div className={styles.commList}>
+            {CASE_COMMUNICATION.map((entry) => (
+              <div key={entry.id} className={styles.commRow}>
+                <span className={styles.commTime}>{entry.time}</span>
+                <span className={styles.commActor}>{entry.actor}</span>
+                <p className={styles.commMessage}>{entry.message}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === '활동이력' && (
+        <div className={styles.tabPanel}>
+          {/* TODO(backend): GET /api/work-items/:id/activity -> CASE_ACTIVITY 대체 */}
+          <div className={styles.timeline}>
+            {CASE_ACTIVITY.map((entry) => (
+              <div key={`${entry.date}-${entry.label}`} className={styles.timelineRow}>
+                <span className={styles.timelineDate}>{entry.date}</span>
+                <span
+                  className={`${styles.timelineDot} ${
+                    entry.highlighted ? styles.timelineDotHighlighted : ''
+                  }`}
+                />
+                <span className={styles.timelineLabel}>{entry.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className={styles.actionDock}>
         <span className={styles.nextStep}>{ACTION_DOCK.nextStep}</span>

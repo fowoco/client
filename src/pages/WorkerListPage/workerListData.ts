@@ -22,7 +22,6 @@ export interface Worker {
   employeeId: string
   phone: string
   deadlineLabel: string
-  deadlineHighlighted: boolean
   /** null이면 임박한 기한이 없어 기한 필터 값과 무관하게 항상 표시한다. */
   deadlineDays: number | null
   note: string
@@ -39,7 +38,6 @@ export const WORKERS: Worker[] = [
     employeeId: 'F-021',
     phone: '010-****-3182',
     deadlineLabel: 'D-12 체류',
-    deadlineHighlighted: true,
     deadlineDays: 12,
     note: '진행 업무 2건',
     currentTasks: [
@@ -61,7 +59,6 @@ export const WORKERS: Worker[] = [
     employeeId: 'F-018',
     phone: '010-****-2091',
     deadlineLabel: 'D-21 서류',
-    deadlineHighlighted: true,
     deadlineDays: 21,
     note: '서류 누락 1건',
     currentTasks: [{ title: '외국인등록증 사본 제출 요청', detail: '오늘 · 근로자 응답 대기', linkTone: 'warning' }],
@@ -75,7 +72,6 @@ export const WORKERS: Worker[] = [
     employeeId: 'F-032',
     phone: '010-****-7745',
     deadlineLabel: 'D-35 체류',
-    deadlineHighlighted: true,
     deadlineDays: 35,
     note: '응답 대기 1건',
     currentTasks: [{ title: '체류연장 안내 응답 대기', detail: '오늘 · 근로자 응답 대기', linkTone: 'warning' }],
@@ -89,7 +85,6 @@ export const WORKERS: Worker[] = [
     employeeId: 'F-014',
     phone: '010-****-5510',
     deadlineLabel: 'D-62 체류',
-    deadlineHighlighted: true,
     deadlineDays: 62,
     note: '진행 업무 없음',
     currentTasks: [],
@@ -103,7 +98,6 @@ export const WORKERS: Worker[] = [
     employeeId: 'F-027',
     phone: '010-****-6623',
     deadlineLabel: '정상',
-    deadlineHighlighted: false,
     deadlineDays: null,
     note: '교육 일정 1건',
     currentTasks: [{ title: '신규 교육 일정 확정', detail: 'D-4 · 담당자 미배정', linkTone: 'warning' }],

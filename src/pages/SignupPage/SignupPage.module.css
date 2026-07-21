@@ -12,7 +12,7 @@
 
 .promo {
   flex: 0 0 420px;
-  padding: 52px 56px;
+  padding: 52px 40px;
   background: var(--brand-dark);
   color: var(--fowoco-white);
   display: flex;

@@ -90,9 +90,10 @@ export function SettingsPage() {
             <h2 className={styles.cardTitle}>구성원과 승인 권한</h2>
 
             <div className={styles.membersHeader}>
-              <span>이름 / 역할</span>
-              <span>승인 가능</span>
-              <span>상태</span>
+              <span className={styles.membersHeaderIdentity}>이름 / 역할</span>
+              <span className={styles.membersHeaderApproval}>승인 가능</span>
+              <span className={styles.membersHeaderToggle} aria-hidden="true" />
+              <span className={styles.membersHeaderStatus}>상태</span>
             </div>
 
             {members.map((member, index) => (
@@ -155,9 +156,9 @@ export function SettingsPage() {
           <div className={styles.membersCard}>
             <h2 className={styles.cardTitle}>최근 발급 이력</h2>
             <div className={styles.membersHeader}>
-              <span>근로자</span>
-              <span>발급 시각</span>
-              <span>상태</span>
+              <span className={styles.membersHeaderIdentity}>근로자</span>
+              <span className={styles.membersHeaderApproval}>발급 시각</span>
+              <span className={styles.membersHeaderStatus}>상태</span>
             </div>
             {SECURITY_LINK_HISTORY.map((entry, index) => (
               <div

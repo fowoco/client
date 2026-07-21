@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { Button } from '../ui/Button/Button'
+import { ToastViewport } from '../ui/ToastViewport/ToastViewport'
 import styles from './AppLayout.module.css'
 import { HelpModal } from './HelpModal/HelpModal'
 import { NAV_ITEMS } from './navItems'
@@ -63,6 +64,7 @@ export function AppLayout() {
       </div>
 
       <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <ToastViewport />
     </div>
   )
 }

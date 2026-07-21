@@ -4,6 +4,7 @@ import { AgentSummary } from '../../components/ui/AgentSummary/AgentSummary'
 import { Button } from '../../components/ui/Button/Button'
 import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
 import { StatusLabel, type StatusTone } from '../../components/ui/StatusLabel/StatusLabel'
+import { useToastStore } from '../../store/toastStore'
 import styles from './CaseDetailPage.module.css'
 import {
   ACTION_DOCK,
@@ -49,9 +50,11 @@ const STEP_STATUS_CLASS: Record<StepStatus, string> = {
 
 export function CaseDetailPage() {
   const [activeTab, setActiveTab] = useState(CASE_TABS[0])
+  const showToast = useToastStore((state) => state.showToast)
 
   function handleRequestApproval() {
     // TODO(backend): POST /api/work-items/:id/approval-request -> 승인 대기 상태로 전환
+    showToast('승인을 요청했습니다.')
   }
 
   function handleMoreActions() {
@@ -64,6 +67,7 @@ export function CaseDetailPage() {
 
   function handleSaveDraft() {
     // TODO(backend): PATCH /api/work-items/:id/draft -> 현재 입력 상태 저장
+    showToast('초안을 저장했습니다.')
   }
 
   return (

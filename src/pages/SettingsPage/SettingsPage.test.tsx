@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { ToastViewport } from '../../components/ui/ToastViewport/ToastViewport'
+import { useToastStore } from '../../store/toastStore'
 import { SettingsPage } from './SettingsPage'
 import {
   COMPLETION_EVIDENCE_RULES,
@@ -10,6 +12,10 @@ import {
   SECURITY_LINK_HISTORY,
   SETTINGS_TABS,
 } from './settingsData'
+
+beforeEach(() => {
+  useToastStore.setState({ toasts: [] })
+})
 
 describe('SettingsPage', () => {
   it('renders every member row', () => {
@@ -29,6 +35,34 @@ describe('SettingsPage', () => {
     await user.click(toggle)
 
     expect(toggle).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('shows a toast when a member approval permission is toggled', async () => {
+    const user = userEvent.setup()
+    render(
+      <>
+        <SettingsPage />
+        <ToastViewport />
+      </>,
+    )
+
+    await user.click(screen.getByRole('switch', { name: '김경민 승인 권한' }))
+
+    expect(screen.getByText('김경민님의 승인 권한을 변경했습니다.')).toBeInTheDocument()
+  })
+
+  it('shows a toast when inviting a member', async () => {
+    const user = userEvent.setup()
+    render(
+      <>
+        <SettingsPage />
+        <ToastViewport />
+      </>,
+    )
+
+    await user.click(screen.getByRole('button', { name: '＋ 구성원 초대' }))
+
+    expect(screen.getByText('구성원 초대를 보냈습니다.')).toBeInTheDocument()
   })
 
   it('switches to the security link tab and shows link history', async () => {

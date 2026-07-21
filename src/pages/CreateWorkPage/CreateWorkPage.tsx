@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button/Button'
+import { useToastStore } from '../../store/toastStore'
 import styles from './CreateWorkPage.module.css'
 import {
   AGENT_TRACE_PREVIEW,
@@ -14,6 +15,7 @@ export function CreateWorkPage() {
   const navigate = useNavigate()
   const [mode, setMode] = useState<InputModeId>('nl')
   const [request, setRequest] = useState('')
+  const showToast = useToastStore((state) => state.showToast)
 
   function handleExampleClick(example: string) {
     setRequest(example)
@@ -26,6 +28,7 @@ export function CreateWorkPage() {
 
   function handleSaveDraft() {
     // TODO(backend): PATCH /api/work-items/draft -> 현재 입력 상태 저장
+    showToast('초안을 저장했습니다.')
   }
 
   function handleLinkWorker() {

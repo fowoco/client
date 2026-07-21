@@ -130,6 +130,11 @@
   outline: none;
 }
 
+.textarea:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
 .textareaHint {
   margin: 0;
   font-size: 13px;

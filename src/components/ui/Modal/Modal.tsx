@@ -18,6 +18,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
     if (!open) return
 
     const previousOverflow = document.body.style.overflow
+    const previousFocus = document.activeElement as HTMLElement | null
     document.body.style.overflow = 'hidden'
 
     const focusable = panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
@@ -25,6 +26,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
 
     return () => {
       document.body.style.overflow = previousOverflow
+      previousFocus?.focus()
     }
   }, [open])
 

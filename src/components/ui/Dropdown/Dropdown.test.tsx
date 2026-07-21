@@ -56,4 +56,37 @@ describe('Dropdown', () => {
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
   })
+
+  it('returns focus to the trigger after selecting an option', async () => {
+    const user = userEvent.setup()
+    render(<Dropdown options={OPTIONS} value="30" onChange={() => {}} ariaLabel="마감 필터" />)
+
+    const trigger = screen.getByRole('button', { name: '마감 필터' })
+    await user.click(trigger)
+    await user.click(screen.getByRole('option', { name: '마감 · 90일' }))
+
+    expect(trigger).toHaveFocus()
+  })
+
+  it('returns focus to the trigger after closing with Escape', async () => {
+    const user = userEvent.setup()
+    render(<Dropdown options={OPTIONS} value="30" onChange={() => {}} ariaLabel="마감 필터" />)
+
+    const trigger = screen.getByRole('button', { name: '마감 필터' })
+    await user.click(trigger)
+    await user.keyboard('{Escape}')
+
+    expect(trigger).toHaveFocus()
+  })
+
+  it('sets aria-activedescendant to the currently active option', async () => {
+    const user = userEvent.setup()
+    render(<Dropdown options={OPTIONS} value="30" onChange={() => {}} ariaLabel="마감 필터" />)
+
+    await user.click(screen.getByRole('button', { name: '마감 필터' }))
+    const list = screen.getByRole('listbox')
+    const selectedOption = screen.getByRole('option', { name: '마감 · 30일' })
+
+    expect(list).toHaveAttribute('aria-activedescendant', selectedOption.id)
+  })
 })

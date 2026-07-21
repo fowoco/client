@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Dropdown } from '../../components/ui/Dropdown/Dropdown'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import { useAsyncDemoData } from '../../hooks/useAsyncDemoData'
@@ -11,10 +12,17 @@ const TASK_LINK_CLASS = {
   primary: styles.taskLinkPrimary,
 }
 
+const DEADLINE_OPTIONS = [
+  { value: '30', label: '기한 · 30일' },
+  { value: '60', label: '기한 · 60일' },
+  { value: '90', label: '기한 · 90일' },
+]
+
 export function WorkerListPage() {
   const navigate = useNavigate()
   const status = useAsyncDemoData(WORKERS.length === 0)
   const [query, setQuery] = useState('')
+  const [deadlineFilter, setDeadlineFilter] = useState('90')
   const [selectedId, setSelectedId] = useState(WORKERS[0].id)
 
   const visibleWorkers = useMemo(() => {
@@ -56,9 +64,13 @@ export function WorkerListPage() {
           onChange={(event) => setQuery(event.target.value)}
           aria-label="근로자 검색"
         />
-        <select className={styles.filter} aria-label="기한 필터" defaultValue="90">
-          <option value="90">기한 · 90일</option>
-        </select>
+        {/* TODO(backend): GET /api/workers?deadline= -> 기한 필터 실제 조회 연동 */}
+        <Dropdown
+          options={DEADLINE_OPTIONS}
+          value={deadlineFilter}
+          onChange={setDeadlineFilter}
+          ariaLabel="기한 필터"
+        />
         <span className={styles.maskingNote}>개인정보 마스킹 켜짐</span>
       </div>
 

@@ -143,11 +143,29 @@
 
 .membersHeader {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
   margin: 24px 0 8px;
   padding: 0 16px;
   font-size: 12px;
   color: var(--text-secondary);
+  text-align: left;
+}
+
+.membersHeaderIdentity {
+  flex: 1;
+}
+
+.membersHeaderApproval {
+  width: 220px;
+}
+
+.membersHeaderToggle {
+  width: 42px;
+}
+
+.membersHeaderStatus {
+  width: 140px;
 }
 
 .memberRow {
@@ -181,6 +199,7 @@
 
 .memberApproval {
   width: 220px;
+  text-align: left;
   font-size: 12px;
   font-weight: 500;
   color: var(--text-secondary);
@@ -221,6 +240,7 @@
 
 .memberStatus {
   width: 140px;
+  text-align: left;
   font-size: 12px;
 }
 

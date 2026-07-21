@@ -2,9 +2,15 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button/Button'
 import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
+import { Dropdown } from '../../components/ui/Dropdown/Dropdown'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import styles from './ReviewWorkPage.module.css'
 import { MISSING_INFO, PREPARED_DRAFT, UNDERSTOOD_REQUEST } from './reviewWorkData'
+
+const INSTITUTION_OPTIONS = [
+  { value: '', label: MISSING_INFO.placeholder },
+  ...MISSING_INFO.options.map((option) => ({ value: option, label: option })),
+]
 
 export function ReviewWorkPage() {
   const navigate = useNavigate()
@@ -102,19 +108,12 @@ export function ReviewWorkPage() {
           <div className={styles.missingCard}>
             <h2 className={styles.missingTitle}>{MISSING_INFO.title}</h2>
             <p className={styles.missingQuestion}>{MISSING_INFO.question}</p>
-            <select
-              className={styles.missingSelect}
+            <Dropdown
+              options={INSTITUTION_OPTIONS}
               value={institution}
-              onChange={(event) => setInstitution(event.target.value)}
-              aria-label={MISSING_INFO.placeholder}
-            >
-              <option value="">{MISSING_INFO.placeholder} ▾</option>
-              {MISSING_INFO.options.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
+              onChange={setInstitution}
+              ariaLabel={MISSING_INFO.placeholder}
+            />
             <p className={styles.missingWarning}>{MISSING_INFO.warning}</p>
           </div>
         </div>

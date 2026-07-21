@@ -27,10 +27,8 @@ describe('ReviewWorkPage', () => {
     const create = screen.getByRole('button', { name: '정보 확인 후 업무 생성' })
     expect(create).toBeDisabled()
 
-    await user.selectOptions(
-      screen.getByLabelText(MISSING_INFO.placeholder),
-      MISSING_INFO.options[0],
-    )
+    await user.click(screen.getByRole('button', { name: MISSING_INFO.placeholder }))
+    await user.click(screen.getByRole('option', { name: MISSING_INFO.options[0] }))
 
     expect(create).toBeEnabled()
   })

@@ -1,6 +1,7 @@
 import type { WorkItemUrgency } from '../../components/ui/WorkItemRow/WorkItemRow'
 
 // TODO(backend): GET /api/work-items?tab=&status=&due=&q= -> WORK_TABS, WORK_ITEMS 대체
+// 백엔드 연동 전까지는 tabIds/status/dueDays 기준으로 클라이언트에서 직접 필터링한다.
 
 export interface WorkTab {
   id: string
@@ -15,12 +16,18 @@ export const WORK_TABS: WorkTab[] = [
   { id: 'follow-up', label: '후속조치', count: 3 },
 ]
 
+export type WorkTabId = 'mine' | 'my-approval' | 'follow-up'
+export type WorkItemStatus = 'pending' | 'waiting-response' | 'other'
+
 export interface WorkListItem {
   id: string
   title: string
   meta: string
   nextAction: string
   urgency: WorkItemUrgency
+  tabIds: WorkTabId[]
+  status: WorkItemStatus
+  dueDays: number
 }
 
 export const WORK_ITEMS: WorkListItem[] = [
@@ -30,6 +37,9 @@ export const WORK_ITEMS: WorkListItem[] = [
     meta: 'D-12 · 승인 대기 · 체류 · 김경민',
     nextAction: '다음 · 요청문 승인',
     urgency: 'warning',
+    tabIds: ['mine', 'my-approval'],
+    status: 'pending',
+    dueDays: 12,
   },
   {
     id: 'WI-2',
@@ -37,6 +47,9 @@ export const WORK_ITEMS: WorkListItem[] = [
     meta: '오늘 · 근로자 응답 대기 · 서류',
     nextAction: '다음 · 응답 확인',
     urgency: 'warning',
+    tabIds: ['mine'],
+    status: 'waiting-response',
+    dueDays: 0,
   },
   {
     id: 'WI-3',
@@ -44,6 +57,9 @@ export const WORK_ITEMS: WorkListItem[] = [
     meta: 'D-2 · 증빙 필요 · 외부기관 · 박서준',
     nextAction: '다음 · 자료 검토',
     urgency: 'warning',
+    tabIds: ['follow-up'],
+    status: 'other',
+    dueDays: 2,
   },
   {
     id: 'WI-4',
@@ -51,6 +67,9 @@ export const WORK_ITEMS: WorkListItem[] = [
     meta: 'D-4 · 담당자 미배정 · 일반행정',
     nextAction: '다음 · 담당자 지정',
     urgency: 'warning',
+    tabIds: ['follow-up'],
+    status: 'other',
+    dueDays: 4,
   },
   {
     id: 'WI-5',
@@ -58,6 +77,9 @@ export const WORK_ITEMS: WorkListItem[] = [
     meta: 'D-7 · 준비 중 · 연결 근로자 없음',
     nextAction: '다음 · 체크리스트',
     urgency: 'warning',
+    tabIds: ['follow-up'],
+    status: 'other',
+    dueDays: 7,
   },
 ]
 

@@ -1,16 +1,31 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Dropdown } from '../../components/ui/Dropdown/Dropdown'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { WorkItemRow } from '../../components/ui/WorkItemRow/WorkItemRow'
 import { useAsyncDemoData } from '../../hooks/useAsyncDemoData'
 import styles from './WorkListPage.module.css'
 import { TOTAL_WORK_COUNT, WORK_ITEMS, WORK_TABS } from './workListData'
 
+const STATUS_OPTIONS = [
+  { value: 'all', label: '상태 · 전체' },
+  { value: 'pending', label: '상태 · 승인 대기' },
+  { value: 'waiting-response', label: '상태 · 응답 대기' },
+]
+
+const DUE_OPTIONS = [
+  { value: '7', label: '마감 · 7일' },
+  { value: '30', label: '마감 · 30일' },
+  { value: '90', label: '마감 · 90일' },
+]
+
 export function WorkListPage() {
   const navigate = useNavigate()
   const status = useAsyncDemoData(WORK_ITEMS.length === 0)
   const [activeTab, setActiveTab] = useState(WORK_TABS[0].id)
   const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [dueFilter, setDueFilter] = useState('30')
 
   const visibleItems = useMemo(() => {
     const normalized = query.trim().toLowerCase()
@@ -56,12 +71,20 @@ export function WorkListPage() {
           onChange={(event) => setQuery(event.target.value)}
           aria-label="업무 검색"
         />
-        <select className={styles.filter} aria-label="상태 필터" defaultValue="all">
-          <option value="all">상태 · 전체</option>
-        </select>
-        <select className={styles.filter} aria-label="마감 필터" defaultValue="30">
-          <option value="30">마감 · 30일</option>
-        </select>
+        {/* TODO(backend): GET /api/work-items?status= -> 상태 필터 실제 조회 연동 */}
+        <Dropdown
+          options={STATUS_OPTIONS}
+          value={statusFilter}
+          onChange={setStatusFilter}
+          ariaLabel="상태 필터"
+        />
+        {/* TODO(backend): GET /api/work-items?due= -> 마감 필터 실제 조회 연동 */}
+        <Dropdown
+          options={DUE_OPTIONS}
+          value={dueFilter}
+          onChange={setDueFilter}
+          ariaLabel="마감 필터"
+        />
         <button type="button" className={styles.advancedFilter} onClick={handleAdvancedFilter}>
           고급 필터 7개 ▾
         </button>

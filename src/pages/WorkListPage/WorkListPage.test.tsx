@@ -63,4 +63,17 @@ describe('WorkListPage', () => {
     renderPage('error')
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument()
   })
+
+  it('changes the status filter selection via the dropdown', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    const trigger = screen.getByRole('button', { name: '상태 필터' })
+    expect(trigger).toHaveTextContent('상태 · 전체')
+
+    await user.click(trigger)
+    await user.click(screen.getByRole('option', { name: '상태 · 승인 대기' }))
+
+    expect(trigger).toHaveTextContent('상태 · 승인 대기')
+  })
 })

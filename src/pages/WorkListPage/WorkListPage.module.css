@@ -64,18 +64,6 @@
   border-radius: var(--fowoco-radius-6);
 }
 
-.filter {
-  width: 180px;
-  height: 48px;
-  padding: 0 15px;
-  font-size: 13px;
-  font-family: inherit;
-  color: var(--text-primary);
-  background: var(--surface-default);
-  border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-6);
-}
-
 .advancedFilter {
   margin-left: auto;
   align-self: center;

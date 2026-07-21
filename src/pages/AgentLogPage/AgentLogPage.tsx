@@ -14,9 +14,15 @@ export function AgentLogPage() {
   const [source, setSource] = useState('all')
 
   const visibleLogs = useMemo(() => {
-    if (source === 'all') return AGENT_LOGS
-    return AGENT_LOGS.filter((log) => log.source === source)
-  }, [source])
+    return AGENT_LOGS.filter((log) => {
+      const matchesSource = source === 'all' || log.source === source
+      const matchesPeriod =
+        period === 'all' ||
+        (period === 'today' && log.daysAgo === 0) ||
+        (period !== 'today' && log.daysAgo <= Number(period))
+      return matchesSource && matchesPeriod
+    })
+  }, [source, period])
 
   function handleOpenRelatedWork(caseId: string) {
     navigate(`/tasks/${caseId}`)
@@ -30,7 +36,7 @@ export function AgentLogPage() {
       </p>
 
       <div className={styles.toolbar}>
-        {/* TODO(backend): GET /api/agent-logs?period= -> 기간 필터 실제 조회 연동 */}
+        {/* TODO(backend): GET /api/agent-logs?period= -> 현재는 클라이언트에서 daysAgo로 필터링, 추후 서버 쿼리로 대체 */}
         <Dropdown options={PERIOD_OPTIONS} value={period} onChange={setPeriod} ariaLabel="기간 필터" />
         <Dropdown options={SOURCE_OPTIONS} value={source} onChange={setSource} ariaLabel="근거 출처 필터" />
       </div>

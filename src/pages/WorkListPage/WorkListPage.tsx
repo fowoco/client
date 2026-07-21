@@ -5,7 +5,7 @@ import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { WorkItemRow } from '../../components/ui/WorkItemRow/WorkItemRow'
 import { useAsyncDemoData } from '../../hooks/useAsyncDemoData'
 import styles from './WorkListPage.module.css'
-import { TOTAL_WORK_COUNT, WORK_ITEMS, WORK_TABS } from './workListData'
+import { TOTAL_WORK_COUNT, WORK_ITEMS, WORK_TABS, type WorkTabId } from './workListData'
 
 const STATUS_OPTIONS = [
   { value: 'all', label: '상태 · 전체' },
@@ -29,9 +29,14 @@ export function WorkListPage() {
 
   const visibleItems = useMemo(() => {
     const normalized = query.trim().toLowerCase()
-    if (!normalized) return WORK_ITEMS
-    return WORK_ITEMS.filter((item) => item.title.toLowerCase().includes(normalized))
-  }, [query])
+    return WORK_ITEMS.filter((item) => {
+      const matchesQuery = !normalized || item.title.toLowerCase().includes(normalized)
+      const matchesTab = activeTab === 'all' || item.tabIds.includes(activeTab as WorkTabId)
+      const matchesStatus = statusFilter === 'all' || item.status === statusFilter
+      const matchesDue = item.dueDays <= Number(dueFilter)
+      return matchesQuery && matchesTab && matchesStatus && matchesDue
+    })
+  }, [query, activeTab, statusFilter, dueFilter])
 
   function handleAdvancedFilter() {
     // TODO(backend): GET /api/work-items/filters -> 고급 필터 옵션 목록
@@ -71,14 +76,14 @@ export function WorkListPage() {
           onChange={(event) => setQuery(event.target.value)}
           aria-label="업무 검색"
         />
-        {/* TODO(backend): GET /api/work-items?status= -> 상태 필터 실제 조회 연동 */}
+        {/* TODO(backend): GET /api/work-items?status= -> 현재는 클라이언트에서 status로 필터링, 추후 서버 쿼리로 대체 */}
         <Dropdown
           options={STATUS_OPTIONS}
           value={statusFilter}
           onChange={setStatusFilter}
           ariaLabel="상태 필터"
         />
-        {/* TODO(backend): GET /api/work-items?due= -> 마감 필터 실제 조회 연동 */}
+        {/* TODO(backend): GET /api/work-items?due= -> 현재는 클라이언트에서 dueDays로 필터링, 추후 서버 쿼리로 대체 */}
         <Dropdown
           options={DUE_OPTIONS}
           value={dueFilter}
@@ -129,7 +134,11 @@ export function WorkListPage() {
 
           {visibleItems.length === 0 ? (
             <div className={styles.stateWrap}>
-              <EmptyState kind="empty" title="검색 결과가 없습니다" body="다른 검색어로 다시 시도해 보세요." />
+              <EmptyState
+                kind="empty"
+                title="표시할 업무가 없습니다"
+                body="다른 탭이나 필터로 다시 시도해 보세요."
+              />
             </div>
           ) : (
             <div className={styles.list}>

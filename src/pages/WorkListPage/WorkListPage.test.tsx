@@ -41,10 +41,10 @@ describe('WorkListPage', () => {
 
     await user.type(screen.getByLabelText('업무 검색'), '존재하지않는검색어')
 
-    expect(screen.getByText('검색 결과가 없습니다')).toBeInTheDocument()
+    expect(screen.getByText('표시할 업무가 없습니다')).toBeInTheDocument()
   })
 
-  it('switches the active tab on click', async () => {
+  it('filters work items when a different tab is selected', async () => {
     const user = userEvent.setup()
     renderPage()
 
@@ -52,6 +52,18 @@ describe('WorkListPage', () => {
     await user.click(mineTab)
 
     expect(mineTab).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByText('응웬반A 체류연장 준비')).toBeInTheDocument()
+    expect(screen.queryByText('월간 기숙사 점검 결과 정리')).not.toBeInTheDocument()
+  })
+
+  it('filters work items when the follow-up tab is selected', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByRole('tab', { name: '후속조치 3' }))
+
+    expect(screen.getByText('월간 기숙사 점검 결과 정리')).toBeInTheDocument()
+    expect(screen.queryByText('응웬반A 체류연장 준비')).not.toBeInTheDocument()
   })
 
   it('shows a loading state', () => {
@@ -64,7 +76,7 @@ describe('WorkListPage', () => {
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument()
   })
 
-  it('changes the status filter selection via the dropdown', async () => {
+  it('filters work items when the status filter changes', async () => {
     const user = userEvent.setup()
     renderPage()
 
@@ -75,5 +87,20 @@ describe('WorkListPage', () => {
     await user.click(screen.getByRole('option', { name: '상태 · 승인 대기' }))
 
     expect(trigger).toHaveTextContent('상태 · 승인 대기')
+    expect(screen.getByText('응웬반A 체류연장 준비')).toBeInTheDocument()
+    expect(screen.queryByText('외국인등록증 사본 제출 요청')).not.toBeInTheDocument()
+  })
+
+  it('filters work items when the due filter changes', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    const trigger = screen.getByRole('button', { name: '마감 필터' })
+
+    await user.click(trigger)
+    await user.click(screen.getByRole('option', { name: '마감 · 7일' }))
+
+    expect(screen.getByText('7월 외부기관 제출자료 취합')).toBeInTheDocument()
+    expect(screen.queryByText('응웬반A 체류연장 준비')).not.toBeInTheDocument()
   })
 })

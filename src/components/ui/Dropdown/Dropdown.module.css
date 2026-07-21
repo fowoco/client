@@ -1,0 +1,89 @@
+.wrapper {
+  position: relative;
+  display: inline-flex;
+  width: 180px;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fowoco-spacing-8);
+  width: 100%;
+  height: 48px;
+  padding: 0 16px 0 15px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color var(--fowoco-motion-fast) var(--fowoco-easing-standard);
+}
+
+.trigger:hover {
+  border-color: var(--brand-primary);
+}
+
+.triggerOpen {
+  border-color: var(--brand-primary);
+}
+
+.label {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.arrow {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--text-secondary);
+  transition: transform var(--fowoco-motion-fast) var(--fowoco-easing-standard);
+}
+
+.arrowOpen {
+  transform: rotate(180deg);
+}
+
+.list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  max-height: 240px;
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+  list-style: none;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
+  box-shadow: 0 4px 12px rgba(23, 43, 45, 0.12);
+}
+
+.option {
+  width: 100%;
+  height: 40px;
+  padding: 0 11px;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: var(--fowoco-radius-4);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.optionActive {
+  background: var(--surface-subtle);
+}
+
+.optionSelected {
+  background: var(--fowoco-teal-50);
+  color: var(--brand-primary);
+  font-weight: 500;
+}

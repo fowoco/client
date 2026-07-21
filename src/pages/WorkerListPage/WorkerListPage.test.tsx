@@ -43,7 +43,7 @@ describe('WorkerListPage', () => {
 
     await user.type(screen.getByLabelText('근로자 검색'), '존재하지않는이름')
 
-    expect(screen.getByText('검색 결과가 없습니다')).toBeInTheDocument()
+    expect(screen.getByText('표시할 근로자가 없습니다')).toBeInTheDocument()
   })
 
   it('switches the detail panel when a different worker is selected', async () => {
@@ -86,7 +86,7 @@ describe('WorkerListPage', () => {
     expect(screen.getByRole('heading', { name: WORKERS[0].name })).toBeInTheDocument()
   })
 
-  it('changes the deadline filter selection via the dropdown', async () => {
+  it('filters workers when the deadline filter changes', async () => {
     const user = userEvent.setup()
     renderPage()
 
@@ -97,5 +97,8 @@ describe('WorkerListPage', () => {
     await user.click(screen.getByRole('option', { name: '기한 · 30일' }))
 
     expect(trigger).toHaveTextContent('기한 · 30일')
+    expect(screen.getAllByText('응웬반A').length).toBeGreaterThan(0)
+    expect(screen.getByText('솜차이E')).toBeInTheDocument()
+    expect(screen.queryByText('아흐메드D')).not.toBeInTheDocument()
   })
 })

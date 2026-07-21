@@ -28,13 +28,17 @@ export function WorkerListPage() {
 
   const visibleWorkers = useMemo(() => {
     const normalized = query.trim().toLowerCase()
-    if (!normalized) return WORKERS
-    return WORKERS.filter((worker) =>
-      [worker.name, worker.nationality, worker.employeeId].some((field) =>
-        field.toLowerCase().includes(normalized),
-      ),
-    )
-  }, [query])
+    return WORKERS.filter((worker) => {
+      const matchesQuery =
+        !normalized ||
+        [worker.name, worker.nationality, worker.employeeId].some((field) =>
+          field.toLowerCase().includes(normalized),
+        )
+      const matchesDeadline =
+        worker.deadlineDays === null || worker.deadlineDays <= Number(deadlineFilter)
+      return matchesQuery && matchesDeadline
+    })
+  }, [query, deadlineFilter])
 
   const selectedWorker = WORKERS.find((worker) => worker.id === workerId) ?? WORKERS[0]
 
@@ -65,7 +69,7 @@ export function WorkerListPage() {
           onChange={(event) => setQuery(event.target.value)}
           aria-label="근로자 검색"
         />
-        {/* TODO(backend): GET /api/workers?deadline= -> 기한 필터 실제 조회 연동 */}
+        {/* TODO(backend): GET /api/workers?deadline= -> 현재는 클라이언트에서 deadlineDays로 필터링, 추후 서버 쿼리로 대체 */}
         <Dropdown
           options={DEADLINE_OPTIONS}
           value={deadlineFilter}
@@ -106,7 +110,11 @@ export function WorkerListPage() {
 
             {visibleWorkers.length === 0 ? (
               <div className={styles.searchEmpty}>
-                <EmptyState kind="empty" title="검색 결과가 없습니다" body="다른 검색어로 다시 시도해 보세요." />
+                <EmptyState
+                  kind="empty"
+                  title="표시할 근로자가 없습니다"
+                  body="다른 검색어나 기한 필터로 다시 시도해 보세요."
+                />
               </div>
             ) : (
               visibleWorkers.map((worker) => (

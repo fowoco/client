@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { Button } from '../ui/Button/Button'
 import styles from './AppLayout.module.css'
+import { HelpModal } from './HelpModal/HelpModal'
 import { NAV_ITEMS } from './navItems'
 import { RouteTransition } from './RouteTransition'
 
@@ -9,6 +11,7 @@ export function AppLayout() {
   const navigate = useNavigate()
   const user = useAuthStore((state) => state.user)
   const logout = useAuthStore((state) => state.logout)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   function handleLogout() {
     logout()
@@ -36,13 +39,7 @@ export function AppLayout() {
         </nav>
 
         <div className={styles.sidebarFooter}>
-          <button
-            type="button"
-            className={styles.help}
-            onClick={() => {
-              // TODO(backend): GET /api/help -> 도움말 콘텐츠 표시
-            }}
-          >
+          <button type="button" className={styles.help} onClick={() => setHelpOpen(true)}>
             ? 도움말
           </button>
           <button type="button" className={styles.logout} onClick={handleLogout}>
@@ -64,6 +61,8 @@ export function AppLayout() {
           <RouteTransition />
         </main>
       </div>
+
+      <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
   )
 }

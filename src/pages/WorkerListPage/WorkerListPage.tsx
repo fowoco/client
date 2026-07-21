@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Dropdown } from '../../components/ui/Dropdown/Dropdown'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
@@ -20,10 +20,11 @@ const DEADLINE_OPTIONS = [
 
 export function WorkerListPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const { workerId } = useParams()
   const status = useAsyncDemoData(WORKERS.length === 0)
   const [query, setQuery] = useState('')
   const [deadlineFilter, setDeadlineFilter] = useState('90')
-  const [selectedId, setSelectedId] = useState(WORKERS[0].id)
 
   const visibleWorkers = useMemo(() => {
     const normalized = query.trim().toLowerCase()
@@ -35,7 +36,7 @@ export function WorkerListPage() {
     )
   }, [query])
 
-  const selectedWorker = WORKERS.find((worker) => worker.id === selectedId) ?? WORKERS[0]
+  const selectedWorker = WORKERS.find((worker) => worker.id === workerId) ?? WORKERS[0]
 
   function handleViewAllWorkers() {
     // TODO(backend): GET /api/workers?page= -> 전체 근로자 페이지네이션
@@ -113,9 +114,9 @@ export function WorkerListPage() {
                   key={worker.id}
                   type="button"
                   className={`${styles.workerRow} ${
-                    worker.id === selectedId ? styles.workerRowActive : ''
+                    worker.id === selectedWorker.id ? styles.workerRowActive : ''
                   }`}
-                  onClick={() => setSelectedId(worker.id)}
+                  onClick={() => navigate({ pathname: `/workers/${worker.id}`, search: location.search })}
                 >
                   <div className={styles.workerRowTop}>
                     <p className={styles.workerName}>{worker.name}</p>

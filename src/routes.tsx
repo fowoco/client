@@ -5,6 +5,7 @@ import { AgentLogPage } from './pages/AgentLogPage/AgentLogPage'
 import { CaseDetailPage } from './pages/CaseDetailPage/CaseDetailPage'
 import { CreateWorkPage } from './pages/CreateWorkPage/CreateWorkPage'
 import { DashboardPage } from './pages/DashboardPage/DashboardPage'
+import { DocumentDetailPage } from './pages/DocumentDetailPage/DocumentDetailPage'
 import { DocumentListPage } from './pages/DocumentListPage/DocumentListPage'
 import { LinkExpiredPage } from './pages/LinkExpiredPage/LinkExpiredPage'
 import { LinkRequestPage } from './pages/LinkRequestPage/LinkRequestPage'
@@ -35,6 +36,7 @@ export const router = createBrowserRouter([
           { path: '/workers/:workerId', element: <WorkerListPage /> },
           { path: '/workers/:workerId/detail', element: <WorkerDetailPage /> },
           { path: '/documents', element: <DocumentListPage /> },
+          { path: '/documents/:documentId', element: <DocumentDetailPage /> },
           { path: '/tasks', element: <WorkListPage /> },
           { path: '/tasks/new', element: <CreateWorkPage /> },
           { path: '/tasks/new/review', element: <ReviewWorkPage /> },

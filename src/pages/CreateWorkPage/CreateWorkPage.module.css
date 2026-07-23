@@ -68,7 +68,7 @@
 }
 
 .modeCard {
-  padding: 12px 18px;
+  padding: var(--fowoco-spacing-12) var(--fowoco-spacing-16);
   text-align: left;
   background: var(--surface-default);
   border: 1px solid var(--border-default);
@@ -150,7 +150,7 @@
 }
 
 .contextPanel {
-  padding: 21px 23px;
+  padding: var(--fowoco-spacing-20) var(--fowoco-spacing-24);
   background: var(--surface-default);
   border: 1px solid var(--border-default);
   border-radius: var(--fowoco-radius-8);
@@ -219,7 +219,7 @@
 
 .tracePreview {
   margin-top: 16px;
-  padding: 18px 24px;
+  padding: var(--fowoco-spacing-16) var(--fowoco-spacing-24);
   background: var(--surface-subtle);
   border-radius: var(--fowoco-radius-8);
 }

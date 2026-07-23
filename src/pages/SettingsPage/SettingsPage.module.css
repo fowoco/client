@@ -61,7 +61,7 @@
 }
 
 .card {
-  padding: 21px 23px;
+  padding: var(--fowoco-spacing-20) var(--fowoco-spacing-24);
   background: var(--surface-default);
   border: 1px solid var(--border-default);
   border-radius: var(--fowoco-radius-8);
@@ -129,7 +129,7 @@
 
 .membersCard {
   margin-top: 16px;
-  padding: 19px 23px;
+  padding: var(--fowoco-spacing-20) var(--fowoco-spacing-24);
   overflow-x: auto;
   background: var(--surface-default);
   border: 1px solid var(--border-default);

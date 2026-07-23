@@ -23,7 +23,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 19px 23px;
+  padding: var(--fowoco-spacing-20) var(--fowoco-spacing-24);
   border-bottom: 1px solid var(--border-default);
 }
 
@@ -44,5 +44,5 @@
 }
 
 .body {
-  padding: 19px 23px;
+  padding: var(--fowoco-spacing-20) var(--fowoco-spacing-24);
 }

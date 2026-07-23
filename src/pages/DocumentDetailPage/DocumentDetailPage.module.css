@@ -49,7 +49,7 @@
 
 .sectionCard {
   margin-top: 16px;
-  padding: 15px 23px;
+  padding: var(--fowoco-spacing-16) var(--fowoco-spacing-24);
   background: var(--surface-default);
   border: 1px solid var(--border-default);
   border-radius: var(--fowoco-radius-8);
@@ -109,7 +109,7 @@
   justify-content: flex-end;
   gap: 12px;
   margin-top: 16px;
-  padding: 12px 19px;
+  padding: var(--fowoco-spacing-12) var(--fowoco-spacing-20);
   background: var(--surface-default);
   border: 1px solid var(--border-default);
   border-radius: var(--fowoco-radius-8);

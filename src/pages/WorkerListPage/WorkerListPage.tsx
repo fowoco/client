@@ -70,7 +70,7 @@ export function WorkerListPage() {
   }
 
   function handleShowMoreDetail() {
-    // TODO(backend): GET /api/workers/:id/full -> 기본정보·서류·안내이력 상세
+    navigate(`/workers/${selectedWorker.id}/detail`)
   }
 
   return (

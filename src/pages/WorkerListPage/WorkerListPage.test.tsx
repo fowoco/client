@@ -12,6 +12,7 @@ function renderPage(demoState = 'success', initialPath = `/workers?demoState=${d
       <Routes>
         <Route path="/workers" element={<WorkerListPage />} />
         <Route path="/workers/:workerId" element={<WorkerListPage />} />
+        <Route path="/workers/:workerId/detail" element={<p>근로자 상세 페이지</p>} />
         <Route path="/tasks/:caseId" element={<p>업무 상세</p>} />
       </Routes>
     </MemoryRouter>,
@@ -79,6 +80,15 @@ describe('WorkerListPage', () => {
     await user.click(screen.getAllByRole('button', { name: '열기 →' })[0])
 
     expect(await screen.findByText('업무 상세')).toBeInTheDocument()
+  })
+
+  it('navigates to the worker detail page when "더 보기" is clicked', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByRole('button', { name: '기본정보·서류·안내이력 더 보기 ▾' }))
+
+    expect(await screen.findByText('근로자 상세 페이지')).toBeInTheDocument()
   })
 
   it('shows an empty state when a worker has no current tasks', async () => {

@@ -15,6 +15,7 @@ import { ReviewWorkPage } from './pages/ReviewWorkPage/ReviewWorkPage'
 import { SettingsPage } from './pages/SettingsPage/SettingsPage'
 import { SignupPage } from './pages/SignupPage/SignupPage'
 import { TicketListPage } from './pages/TicketListPage/TicketListPage'
+import { WorkerDetailPage } from './pages/WorkerDetailPage/WorkerDetailPage'
 import { WorkerListPage } from './pages/WorkerListPage/WorkerListPage'
 import { WorkListPage } from './pages/WorkListPage/WorkListPage'
 
@@ -31,6 +32,7 @@ export const router = createBrowserRouter([
           { path: '/dashboard', element: <DashboardPage /> },
           { path: '/workers', element: <WorkerListPage /> },
           { path: '/workers/:workerId', element: <WorkerListPage /> },
+          { path: '/workers/:workerId/detail', element: <WorkerDetailPage /> },
           { path: '/documents', element: <DocumentListPage /> },
           { path: '/tasks', element: <WorkListPage /> },
           { path: '/tasks/new', element: <CreateWorkPage /> },

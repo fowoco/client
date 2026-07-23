@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Dropdown } from '../../components/ui/Dropdown/Dropdown'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
+import { SearchInput } from '../../components/ui/SearchInput/SearchInput'
 import { WorkItemRow, type WorkItemUrgency } from '../../components/ui/WorkItemRow/WorkItemRow'
 import { useAsyncDemoData } from '../../hooks/useAsyncDemoData'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
@@ -91,12 +92,11 @@ export function WorkListPage() {
       </div>
 
       <div className={styles.toolbar}>
-        <input
-          className={styles.search}
-          placeholder="업무명·대상·담당자 검색"
+        <SearchInput
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          aria-label="업무 검색"
+          onChange={setQuery}
+          placeholder="업무명·대상·담당자 검색"
+          ariaLabel="업무 검색"
         />
         {/* TODO(backend): GET /api/work-items?status= -> 현재는 클라이언트에서 status로 필터링, 추후 서버 쿼리로 대체 */}
         <Dropdown

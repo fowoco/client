@@ -53,17 +53,6 @@
   }
 }
 
-.search {
-  flex: 1 1 240px;
-  max-width: 520px;
-  height: 48px;
-  padding: 0 15px;
-  font-size: 14px;
-  font-family: inherit;
-  border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-6);
-}
-
 .advancedFilter {
   margin-left: auto;
   align-self: center;

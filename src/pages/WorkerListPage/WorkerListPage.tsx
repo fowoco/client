@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Dropdown } from '../../components/ui/Dropdown/Dropdown'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
+import { SearchInput } from '../../components/ui/SearchInput/SearchInput'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import { useAsyncDemoData } from '../../hooks/useAsyncDemoData'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
@@ -81,13 +82,7 @@ export function WorkerListPage() {
       </p>
 
       <div className={styles.toolbar}>
-        <input
-          className={styles.search}
-          placeholder="이름·사번·국적 검색"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          aria-label="근로자 검색"
-        />
+        <SearchInput value={query} onChange={setQuery} placeholder="이름·사번·국적 검색" ariaLabel="근로자 검색" />
         {/* TODO(backend): GET /api/workers?deadline= -> 현재는 클라이언트에서 deadlineDays로 필터링, 추후 서버 쿼리로 대체 */}
         <Dropdown
           options={DEADLINE_OPTIONS}

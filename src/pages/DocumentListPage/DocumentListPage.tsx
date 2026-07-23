@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
+import { SearchInput } from '../../components/ui/SearchInput/SearchInput'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import { useAsyncDemoData } from '../../hooks/useAsyncDemoData'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
@@ -69,12 +70,11 @@ export function DocumentListPage() {
       </div>
 
       <div className={styles.toolbar}>
-        <input
-          className={styles.search}
-          placeholder="근로자명·서류 종류 검색"
+        <SearchInput
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          aria-label="서류 검색"
+          onChange={setQuery}
+          placeholder="근로자명·서류 종류 검색"
+          ariaLabel="서류 검색"
         />
       </div>
 

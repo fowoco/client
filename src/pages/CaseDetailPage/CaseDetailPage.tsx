@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { AgentSummary } from '../../components/ui/AgentSummary/AgentSummary'
 import { Button } from '../../components/ui/Button/Button'
 import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
+import { Drawer } from '../../components/ui/Drawer/Drawer'
 import { StatusLabel, type StatusTone } from '../../components/ui/StatusLabel/StatusLabel'
 import { useToastStore } from '../../store/toastStore'
 import styles from './CaseDetailPage.module.css'
@@ -18,6 +19,7 @@ import {
   CASE_TABS,
   COMPLETION_GATES,
   CONTEXT_ACCESS,
+  CONTEXT_DRAWER,
   type CaseDocumentStatus,
   type StepStatus,
 } from './caseDetailData'
@@ -51,6 +53,7 @@ const STEP_STATUS_CLASS: Record<StepStatus, string> = {
 export function CaseDetailPage() {
   const [activeTab, setActiveTab] = useState(CASE_TABS[0])
   const [moreMenuOpen, setMoreMenuOpen] = useState(false)
+  const [contextDrawerOpen, setContextDrawerOpen] = useState(false)
   const moreMenuRef = useRef<HTMLDivElement>(null)
   const showToast = useToastStore((state) => state.showToast)
 
@@ -87,7 +90,7 @@ export function CaseDetailPage() {
   }
 
   function handleExpandContext() {
-    // TODO(backend): GET /api/work-items/:id/context -> 근거·문서·활동 상세 목록
+    setContextDrawerOpen(true)
   }
 
   function handleSaveDraft() {
@@ -319,6 +322,60 @@ export function CaseDetailPage() {
       </div>
 
       <p className={styles.footnote}>{ACTION_DOCK.footnote}</p>
+
+      <Drawer open={contextDrawerOpen} onClose={() => setContextDrawerOpen(false)} title="관련 Context">
+        {/* TODO(backend): GET /api/work-items/:id/context -> CONTEXT_DRAWER 대체 */}
+        <div className={styles.contextSection}>
+          <h3 className={styles.contextSectionTitle}>Agent가 확인한 내용</h3>
+          <ul className={styles.contextList}>
+            {CONTEXT_DRAWER.agentConfirmed.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+
+        <div className={styles.contextSection}>
+          <h3 className={styles.contextSectionTitle}>부족한 정보</h3>
+          <ul className={styles.contextList}>
+            {CONTEXT_DRAWER.missingInfo.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+
+        <div className={styles.contextSection}>
+          <h3 className={styles.contextSectionTitle}>공식 출처</h3>
+          {CONTEXT_DRAWER.officialSources.map((source) => (
+            <DetailRow key={source.label} label={source.label} value={source.value} />
+          ))}
+        </div>
+
+        <div className={styles.contextSection}>
+          <h3 className={styles.contextSectionTitle}>최근 활동</h3>
+          <div className={styles.timeline}>
+            {CASE_ACTIVITY.slice(0, 3).map((entry) => (
+              <div key={`${entry.date}-${entry.label}`} className={styles.timelineRow}>
+                <span className={styles.timelineDate}>{entry.date}</span>
+                <span
+                  className={`${styles.timelineDot} ${
+                    entry.highlighted ? styles.timelineDotHighlighted : ''
+                  }`}
+                />
+                <span className={styles.timelineLabel}>{entry.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className={styles.contextSection}>
+          <h3 className={styles.contextSectionTitle}>HR이 할 일</h3>
+          <ul className={styles.contextList}>
+            {CONTEXT_DRAWER.hrTodo.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      </Drawer>
     </div>
   )
 }

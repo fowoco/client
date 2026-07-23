@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { SearchInput } from '../../components/ui/SearchInput/SearchInput'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
+import { Tabs } from '../../components/ui/Tabs/Tabs'
 import { useAsyncDemoData } from '../../hooks/useAsyncDemoData'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import styles from './DocumentListPage.module.css'
@@ -54,20 +55,7 @@ export function DocumentListPage() {
         미제출·확인 대기 서류를 우선 보여주며, 확인이 끝나면 상태가 자동으로 갱신됩니다.
       </p>
 
-      <div className={styles.tabs} role="tablist" aria-label="서류 탭">
-        {DOCUMENT_TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === tab.id}
-            className={`${styles.tab} ${activeTab === tab.id ? styles.tabActive : ''}`}
-            onClick={() => setActiveTab(tab.id)}
-          >
-            {tab.label} {tab.count}
-          </button>
-        ))}
-      </div>
+      <Tabs tabs={DOCUMENT_TABS} activeId={activeTab} onChange={setActiveTab} ariaLabel="서류 탭" />
 
       <div className={styles.toolbar}>
         <SearchInput

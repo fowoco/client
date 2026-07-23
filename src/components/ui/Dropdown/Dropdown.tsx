@@ -12,11 +12,13 @@ export interface DropdownProps {
   onChange: (value: string) => void
   ariaLabel: string
   className?: string
+  /** 트리거 너비. 라벨이 긴 옵션이 있을 때 기본값(180px) 대신 지정한다. */
+  width?: string
 }
 
 let dropdownIdCounter = 0
 
-export function Dropdown({ options, value, onChange, ariaLabel, className }: DropdownProps) {
+export function Dropdown({ options, value, onChange, ariaLabel, className, width }: DropdownProps) {
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -84,7 +86,11 @@ export function Dropdown({ options, value, onChange, ariaLabel, className }: Dro
   }
 
   return (
-    <div ref={wrapperRef} className={`${styles.wrapper} ${className ?? ''}`}>
+    <div
+      ref={wrapperRef}
+      className={`${styles.wrapper} ${className ?? ''}`}
+      style={width ? { width } : undefined}
+    >
       <button
         ref={triggerRef}
         type="button"

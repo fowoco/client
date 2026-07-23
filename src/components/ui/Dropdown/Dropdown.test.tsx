@@ -89,4 +89,13 @@ describe('Dropdown', () => {
 
     expect(list).toHaveAttribute('aria-activedescendant', selectedOption.id)
   })
+
+  it('applies a custom width when provided', () => {
+    render(
+      <Dropdown options={OPTIONS} value="30" onChange={() => {}} ariaLabel="마감 필터" width="260px" />,
+    )
+
+    const trigger = screen.getByRole('button', { name: '마감 필터' })
+    expect(trigger.parentElement).toHaveStyle({ width: '260px' })
+  })
 })

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AgentSummary } from '../../components/ui/AgentSummary/AgentSummary'
 import { Button } from '../../components/ui/Button/Button'
@@ -50,7 +50,22 @@ const STEP_STATUS_CLASS: Record<StepStatus, string> = {
 
 export function CaseDetailPage() {
   const [activeTab, setActiveTab] = useState(CASE_TABS[0])
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false)
+  const moreMenuRef = useRef<HTMLDivElement>(null)
   const showToast = useToastStore((state) => state.showToast)
+
+  useEffect(() => {
+    if (!moreMenuOpen) return
+
+    function handlePointerDown(event: PointerEvent) {
+      if (!moreMenuRef.current?.contains(event.target as Node)) {
+        setMoreMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    return () => document.removeEventListener('pointerdown', handlePointerDown)
+  }, [moreMenuOpen])
 
   function handleRequestApproval() {
     // TODO(backend): POST /api/work-items/:id/approval-request -> 승인 대기 상태로 전환
@@ -58,7 +73,17 @@ export function CaseDetailPage() {
   }
 
   function handleMoreActions() {
-    // TODO(backend): GET /api/work-items/:id/actions -> 취소·담당자 변경 등 메뉴 항목 구성
+    setMoreMenuOpen((open) => !open)
+  }
+
+  function handleCancelCase() {
+    // TODO(backend): POST /api/work-items/:id/cancel -> 업무 취소
+    setMoreMenuOpen(false)
+  }
+
+  function handleReassignCase() {
+    // TODO(backend): PATCH /api/work-items/:id/assignee -> 담당자 변경
+    setMoreMenuOpen(false)
   }
 
   function handleExpandContext() {
@@ -76,9 +101,36 @@ export function CaseDetailPage() {
         <Link to="/tasks" className={styles.back}>
           ← 업무함
         </Link>
-        <button type="button" className={styles.more} onClick={handleMoreActions}>
-          더보기 ···
-        </button>
+        <div className={styles.moreWrap} ref={moreMenuRef}>
+          <button
+            type="button"
+            className={styles.more}
+            aria-haspopup="menu"
+            aria-expanded={moreMenuOpen}
+            onClick={handleMoreActions}
+          >
+            더보기 ···
+          </button>
+          {moreMenuOpen && (
+            <ul className={styles.moreMenu} role="menu" aria-label="업무 더보기 메뉴">
+              <li role="presentation">
+                <button type="button" role="menuitem" className={styles.moreMenuItem} onClick={handleCancelCase}>
+                  취소
+                </button>
+              </li>
+              <li role="presentation">
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={styles.moreMenuItem}
+                  onClick={handleReassignCase}
+                >
+                  담당자 변경
+                </button>
+              </li>
+            </ul>
+          )}
+        </div>
       </div>
 
       <div className={styles.headerRow}>

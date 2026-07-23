@@ -99,4 +99,41 @@ describe('CaseDetailPage', () => {
 
     expect(screen.getByText('승인을 요청했습니다.')).toBeInTheDocument()
   })
+
+  it('opens and closes the more menu', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    const moreButton = screen.getByRole('button', { name: '더보기 ···' })
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+
+    await user.click(moreButton)
+    expect(screen.getByRole('menu', { name: '업무 더보기 메뉴' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: '취소' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: '담당자 변경' })).toBeInTheDocument()
+
+    await user.click(moreButton)
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
+  it('closes the more menu after selecting an item', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByRole('button', { name: '더보기 ···' }))
+    await user.click(screen.getByRole('menuitem', { name: '취소' }))
+
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
+  it('closes the more menu when clicking outside', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByRole('button', { name: '더보기 ···' }))
+    expect(screen.getByRole('menu')).toBeInTheDocument()
+
+    await user.click(screen.getByText(CASE_HEADER.title))
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
 })

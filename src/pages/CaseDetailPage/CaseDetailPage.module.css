@@ -27,6 +27,42 @@
   padding: 0;
 }
 
+.moreWrap {
+  position: relative;
+}
+
+.moreMenu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin: 6px 0 0;
+  padding: 4px;
+  min-width: 140px;
+  list-style: none;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
+  box-shadow: 0 4px 12px rgba(23, 43, 45, 0.12);
+  z-index: 10;
+}
+
+.moreMenuItem {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  border-radius: var(--fowoco-radius-6);
+  font-size: 13px;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.moreMenuItem:hover {
+  background: var(--surface-subtle);
+}
+
 .headerRow {
   display: flex;
   align-items: center;

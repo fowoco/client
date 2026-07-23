@@ -92,6 +92,11 @@
   resize: vertical;
 }
 
+.answerInput:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
 .answerActions {
   display: flex;
   justify-content: flex-end;

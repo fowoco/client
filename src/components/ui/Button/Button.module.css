@@ -45,3 +45,8 @@
   opacity: 0.42;
   cursor: not-allowed;
 }
+
+.button:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}

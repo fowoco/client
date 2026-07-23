@@ -14,18 +14,22 @@ export function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
-  const canSubmit = email.trim() !== '' && password.trim() !== ''
+  const canSubmit = email.trim() !== '' && password.trim() !== '' && !submitting
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
+    setSubmitting(true)
 
-    const success = login(email, password)
-    if (success) {
+    const result = await login(email, password)
+
+    setSubmitting(false)
+    if (result.success) {
       navigate('/dashboard')
     } else {
-      setError('이메일 또는 비밀번호가 올바르지 않습니다.')
+      setError(result.message ?? '이메일 또는 비밀번호가 올바르지 않습니다.')
     }
   }
 

@@ -76,7 +76,7 @@
 }
 
 .card {
-  padding: 21px 23px;
+  padding: var(--fowoco-spacing-20) var(--fowoco-spacing-24);
   background: var(--surface-default);
   border: 1px solid var(--border-default);
   border-radius: var(--fowoco-radius-8);
@@ -149,7 +149,7 @@
 }
 
 .missingCard {
-  padding: 20px 24px;
+  padding: var(--fowoco-spacing-20) var(--fowoco-spacing-24);
   background: var(--fowoco-amber-50);
   border-radius: var(--fowoco-radius-8);
 }
@@ -174,7 +174,7 @@
 }
 
 .draftPanel {
-  padding: 21px 23px;
+  padding: var(--fowoco-spacing-20) var(--fowoco-spacing-24);
   background: var(--surface-default);
   border: 1px solid var(--border-default);
   border-radius: var(--fowoco-radius-8);

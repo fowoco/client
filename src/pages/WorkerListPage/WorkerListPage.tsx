@@ -65,8 +65,8 @@ export function WorkerListPage() {
     setShowAll(true)
   }
 
-  function handleOpenTask() {
-    // TODO(backend): GET /api/work-items/:id -> 해당 업무 상세로 이동
+  function handleOpenTask(caseId: string) {
+    navigate(`/tasks/${caseId}`)
   }
 
   function handleShowMoreDetail() {
@@ -192,7 +192,7 @@ export function WorkerListPage() {
             ) : (
               <div className={styles.taskList}>
                 {selectedWorker.currentTasks.map((task) => (
-                  <div key={task.title} className={styles.taskRow}>
+                  <div key={task.caseId} className={styles.taskRow}>
                     <div>
                       <p className={styles.taskTitle}>{task.title}</p>
                       <p className={styles.taskDetail}>{task.detail}</p>
@@ -200,7 +200,7 @@ export function WorkerListPage() {
                     <button
                       type="button"
                       className={`${styles.taskLink} ${TASK_LINK_CLASS[task.linkTone]}`}
-                      onClick={handleOpenTask}
+                      onClick={() => handleOpenTask(task.caseId)}
                     >
                       열기 →
                     </button>

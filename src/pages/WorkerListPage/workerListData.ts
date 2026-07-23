@@ -3,6 +3,8 @@
 // TODO(backend): GET /api/workers/:id -> 선택된 근로자의 currentTasks/timeline 대체
 
 export interface WorkerTask {
+  /** WorkListPage/CaseDetailPage와 동일한 업무 ID 체계 (`/tasks/:caseId`로 연결) */
+  caseId: string
   title: string
   detail: string
   linkTone: 'warning' | 'primary'
@@ -41,8 +43,8 @@ export const WORKERS: Worker[] = [
     deadlineDays: 12,
     note: '진행 업무 2건',
     currentTasks: [
-      { title: '체류연장 준비', detail: '승인 대기 · D-12', linkTone: 'warning' },
-      { title: '여권 사본 요청', detail: '근로자 응답 대기 · 오늘', linkTone: 'primary' },
+      { caseId: 'WI-021', title: '체류연장 준비', detail: '승인 대기 · D-12', linkTone: 'warning' },
+      { caseId: 'WI-021-2', title: '여권 사본 요청', detail: '근로자 응답 대기 · 오늘', linkTone: 'primary' },
     ],
     timeline: [
       { date: '07.20', label: 'Agent가 체류연장 업무 초안 준비', highlighted: true },
@@ -61,7 +63,7 @@ export const WORKERS: Worker[] = [
     deadlineLabel: 'D-21 서류',
     deadlineDays: 21,
     note: '서류 누락 1건',
-    currentTasks: [{ title: '외국인등록증 사본 제출 요청', detail: '오늘 · 근로자 응답 대기', linkTone: 'warning' }],
+    currentTasks: [{ caseId: 'WI-018', title: '외국인등록증 사본 제출 요청', detail: '오늘 · 근로자 응답 대기', linkTone: 'warning' }],
     timeline: [{ date: '07.19', label: '서류 미제출 안내 발송', highlighted: true }],
   },
   {
@@ -74,7 +76,7 @@ export const WORKERS: Worker[] = [
     deadlineLabel: 'D-35 체류',
     deadlineDays: 35,
     note: '응답 대기 1건',
-    currentTasks: [{ title: '체류연장 안내 응답 대기', detail: '오늘 · 근로자 응답 대기', linkTone: 'warning' }],
+    currentTasks: [{ caseId: 'WI-032', title: '체류연장 안내 응답 대기', detail: '오늘 · 근로자 응답 대기', linkTone: 'warning' }],
     timeline: [{ date: '07.15', label: '체류연장 안내 발송', highlighted: true }],
   },
   {
@@ -100,7 +102,7 @@ export const WORKERS: Worker[] = [
     deadlineLabel: '정상',
     deadlineDays: null,
     note: '교육 일정 1건',
-    currentTasks: [{ title: '신규 교육 일정 확정', detail: 'D-4 · 담당자 미배정', linkTone: 'warning' }],
+    currentTasks: [{ caseId: 'WI-027', title: '신규 교육 일정 확정', detail: 'D-4 · 담당자 미배정', linkTone: 'warning' }],
     timeline: [{ date: '07.10', label: '교육 일정 등록', highlighted: false }],
   },
   {
@@ -113,7 +115,7 @@ export const WORKERS: Worker[] = [
     deadlineLabel: 'D-9 서류',
     deadlineDays: 9,
     note: '서류 누락 1건',
-    currentTasks: [{ title: '표준근로계약서 갱신 확인', detail: '승인 대기 · D-9', linkTone: 'warning' }],
+    currentTasks: [{ caseId: 'WI-041', title: '표준근로계약서 갱신 확인', detail: '승인 대기 · D-9', linkTone: 'warning' }],
     timeline: [{ date: '07.18', label: '계약서 갱신 요청 발송', highlighted: false }],
   },
   {
@@ -126,7 +128,7 @@ export const WORKERS: Worker[] = [
     deadlineLabel: 'D-27 체류',
     deadlineDays: 27,
     note: '진행 업무 1건',
-    currentTasks: [{ title: '체류연장 서류 안내', detail: '근로자 응답 대기 · 오늘', linkTone: 'primary' }],
+    currentTasks: [{ caseId: 'WI-042', title: '체류연장 서류 안내', detail: '근로자 응답 대기 · 오늘', linkTone: 'primary' }],
     timeline: [{ date: '07.16', label: '체류연장 안내 발송', highlighted: false }],
   },
   {
@@ -178,7 +180,7 @@ export const WORKERS: Worker[] = [
     deadlineLabel: 'D-33 서류',
     deadlineDays: 33,
     note: '서류 누락 1건',
-    currentTasks: [{ title: '건강진단서 제출 요청', detail: '오늘 · 근로자 응답 대기', linkTone: 'warning' }],
+    currentTasks: [{ caseId: 'WI-046', title: '건강진단서 제출 요청', detail: '오늘 · 근로자 응답 대기', linkTone: 'warning' }],
     timeline: [{ date: '07.14', label: '건강진단서 제출 요청 발송', highlighted: false }],
   },
   {
@@ -217,7 +219,7 @@ export const WORKERS: Worker[] = [
     deadlineLabel: 'D-19 체류',
     deadlineDays: 19,
     note: '진행 업무 1건',
-    currentTasks: [{ title: '체류연장 준비', detail: '승인 대기 · D-19', linkTone: 'warning' }],
+    currentTasks: [{ caseId: 'WI-049', title: '체류연장 준비', detail: '승인 대기 · D-19', linkTone: 'warning' }],
     timeline: [{ date: '07.17', label: 'Agent가 체류연장 업무 초안 준비', highlighted: false }],
   },
   {
@@ -243,7 +245,7 @@ export const WORKERS: Worker[] = [
     deadlineLabel: '정상',
     deadlineDays: null,
     note: '교육 일정 1건',
-    currentTasks: [{ title: '분기별 안전교육 일정 확정', detail: 'D-22 · 담당자 미배정', linkTone: 'warning' }],
+    currentTasks: [{ caseId: 'WI-051', title: '분기별 안전교육 일정 확정', detail: 'D-22 · 담당자 미배정', linkTone: 'warning' }],
     timeline: [{ date: '07.05', label: '교육 일정 등록', highlighted: false }],
   },
   {
@@ -256,7 +258,7 @@ export const WORKERS: Worker[] = [
     deadlineLabel: 'D-24 서류',
     deadlineDays: 24,
     note: '서류 누락 1건',
-    currentTasks: [{ title: '외국인등록증 사본 제출 요청', detail: '오늘 · 근로자 응답 대기', linkTone: 'warning' }],
+    currentTasks: [{ caseId: 'WI-052', title: '외국인등록증 사본 제출 요청', detail: '오늘 · 근로자 응답 대기', linkTone: 'warning' }],
     timeline: [{ date: '07.13', label: '서류 미제출 안내 발송', highlighted: false }],
   },
   {
@@ -295,7 +297,7 @@ export const WORKERS: Worker[] = [
     deadlineLabel: 'D-15 체류',
     deadlineDays: 15,
     note: '진행 업무 1건',
-    currentTasks: [{ title: '체류연장 안내 응답 대기', detail: '오늘 · 근로자 응답 대기', linkTone: 'warning' }],
+    currentTasks: [{ caseId: 'WI-055', title: '체류연장 안내 응답 대기', detail: '오늘 · 근로자 응답 대기', linkTone: 'warning' }],
     timeline: [{ date: '07.12', label: '체류연장 안내 발송', highlighted: false }],
   },
   {
@@ -334,7 +336,7 @@ export const WORKERS: Worker[] = [
     deadlineLabel: 'D-41 서류',
     deadlineDays: 41,
     note: '서류 누락 1건',
-    currentTasks: [{ title: '건강진단서 제출 요청', detail: '오늘 · 근로자 응답 대기', linkTone: 'warning' }],
+    currentTasks: [{ caseId: 'WI-058', title: '건강진단서 제출 요청', detail: '오늘 · 근로자 응답 대기', linkTone: 'warning' }],
     timeline: [{ date: '07.09', label: '건강진단서 제출 요청 발송', highlighted: false }],
   },
   {
@@ -386,7 +388,7 @@ export const WORKERS: Worker[] = [
     deadlineLabel: 'D-8 서류',
     deadlineDays: 8,
     note: '서류 누락 1건',
-    currentTasks: [{ title: '외국인등록증 사본 제출 요청', detail: '오늘 · 근로자 응답 대기', linkTone: 'warning' }],
+    currentTasks: [{ caseId: 'WI-062', title: '외국인등록증 사본 제출 요청', detail: '오늘 · 근로자 응답 대기', linkTone: 'warning' }],
     timeline: [{ date: '07.19', label: '서류 미제출 안내 발송', highlighted: false }],
   },
   {

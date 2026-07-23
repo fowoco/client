@@ -120,7 +120,7 @@ export function LoginPage() {
 
           {error && <p className={styles.errorMessage}>{error}</p>}
 
-          <Button type="submit" className={styles.submit} disabled={!canSubmit}>
+          <Button type="submit" className={styles.submit} disabled={!canSubmit} isLoading={submitting}>
             로그인
           </Button>
 

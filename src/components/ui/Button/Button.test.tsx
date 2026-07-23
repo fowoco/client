@@ -18,4 +18,11 @@ describe('Button', () => {
     render(<Button disabled>업무 생성</Button>)
     expect(screen.getByRole('button', { name: '업무 생성' })).toBeDisabled()
   })
+
+  it('disables itself and marks aria-busy when isLoading is set', () => {
+    render(<Button isLoading>업무 생성</Button>)
+    const button = screen.getByRole('button', { name: '업무 생성' })
+    expect(button).toBeDisabled()
+    expect(button).toHaveAttribute('aria-busy', 'true')
+  })
 })

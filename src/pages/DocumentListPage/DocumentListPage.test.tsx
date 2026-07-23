@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { DocumentListPage } from './DocumentListPage'
 import { DOCUMENT_TABS, DOCUMENTS } from './documentListData'
@@ -8,7 +8,10 @@ import { DOCUMENT_TABS, DOCUMENTS } from './documentListData'
 function renderPage(demoState = 'success') {
   render(
     <MemoryRouter initialEntries={[`/documents?demoState=${demoState}`]}>
-      <DocumentListPage />
+      <Routes>
+        <Route path="/documents" element={<DocumentListPage />} />
+        <Route path="/documents/:documentId" element={<p>서류 상세</p>} />
+      </Routes>
     </MemoryRouter>,
   )
 }
@@ -45,6 +48,15 @@ describe('DocumentListPage', () => {
 
     expect(screen.getByText('수라즈C')).toBeInTheDocument()
     expect(screen.queryByText('박서준')).not.toBeInTheDocument()
+  })
+
+  it('navigates to the document detail when "확인하기 →" is clicked', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getAllByRole('button', { name: '확인하기 →' })[0])
+
+    expect(await screen.findByText('서류 상세')).toBeInTheDocument()
   })
 
   it('shows an empty state when a search has no matches', async () => {

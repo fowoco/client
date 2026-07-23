@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import { useAsyncDemoData } from '../../hooks/useAsyncDemoData'
@@ -21,6 +22,7 @@ const TAB_STATUS: Record<string, DocumentStatus | null> = {
 }
 
 export function DocumentListPage() {
+  const navigate = useNavigate()
   const status = useAsyncDemoData(DOCUMENTS.length === 0)
   const [activeTab, setActiveTab] = useState(DOCUMENT_TABS[0].id)
   const [query, setQuery] = useState('')
@@ -40,8 +42,8 @@ export function DocumentListPage() {
     })
   }, [activeTab, debouncedQuery])
 
-  function handleReviewDocument() {
-    // TODO(backend): GET /api/documents/:id -> 서류 상세 확인 화면으로 이동
+  function handleReviewDocument(documentId: string) {
+    navigate(`/documents/${documentId}`)
   }
 
   return (
@@ -123,7 +125,11 @@ export function DocumentListPage() {
                     {DOCUMENT_STATUS_LABEL[document.status]}
                   </StatusLabel>
                   <span className={styles.submittedAt}>{document.submittedAt}</span>
-                  <button type="button" className={styles.reviewButton} onClick={handleReviewDocument}>
+                  <button
+                    type="button"
+                    className={styles.reviewButton}
+                    onClick={() => handleReviewDocument(document.id)}
+                  >
                     확인하기 →
                   </button>
                 </div>

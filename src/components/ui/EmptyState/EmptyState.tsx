@@ -12,8 +12,9 @@ export interface EmptyStateProps {
 
 export function EmptyState({ kind = 'empty', title, body, actionLabel, onAction }: EmptyStateProps) {
   const isError = kind === 'error'
+  const isLoading = kind === 'loading'
   return (
-    <div className={styles.state}>
+    <div className={`${styles.state} ${isLoading ? styles.loading : ''}`}>
       <p className={`${styles.title} ${isError ? styles.titleError : ''}`}>{title}</p>
       <p className={styles.body}>{body}</p>
       {actionLabel && (

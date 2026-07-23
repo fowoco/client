@@ -19,18 +19,6 @@
   margin-top: 24px;
 }
 
-.search {
-  width: 520px;
-  max-width: 100%;
-  flex: 1 1 240px;
-  height: 48px;
-  padding: 0 15px;
-  font-size: 14px;
-  font-family: inherit;
-  border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-6);
-}
-
 .maskingNote {
   margin-left: auto;
   font-size: 12px;

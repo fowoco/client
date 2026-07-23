@@ -47,3 +47,23 @@
 .actionError {
   color: var(--status-critical);
 }
+
+@keyframes empty-state-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.loading {
+  animation: empty-state-pulse 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading {
+    animation: none;
+  }
+}

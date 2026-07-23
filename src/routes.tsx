@@ -14,6 +14,7 @@ import { NotFoundPage } from './pages/NotFoundPage/NotFoundPage'
 import { ReviewWorkPage } from './pages/ReviewWorkPage/ReviewWorkPage'
 import { SettingsPage } from './pages/SettingsPage/SettingsPage'
 import { SignupPage } from './pages/SignupPage/SignupPage'
+import { TicketDetailPage } from './pages/TicketDetailPage/TicketDetailPage'
 import { TicketListPage } from './pages/TicketListPage/TicketListPage'
 import { WorkerDetailPage } from './pages/WorkerDetailPage/WorkerDetailPage'
 import { WorkerListPage } from './pages/WorkerListPage/WorkerListPage'
@@ -40,6 +41,7 @@ export const router = createBrowserRouter([
           { path: '/tasks/:caseId', element: <CaseDetailPage /> },
           { path: '/agent', element: <AgentLogPage /> },
           { path: '/tickets', element: <TicketListPage /> },
+          { path: '/tickets/:ticketId', element: <TicketDetailPage /> },
           { path: '/settings', element: <SettingsPage /> },
         ],
       },

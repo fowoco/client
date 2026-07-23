@@ -1,5 +1,5 @@
 .section {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .section:last-child {
@@ -15,39 +15,95 @@
 
 .flowList {
   margin: 0;
-  padding-left: 18px;
+  padding: 0;
+  list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .flowItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.flowBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--fowoco-teal-50);
+  color: var(--brand-primary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.flowText {
   font-size: 13px;
+  line-height: 18px;
   color: var(--text-secondary);
+}
+
+.faqList {
+  display: flex;
+  flex-direction: column;
 }
 
 .faqItem {
-  padding: 10px 0;
   border-top: 1px solid var(--border-default);
 }
 
-.faqItem:first-of-type {
+.faqItem:first-child {
   border-top: none;
-  padding-top: 0;
 }
 
 .faqQuestion {
-  margin: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  background: none;
+  border: none;
   font-size: 13px;
   font-weight: 500;
   color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.faqChevron {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  transition: transform var(--fowoco-motion-fast) var(--fowoco-easing-standard);
+}
+
+.faqChevronOpen {
+  transform: rotate(180deg);
+  color: var(--brand-primary);
 }
 
 .faqAnswer {
-  margin: 6px 0 0;
+  margin: 0 0 12px;
   font-size: 12px;
   line-height: 18px;
   color: var(--text-secondary);
+}
+
+.demoCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
 }
 
 .demoAccount {
@@ -61,4 +117,20 @@
   margin: 6px 0 0;
   font-size: 12px;
   color: var(--text-secondary);
+}
+
+.demoCopy {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.demoCopy:hover {
+  background: var(--surface-subtle);
 }

@@ -3,11 +3,12 @@ import { apiFetch, setAccessToken, setAuthExpiredHandler } from '../api/client'
 import { ApiError, getErrorMessage } from '../api/errors'
 
 // 로그인 화면·도움말에 안내하는 데모 계정.
-// TODO(backend): 이 계정이 fowoco/server DB에 실제로 seed돼 있는지 백엔드팀 확인 필요 (#101).
-// 없으면 여기 값을 실제 seed 계정으로 교체해야 한다.
+// fowoco/server는 DEMO_SEED_* 환경변수로 이 계정을 만든다 (README "선택 사항: 데모 로그인
+// 계정 만들기" 참고). 비밀번호는 서버가 DEMO_SEED_ADMIN_PASSWORD 최소 길이(12자)를 강제하므로
+// "1234"처럼 짧은 값은 쓸 수 없다 — 로컬 seed 값과 반드시 일치시켜야 한다.
 export const DEMO_ACCOUNT = {
   email: 'mini@naver.com',
-  password: '1234',
+  password: 'fowoco-demo-1234',
 }
 
 export interface AuthUser {

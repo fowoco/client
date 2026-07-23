@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
+import { ListRow } from '../../components/ui/ListRow/ListRow'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import { Tabs } from '../../components/ui/Tabs/Tabs'
 import { useAsyncDemoData } from '../../hooks/useAsyncDemoData'
@@ -67,7 +68,7 @@ export function TicketListPage() {
           ) : (
             <div className={styles.list}>
               {visibleTickets.map((ticket) => (
-                <div key={ticket.id} className={styles.row}>
+                <ListRow key={ticket.id} columns="1fr 120px 120px 88px">
                   <div className={styles.rowMain}>
                     <p className={styles.workerName}>{ticket.workerName}</p>
                     <p className={styles.summary}>{ticket.summary}</p>
@@ -83,7 +84,7 @@ export function TicketListPage() {
                   >
                     답변하기 →
                   </button>
-                </div>
+                </ListRow>
               ))}
             </div>
           )}

@@ -1,0 +1,17 @@
+.row {
+  display: grid;
+  align-items: center;
+  gap: var(--fowoco-spacing-16);
+  padding: var(--fowoco-spacing-16) var(--fowoco-spacing-20);
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
+}
+
+@media (max-width: 720px) {
+  .row {
+    grid-template-columns: 1fr !important;
+    justify-items: start;
+    gap: var(--fowoco-spacing-8);
+  }
+}

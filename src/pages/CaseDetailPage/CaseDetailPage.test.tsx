@@ -13,6 +13,7 @@ import {
   CASE_HEADER,
   CASE_STEPS,
   CASE_TABS,
+  CONTEXT_DRAWER,
 } from './caseDetailData'
 
 beforeEach(() => {
@@ -135,5 +136,29 @@ describe('CaseDetailPage', () => {
 
     await user.click(screen.getByText(CASE_HEADER.title))
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
+  it('opens the context drawer with every section and closes on Escape', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '펼쳐 보기 →' }))
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByText('Agent가 확인한 내용')).toBeInTheDocument()
+    expect(screen.getByText(CONTEXT_DRAWER.agentConfirmed[0])).toBeInTheDocument()
+    expect(screen.getByText('부족한 정보')).toBeInTheDocument()
+    expect(screen.getByText(CONTEXT_DRAWER.missingInfo[0])).toBeInTheDocument()
+    expect(screen.getByText('공식 출처')).toBeInTheDocument()
+    expect(screen.getByText(CONTEXT_DRAWER.officialSources[0].label)).toBeInTheDocument()
+    expect(screen.getByText('최근 활동')).toBeInTheDocument()
+    expect(screen.getByText(CASE_ACTIVITY[0].label)).toBeInTheDocument()
+    expect(screen.getByText('HR이 할 일')).toBeInTheDocument()
+    expect(screen.getByText(CONTEXT_DRAWER.hrTodo[0])).toBeInTheDocument()
+
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })

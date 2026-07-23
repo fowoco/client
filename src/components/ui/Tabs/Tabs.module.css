@@ -1,0 +1,39 @@
+.tabs {
+  display: flex;
+  gap: 32px;
+  margin-top: var(--fowoco-spacing-24);
+  border-bottom: 1px solid var(--border-default);
+}
+
+@media (max-width: 720px) {
+  .tabs {
+    overflow-x: auto;
+  }
+}
+
+.tab {
+  padding: 0 0 12px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color var(--fowoco-motion-fast) var(--fowoco-easing-standard),
+    border-color var(--fowoco-motion-fast) var(--fowoco-easing-standard);
+}
+
+.tab:hover {
+  color: var(--text-primary);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
+.tabActive {
+  color: var(--brand-primary);
+  font-weight: 500;
+  border-bottom-color: var(--brand-primary);
+}

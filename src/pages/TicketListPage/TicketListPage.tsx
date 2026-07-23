@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
+import { Tabs } from '../../components/ui/Tabs/Tabs'
 import { useAsyncDemoData } from '../../hooks/useAsyncDemoData'
 import styles from './TicketListPage.module.css'
 import {
@@ -33,20 +34,7 @@ export function TicketListPage() {
         근로자 모바일에서 들어온 질문·이슈를 확인하고 답변합니다.
       </p>
 
-      <div className={styles.tabs} role="tablist" aria-label="티켓 탭">
-        {TICKET_TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === tab.id}
-            className={`${styles.tab} ${activeTab === tab.id ? styles.tabActive : ''}`}
-            onClick={() => setActiveTab(tab.id)}
-          >
-            {tab.label} {tab.count}
-          </button>
-        ))}
-      </div>
+      <Tabs tabs={TICKET_TABS} activeId={activeTab} onChange={setActiveTab} ariaLabel="티켓 탭" />
 
       {status === 'loading' && (
         <div className={styles.stateWrap}>

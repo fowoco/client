@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Dropdown } from '../../components/ui/Dropdown/Dropdown'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { SearchInput } from '../../components/ui/SearchInput/SearchInput'
+import { Tabs } from '../../components/ui/Tabs/Tabs'
 import { WorkItemRow, type WorkItemUrgency } from '../../components/ui/WorkItemRow/WorkItemRow'
 import { useAsyncDemoData } from '../../hooks/useAsyncDemoData'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
@@ -76,20 +77,7 @@ export function WorkListPage() {
         근로자와 연결되지 않은 내부 사무업무도 같은 업무 구조로 표시됩니다.
       </p>
 
-      <div className={styles.tabs} role="tablist" aria-label="업무함 탭">
-        {WORK_TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === tab.id}
-            className={`${styles.tab} ${activeTab === tab.id ? styles.tabActive : ''}`}
-            onClick={() => setActiveTab(tab.id)}
-          >
-            {tab.label} {tab.count}
-          </button>
-        ))}
-      </div>
+      <Tabs tabs={WORK_TABS} activeId={activeTab} onChange={setActiveTab} ariaLabel="업무함 탭" />
 
       <div className={styles.toolbar}>
         <SearchInput

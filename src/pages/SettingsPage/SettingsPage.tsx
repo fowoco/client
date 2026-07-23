@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
+import { Tabs } from '../../components/ui/Tabs/Tabs'
 import { useToastStore } from '../../store/toastStore'
 import styles from './SettingsPage.module.css'
 import {
@@ -15,6 +16,8 @@ import {
   SETTINGS_TABS,
   type Member,
 } from './settingsData'
+
+const SETTINGS_TAB_ITEMS = SETTINGS_TABS.map((label) => ({ id: label, label }))
 
 export function SettingsPage() {
   const [activeTab, setActiveTab] = useState(SETTINGS_TABS[0])
@@ -49,22 +52,13 @@ export function SettingsPage() {
         서비스 범위를 확장하지 않고 담당자의 권한과 안전 기준만 설정합니다.
       </p>
 
-      <div className={styles.tabs} role="tablist" aria-label="설정 탭">
-        {SETTINGS_TABS.map((tab, index) => (
-          <button
-            key={tab}
-            id={`settings-tab-${index}`}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === tab}
-            aria-controls={`settings-panel-${index}`}
-            className={`${styles.tab} ${activeTab === tab ? styles.tabActive : ''}`}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        tabs={SETTINGS_TAB_ITEMS}
+        activeId={activeTab}
+        onChange={setActiveTab}
+        ariaLabel="설정 탭"
+        idPrefix="settings"
+      />
 
       {activeTab === SETTINGS_TABS[0] && (
         <div id="settings-panel-0" role="tabpanel" aria-labelledby="settings-tab-0">

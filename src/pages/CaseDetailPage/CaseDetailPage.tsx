@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/Button/Button'
 import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
 import { Drawer } from '../../components/ui/Drawer/Drawer'
 import { StatusLabel, type StatusTone } from '../../components/ui/StatusLabel/StatusLabel'
+import { Tabs } from '../../components/ui/Tabs/Tabs'
 import { useToastStore } from '../../store/toastStore'
 import styles from './CaseDetailPage.module.css'
 import {
@@ -23,6 +24,8 @@ import {
   type CaseDocumentStatus,
   type StepStatus,
 } from './caseDetailData'
+
+const CASE_TAB_ITEMS = CASE_TABS.map((label) => ({ id: label, label }))
 
 const DOCUMENT_STATUS_TONE: Record<CaseDocumentStatus, StatusTone> = {
   missing: 'critical',
@@ -143,22 +146,13 @@ export function CaseDetailPage() {
       </div>
       <p className={styles.meta}>{CASE_HEADER.meta}</p>
 
-      <div className={styles.tabs} role="tablist" aria-label="업무 상세 탭">
-        {CASE_TABS.map((tab, index) => (
-          <button
-            key={tab}
-            id={`case-tab-${index}`}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === tab}
-            aria-controls={`case-panel-${index}`}
-            className={`${styles.tab} ${activeTab === tab ? styles.tabActive : ''}`}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        tabs={CASE_TAB_ITEMS}
+        activeId={activeTab}
+        onChange={setActiveTab}
+        ariaLabel="업무 상세 탭"
+        idPrefix="case"
+      />
 
       {activeTab === '현재 단계' && (
         <div id="case-panel-0" role="tabpanel" aria-labelledby="case-tab-0">

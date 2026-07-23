@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import { useAsyncDemoData } from '../../hooks/useAsyncDemoData'
@@ -12,6 +13,7 @@ import {
 } from './ticketListData'
 
 export function TicketListPage() {
+  const navigate = useNavigate()
   const status = useAsyncDemoData(TICKETS.length === 0)
   const [activeTab, setActiveTab] = useState(TICKET_TABS[0].id)
 
@@ -20,8 +22,8 @@ export function TicketListPage() {
     [activeTab],
   )
 
-  function handleAnswerTicket() {
-    // TODO(backend): GET /api/tickets/:id -> 티켓 상세·답변 화면으로 이동
+  function handleAnswerTicket(ticketId: string) {
+    navigate(`/tickets/${ticketId}`)
   }
 
   return (
@@ -86,7 +88,11 @@ export function TicketListPage() {
                     {TICKET_STATUS_LABEL[ticket.status]}
                   </StatusLabel>
                   <span className={styles.receivedAt}>{ticket.receivedAt}</span>
-                  <button type="button" className={styles.answerButton} onClick={handleAnswerTicket}>
+                  <button
+                    type="button"
+                    className={styles.answerButton}
+                    onClick={() => handleAnswerTicket(ticket.id)}
+                  >
                     답변하기 →
                   </button>
                 </div>

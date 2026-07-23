@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { AgentSourceLabel } from '../../components/ui/AgentSourceLabel/AgentSourceLabel'
 import { Dropdown } from '../../components/ui/Dropdown/Dropdown'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
+import { ListRow } from '../../components/ui/ListRow/ListRow'
 import { useAsyncDemoData } from '../../hooks/useAsyncDemoData'
 import { AGENT_LOGS, PERIOD_OPTIONS, SOURCE_OPTIONS, TOTAL_AGENT_LOG_COUNT } from './agentLogData'
 import styles from './AgentLogPage.module.css'
@@ -72,7 +73,7 @@ export function AgentLogPage() {
           ) : (
             <div className={styles.list}>
               {visibleLogs.map((log) => (
-                <div key={log.id} className={styles.row}>
+                <ListRow key={log.id} columns="120px 1fr 140px 140px">
                   <span className={styles.time}>{log.time}</span>
                   <p className={styles.logDescription}>{log.description}</p>
                   <AgentSourceLabel source={log.source} />
@@ -83,7 +84,7 @@ export function AgentLogPage() {
                   >
                     관련 업무 보기 →
                   </button>
-                </div>
+                </ListRow>
               ))}
             </div>
           )}

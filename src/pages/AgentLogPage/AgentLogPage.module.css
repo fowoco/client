@@ -29,17 +29,6 @@
   margin-top: 24px;
 }
 
-.row {
-  display: grid;
-  grid-template-columns: 120px 1fr 140px 140px;
-  align-items: center;
-  gap: 16px;
-  padding: 16px 20px;
-  background: var(--surface-default);
-  border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-8);
-}
-
 .time {
   font-size: 12px;
   color: var(--text-secondary);
@@ -63,12 +52,6 @@
 }
 
 @media (max-width: 720px) {
-  .row {
-    grid-template-columns: 1fr;
-    justify-items: start;
-    gap: 8px;
-  }
-
   .link {
     justify-self: start;
   }

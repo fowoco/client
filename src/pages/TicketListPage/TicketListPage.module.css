@@ -22,17 +22,6 @@
   margin-top: 24px;
 }
 
-.row {
-  display: grid;
-  grid-template-columns: 1fr 120px 120px 88px;
-  align-items: center;
-  gap: 16px;
-  padding: 16px 20px;
-  background: var(--surface-default);
-  border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-8);
-}
-
 .rowMain {
   min-width: 0;
 }
@@ -67,12 +56,6 @@
 }
 
 @media (max-width: 720px) {
-  .row {
-    grid-template-columns: 1fr;
-    justify-items: start;
-    gap: 8px;
-  }
-
   .answerButton {
     justify-self: start;
   }

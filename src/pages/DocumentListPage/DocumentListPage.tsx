@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
+import { ListRow } from '../../components/ui/ListRow/ListRow'
 import { SearchInput } from '../../components/ui/SearchInput/SearchInput'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import { Tabs } from '../../components/ui/Tabs/Tabs'
@@ -104,7 +105,7 @@ export function DocumentListPage() {
           ) : (
             <div className={styles.list}>
               {visibleDocuments.map((document) => (
-                <div key={document.id} className={styles.row}>
+                <ListRow key={document.id} columns="1fr 120px 120px 88px">
                   <div className={styles.rowMain}>
                     <p className={styles.workerName}>{document.workerName}</p>
                     <p className={styles.docType}>{document.docType}</p>
@@ -120,7 +121,7 @@ export function DocumentListPage() {
                   >
                     확인하기 →
                   </button>
-                </div>
+                </ListRow>
               ))}
             </div>
           )}

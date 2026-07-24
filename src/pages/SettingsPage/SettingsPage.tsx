@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
 import { Tabs } from '../../components/ui/Tabs/Tabs'
 import { useToastStore } from '../../store/toastStore'
+import { LinkReissueModal, type ReissueSubmission } from './overlays/LinkReissueModal'
+import { LinkReissuedModal } from './overlays/LinkReissuedModal'
 import styles from './SettingsPage.module.css'
 import {
   APPROVAL_POLICY,
@@ -15,13 +17,19 @@ import {
   SECURITY_LINK_POLICY,
   SETTINGS_TABS,
   type Member,
+  type SecurityLinkHistoryEntry,
 } from './settingsData'
 
 const SETTINGS_TAB_ITEMS = SETTINGS_TABS.map((label) => ({ id: label, label }))
 
+type LinkOverlay = 'none' | 'reissue' | 'reissued'
+
 export function SettingsPage() {
   const [activeTab, setActiveTab] = useState(SETTINGS_TABS[0])
   const [members, setMembers] = useState<Member[]>(MEMBERS)
+  const [linkOverlay, setLinkOverlay] = useState<LinkOverlay>('none')
+  const [activeLinkEntry, setActiveLinkEntry] = useState<SecurityLinkHistoryEntry | null>(null)
+  const [reissueSubmission, setReissueSubmission] = useState<ReissueSubmission | null>(null)
   const showToast = useToastStore((state) => state.showToast)
 
   function toggleApproval(id: string) {
@@ -38,6 +46,24 @@ export function SettingsPage() {
       ),
     )
     if (member) showToast(`${member.name}님의 승인 권한을 변경했습니다.`)
+  }
+
+  function handleOpenReissue(entry: SecurityLinkHistoryEntry) {
+    setActiveLinkEntry(entry)
+    setLinkOverlay('reissue')
+  }
+
+  function handleSubmitReissue(submission: ReissueSubmission) {
+    // TODO(backend): POST /api/security-links/:workerId/reissue { reason, channel, expiry } -> 기존 링크 폐기 + 새 링크 발급
+    setReissueSubmission(submission)
+    setLinkOverlay('reissued')
+  }
+
+  function handleCloseReissued() {
+    setLinkOverlay('none')
+    setActiveLinkEntry(null)
+    setReissueSubmission(null)
+    showToast('보안 링크를 재발급했습니다.')
   }
 
   function handleInviteMember() {
@@ -163,6 +189,7 @@ export function SettingsPage() {
                 <span className={styles.membersHeaderIdentity}>근로자</span>
                 <span className={styles.membersHeaderApproval}>발급 시각</span>
                 <span className={styles.membersHeaderStatus}>상태</span>
+                <span className={styles.membersHeaderAction} aria-hidden="true" />
               </div>
               {SECURITY_LINK_HISTORY.map((entry, index) => (
                 <div
@@ -174,6 +201,13 @@ export function SettingsPage() {
                   </div>
                   <span className={styles.memberApproval}>{entry.issuedAt}</span>
                   <span className={styles.memberStatus}>{entry.status}</span>
+                  <button
+                    type="button"
+                    className={styles.memberAction}
+                    onClick={() => handleOpenReissue(entry)}
+                  >
+                    재발급
+                  </button>
                 </div>
               ))}
             </div>
@@ -223,6 +257,18 @@ export function SettingsPage() {
       )}
 
       <p className={styles.footnote}>{FOOTNOTE}</p>
+
+      <LinkReissueModal
+        open={linkOverlay === 'reissue'}
+        entry={activeLinkEntry}
+        onClose={() => setLinkOverlay('none')}
+        onSubmit={handleSubmitReissue}
+      />
+      <LinkReissuedModal
+        open={linkOverlay === 'reissued'}
+        submission={reissueSubmission}
+        onClose={handleCloseReissued}
+      />
     </div>
   )
 }

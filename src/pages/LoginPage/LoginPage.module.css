@@ -12,7 +12,7 @@
 }
 
 .promo {
-  flex: 0 0 420px;
+  flex: 0 0 460px;
   padding: 52px 56px;
   background: var(--brand-dark);
   color: var(--fowoco-white);
@@ -109,7 +109,7 @@
 
 .form {
   width: 100%;
-  max-width: 420px;
+  max-width: 460px;
 }
 
 .title {

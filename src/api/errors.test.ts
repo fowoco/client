@@ -36,6 +36,11 @@ describe('getErrorMessage', () => {
     const error = new ApiError(makeBody({ code: 'SOMETHING_NEW', message: '서버가 준 원문' }))
     expect(getErrorMessage(error)).toBe('서버가 준 원문')
   })
+
+  it('hides the raw HTTP status text for UNKNOWN_ERROR behind a Korean message', () => {
+    const error = new ApiError(makeBody({ code: 'UNKNOWN_ERROR', message: 'Not Found' }))
+    expect(getErrorMessage(error)).toBe('요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+  })
 })
 
 describe('networkApiError', () => {

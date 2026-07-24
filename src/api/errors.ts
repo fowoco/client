@@ -47,6 +47,10 @@ const ERROR_MESSAGES: Record<string, string> = {
   INTERNAL_SERVER_ERROR: '일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',
   SERVICE_TEMPORARILY_UNAVAILABLE: '서비스를 일시적으로 이용할 수 없습니다.',
   NETWORK_ERROR: '네트워크 상태를 확인한 뒤 다시 시도해 주세요.',
+  // 서버가 JSON 오류 본문 없이 응답할 때(client.ts의 parseErrorBody 대체 경로).
+  // 이 경우 raw HTTP status text("Not Found" 등)가 error.message에 담기므로,
+  // 화면에는 그 원문 대신 이 문구를 보여준다.
+  UNKNOWN_ERROR: '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.',
 }
 
 const DEFAULT_MESSAGE = '알 수 없는 오류가 발생했습니다.'

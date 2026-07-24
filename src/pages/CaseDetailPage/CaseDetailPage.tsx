@@ -24,6 +24,20 @@ import {
   type CaseDocumentStatus,
   type StepStatus,
 } from './caseDetailData'
+import { ApprovalDecisionModal } from './overlays/ApprovalDecisionModal'
+import { ApprovalRequestModal } from './overlays/ApprovalRequestModal'
+import { ApprovalSnapshotDiffModal } from './overlays/ApprovalSnapshotDiffModal'
+import { OtherApproverHandledModal } from './overlays/OtherApproverHandledModal'
+import { RejectionReasonModal } from './overlays/RejectionReasonModal'
+
+type ApprovalOverlay = 'none' | 'request' | 'decision' | 'rejection' | 'other-handled' | 'snapshot-diff'
+type ApprovalState = 'pending' | 'approved' | 'rejected'
+
+const APPROVAL_BADGE: Record<ApprovalState, { label: string; tone: StatusTone }> = {
+  pending: { label: '승인 대기', tone: 'warning' },
+  approved: { label: '승인 완료', tone: 'success' },
+  rejected: { label: '반려됨', tone: 'critical' },
+}
 
 const CASE_TAB_ITEMS = CASE_TABS.map((label) => ({ id: label, label }))
 
@@ -57,6 +71,8 @@ export function CaseDetailPage() {
   const [activeTab, setActiveTab] = useState(CASE_TABS[0])
   const [moreMenuOpen, setMoreMenuOpen] = useState(false)
   const [contextDrawerOpen, setContextDrawerOpen] = useState(false)
+  const [approvalOverlay, setApprovalOverlay] = useState<ApprovalOverlay>('none')
+  const [approvalState, setApprovalState] = useState<ApprovalState>('pending')
   const moreMenuRef = useRef<HTMLDivElement>(null)
   const showToast = useToastStore((state) => state.showToast)
 
@@ -73,9 +89,49 @@ export function CaseDetailPage() {
     return () => document.removeEventListener('pointerdown', handlePointerDown)
   }, [moreMenuOpen])
 
-  function handleRequestApproval() {
+  function handleOpenApprovalRequest() {
+    setApprovalOverlay('request')
+  }
+
+  function handleSubmitApprovalRequest() {
     // TODO(backend): POST /api/work-items/:id/approval-request -> 승인 대기 상태로 전환
+    setApprovalOverlay('none')
     showToast('승인을 요청했습니다.')
+  }
+
+  function handleOpenReview() {
+    // 데모 진입점: 실제로는 승인자 계정으로 로그인해야 볼 수 있는 화면이다.
+    setApprovalOverlay(approvalState === 'pending' ? 'decision' : 'other-handled')
+  }
+
+  function handleApprove() {
+    // TODO(backend): POST /api/work-items/:id/approval-decisions { decision: 'approved' }
+    setApprovalState('approved')
+    setApprovalOverlay('none')
+    showToast('승인했습니다.')
+  }
+
+  function handleStartReject() {
+    setApprovalOverlay('rejection')
+  }
+
+  function handleConfirmReject(reason: string) {
+    // TODO(backend): POST /api/work-items/:id/approval-decisions { decision: 'rejected', reason }
+    void reason
+    setApprovalState('rejected')
+    setApprovalOverlay('none')
+    showToast('반려했습니다.')
+  }
+
+  function handleOpenSnapshotDiff() {
+    setApprovalOverlay('snapshot-diff')
+  }
+
+  function handleRequestReapproval() {
+    // TODO(backend): POST /api/work-items/:id/approval-request -> 재승인 요청, 승인 대기 상태로 전환
+    setApprovalState('pending')
+    setApprovalOverlay('none')
+    showToast('재승인을 요청했습니다.')
   }
 
   function handleMoreActions() {
@@ -141,7 +197,9 @@ export function CaseDetailPage() {
 
       <div className={styles.headerRow}>
         <h1 className={styles.title}>{CASE_HEADER.title}</h1>
-        <StatusLabel tone="warning">{CASE_HEADER.badges[0]}</StatusLabel>
+        <StatusLabel tone={APPROVAL_BADGE[approvalState].tone}>
+          {APPROVAL_BADGE[approvalState].label}
+        </StatusLabel>
         <StatusLabel tone="info">{CASE_HEADER.badges[1]}</StatusLabel>
       </div>
       <p className={styles.meta}>{CASE_HEADER.meta}</p>
@@ -309,13 +367,45 @@ export function CaseDetailPage() {
 
       <div className={styles.actionDock}>
         <span className={styles.nextStep}>{ACTION_DOCK.nextStep}</span>
+        <button type="button" className={styles.draftSave} onClick={handleOpenReview}>
+          데모: 승인자로 검토
+        </button>
+        <button type="button" className={styles.draftSave} onClick={handleOpenSnapshotDiff}>
+          데모: 재승인 필요 보기
+        </button>
         <button type="button" className={styles.draftSave} onClick={handleSaveDraft}>
           {ACTION_DOCK.draftSaveLabel}
         </button>
-        <Button onClick={handleRequestApproval}>{ACTION_DOCK.approveLabel}</Button>
+        <Button onClick={handleOpenApprovalRequest}>{ACTION_DOCK.approveLabel}</Button>
       </div>
 
       <p className={styles.footnote}>{ACTION_DOCK.footnote}</p>
+
+      <ApprovalRequestModal
+        open={approvalOverlay === 'request'}
+        onClose={() => setApprovalOverlay('none')}
+        onSubmit={handleSubmitApprovalRequest}
+      />
+      <ApprovalDecisionModal
+        open={approvalOverlay === 'decision'}
+        onClose={() => setApprovalOverlay('none')}
+        onApprove={handleApprove}
+        onReject={handleStartReject}
+      />
+      <RejectionReasonModal
+        open={approvalOverlay === 'rejection'}
+        onBack={() => setApprovalOverlay('decision')}
+        onConfirm={handleConfirmReject}
+      />
+      <OtherApproverHandledModal
+        open={approvalOverlay === 'other-handled'}
+        onClose={() => setApprovalOverlay('none')}
+      />
+      <ApprovalSnapshotDiffModal
+        open={approvalOverlay === 'snapshot-diff'}
+        onClose={() => setApprovalOverlay('none')}
+        onRequestReapproval={handleRequestReapproval}
+      />
 
       <Drawer open={contextDrawerOpen} onClose={() => setContextDrawerOpen(false)} title="관련 Context">
         {/* TODO(backend): GET /api/work-items/:id/context -> CONTEXT_DRAWER 대체 */}

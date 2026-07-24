@@ -92,13 +92,70 @@ describe('CaseDetailPage', () => {
     expect(screen.getByText('초안을 저장했습니다.')).toBeInTheDocument()
   })
 
-  it('shows a toast when approval is requested', async () => {
+  it('opens the approval request modal and shows a toast on submit', async () => {
     const user = userEvent.setup()
     renderPage()
 
     await user.click(screen.getByRole('button', { name: '승인 요청' }))
+    expect(screen.getByRole('dialog', { name: '승인 요청' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '승인 요청 보내기' }))
 
     expect(screen.getByText('승인을 요청했습니다.')).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('walks through the approve decision flow', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByRole('button', { name: '데모: 승인자로 검토' }))
+    expect(screen.getByRole('dialog', { name: '승인 요청을 검토하세요' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '승인' }))
+
+    expect(screen.getByText('승인했습니다.')).toBeInTheDocument()
+    expect(screen.getByText('승인 완료')).toBeInTheDocument()
+  })
+
+  it('walks through the reject decision flow', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByRole('button', { name: '데모: 승인자로 검토' }))
+    await user.click(screen.getByRole('button', { name: '반려' }))
+    expect(screen.getByRole('dialog', { name: '반려 사유를 입력하세요' })).toBeInTheDocument()
+
+    await user.type(screen.getByPlaceholderText('반려 사유를 입력하세요'), '마감일 불일치')
+    await user.click(screen.getByRole('button', { name: '반려 확정' }))
+
+    expect(screen.getByText('반려했습니다.')).toBeInTheDocument()
+    expect(screen.getByText('반려됨')).toBeInTheDocument()
+  })
+
+  it('shows the other-approver-handled overlay after a decision is already made', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByRole('button', { name: '데모: 승인자로 검토' }))
+    await user.click(screen.getByRole('button', { name: '승인' }))
+
+    await user.click(screen.getByRole('button', { name: '데모: 승인자로 검토' }))
+
+    expect(screen.getByRole('dialog', { name: '다른 승인자가 처리했습니다' })).toBeInTheDocument()
+  })
+
+  it('opens the snapshot diff overlay and re-requests approval', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByRole('button', { name: '데모: 재승인 필요 보기' }))
+    expect(screen.getByRole('dialog', { name: '승인본 V1 · 수정본 V2 변경 내용' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '재승인 요청' }))
+
+    expect(screen.getByText('재승인을 요청했습니다.')).toBeInTheDocument()
+    expect(screen.getAllByText('승인 대기').length).toBeGreaterThan(0)
   })
 
   it('opens and closes the more menu', async () => {

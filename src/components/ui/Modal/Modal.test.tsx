@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { Modal } from './Modal'
+import styles from './Modal.module.css'
 
 function TriggerAndModal() {
   const [open, setOpen] = useState(false)
@@ -102,5 +103,21 @@ describe('Modal', () => {
     await user.click(screen.getByRole('button', { name: '닫기' }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(trigger).toHaveFocus()
+  })
+
+  it('applies the wide/xl size class when requested', () => {
+    const { rerender } = render(
+      <Modal open onClose={vi.fn()} title="테스트" size="wide">
+        내용
+      </Modal>,
+    )
+    expect(screen.getByRole('dialog')).toHaveClass(styles.wide)
+
+    rerender(
+      <Modal open onClose={vi.fn()} title="테스트" size="xl">
+        내용
+      </Modal>,
+    )
+    expect(screen.getByRole('dialog')).toHaveClass(styles.xl)
   })
 })

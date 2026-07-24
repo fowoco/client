@@ -6,12 +6,20 @@ export interface ModalProps {
   onClose: () => void
   title: string
   children: ReactNode
+  /** 기본은 480px. 표 형태 콘텐츠 등 더 넓은 모달이 필요하면 지정한다. */
+  size?: 'default' | 'wide' | 'xl'
 }
 
 const FOCUSABLE_SELECTOR =
   'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
 
-export function Modal({ open, onClose, title, children }: ModalProps) {
+const SIZE_CLASS: Record<NonNullable<ModalProps['size']>, string> = {
+  default: '',
+  wide: styles.wide,
+  xl: styles.xl,
+}
+
+export function Modal({ open, onClose, title, children, size = 'default' }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -60,7 +68,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
     <div className={styles.backdrop} onClick={onClose}>
       <div
         ref={panelRef}
-        className={styles.panel}
+        className={`${styles.panel} ${SIZE_CLASS[size]}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"

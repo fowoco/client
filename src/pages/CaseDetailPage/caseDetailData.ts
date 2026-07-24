@@ -138,3 +138,51 @@ export const CASE_ACTIVITY: CaseActivityEntry[] = [
   { date: '07.18', label: '보유서류와 필요서류 비교 완료', highlighted: false },
   { date: '07.15', label: '체류만료일과 대상 확인', highlighted: false },
 ]
+
+// 승인 플로우 오버레이 5종 데모 데이터 (Figma "05_States & Overlays" 기준)
+export const APPROVAL_REQUEST_FORM = {
+  target: '체류연장 안내문 · 승인본 V1',
+  approverGroup: 'HR 승인 그룹 · ANY_ONE',
+  anyOneRuleTitle: '승인자 3명 중 1명이 처리하면 완료',
+  anyOneRuleBody:
+    "먼저 승인 또는 반려한 결과가 최종이며, 다른 승인자에게는 '다른 승인자가 처리함'으로 표시됩니다.",
+  memo: '여권 사본 요청 문구와 72시간 링크 설정을 확인해 주세요.',
+  footnote: '외부 발송이 아니라 FOWOCO 내부 승인 요청입니다.',
+}
+
+export const APPROVAL_SNAPSHOT = {
+  requester: '김민지',
+  requestedAt: '2026.07.20 11:20',
+  rows: [
+    { label: '대상', value: '응웬반A' },
+    { label: '마감일', value: '2026.07.24' },
+    { label: '안내문', value: '여권 사진면 제출 요청' },
+    { label: '첨부', value: '안내문_ko.pdf 외 1개' },
+    { label: '전달 채널', value: '보안 링크 복사' },
+    { label: '처리 절차', value: '체류연장 준비 v3.2' },
+  ],
+  diffNote: '변경 내용 없음 · 이전 승인본 비교',
+  decisionPolicy: '이 결정이 가장 먼저 처리되면 다른 승인자의 버튼은 비활성화됩니다.',
+}
+
+export const OTHER_APPROVER_HANDLED = {
+  policyNote: 'ANY_ONE · 먼저 처리된 결과가 최종입니다.',
+  rows: [
+    { label: '승인 요청일', value: '2026.07.20 10:14' },
+    { label: '지정 승인자', value: '김수진 · 박지훈' },
+    { label: '처리자', value: '김수진 HR_MANAGER' },
+    { label: '처리일', value: '2026.07.20 10:22' },
+    { label: '처리 결과', value: '승인됨' },
+    { label: '사유', value: '필수서류와 마감일 확인' },
+  ],
+}
+
+export const APPROVAL_SNAPSHOT_DIFF = {
+  warningNote: '승인된 핵심 내용이 변경되어 재승인이 필요합니다.',
+  rows: [
+    { field: '마감일', before: '2026.07.24', after: '2026.07.25', result: '재승인' as const },
+    { field: '요청 서류', before: '여권 사본', after: '여권·등록증 사본', result: '재승인' as const },
+    { field: '안내문 본문', before: 'V1 승인 문구', after: '마감일 안내 추가', result: '재승인' as const },
+    { field: '내부 메모', before: '초안 확인', after: '전화 확인 완료', result: '승인 유지' as const },
+  ],
+}

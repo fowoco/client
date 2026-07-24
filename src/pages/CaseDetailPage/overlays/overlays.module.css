@@ -1,0 +1,261 @@
+.description {
+  margin: 0 0 var(--fowoco-spacing-24);
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.field {
+  margin-bottom: var(--fowoco-spacing-20);
+}
+
+.fieldLabel {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.fieldBox {
+  padding: 12px 15px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.ruleCard {
+  margin-bottom: var(--fowoco-spacing-20);
+  padding: var(--fowoco-spacing-16) var(--fowoco-spacing-24);
+  background: var(--fowoco-teal-50);
+  border-radius: var(--fowoco-radius-8);
+}
+
+.ruleTitle {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--brand-primary);
+}
+
+.ruleBody {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.actionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--fowoco-spacing-24);
+}
+
+.decisionActionRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-top: var(--fowoco-spacing-24);
+}
+
+.textLink {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.primaryButton {
+  height: 48px;
+  padding: 0 24px;
+  background: var(--brand-primary);
+  border: none;
+  border-radius: var(--fowoco-radius-6);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--fowoco-white);
+  cursor: pointer;
+}
+
+.primaryButton:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.rejectButton {
+  height: 48px;
+  padding: 0 24px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--status-critical);
+  cursor: pointer;
+  margin-right: auto;
+}
+
+.footnote {
+  margin: var(--fowoco-spacing-16) 0 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* 승인 결정 / 다른 승인자 처리 스냅샷 카드 */
+.snapshotCard {
+  padding: var(--fowoco-spacing-16) var(--fowoco-spacing-24);
+  background: var(--surface-subtle);
+  border-radius: var(--fowoco-radius-8);
+}
+
+.snapshotTitle {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--brand-primary);
+}
+
+.snapshotRow {
+  display: flex;
+  gap: 24px;
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.snapshotLabel {
+  flex: 0 0 100px;
+  color: var(--text-secondary);
+}
+
+.snapshotValue {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.diffNote {
+  margin: var(--fowoco-spacing-16) 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--brand-primary);
+}
+
+.policyBanner {
+  margin-top: var(--fowoco-spacing-16);
+  padding: var(--fowoco-spacing-16) var(--fowoco-spacing-24);
+  background: var(--fowoco-amber-50);
+  border-radius: var(--fowoco-radius-8);
+}
+
+.policyBannerText {
+  margin: 0;
+  font-size: 12px;
+  color: var(--status-warning);
+}
+
+.successNote {
+  margin: 0 0 var(--fowoco-spacing-16);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fowoco-green-600);
+}
+
+.disabledNote {
+  padding: 0 16px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  background: var(--surface-subtle);
+  border-radius: var(--fowoco-radius-6);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* 반려 사유 */
+.reasonBox {
+  position: relative;
+}
+
+.reasonTextarea {
+  width: 100%;
+  min-height: 150px;
+  box-sizing: border-box;
+  padding: 20px;
+  padding-bottom: 32px;
+  background: var(--surface-default);
+  border: 1px solid var(--status-critical);
+  border-radius: var(--fowoco-radius-8);
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text-primary);
+  resize: vertical;
+}
+
+.reasonTextarea:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
+.reasonCounter {
+  position: absolute;
+  right: 16px;
+  bottom: 10px;
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+/* 승인본 diff 표 */
+.warningNote {
+  margin: 0 0 var(--fowoco-spacing-20);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--status-warning);
+}
+
+.diffTable {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--fowoco-radius-4);
+  overflow: hidden;
+}
+
+.diffHeaderRow,
+.diffRow {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 1.5fr 1fr;
+  gap: 16px;
+  padding: 12px 16px;
+  font-size: 13px;
+}
+
+.diffHeaderRow {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.diffRowShaded {
+  background: var(--surface-subtle);
+}
+
+.diffField {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.diffValue {
+  color: var(--text-secondary);
+}
+
+.diffResultWarning {
+  color: var(--status-warning);
+}
+
+.diffResultNeutral {
+  color: var(--text-secondary);
+}

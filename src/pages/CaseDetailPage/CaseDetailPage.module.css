@@ -281,6 +281,16 @@
   color: var(--fowoco-red-600);
 }
 
+.gateComplete {
+  margin-top: 8px;
+  padding: var(--fowoco-spacing-12) var(--fowoco-spacing-16);
+  background: var(--fowoco-green-50);
+  border-radius: var(--fowoco-radius-6);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fowoco-green-600);
+}
+
 .tabPanel {
   margin-top: 20px;
 }

@@ -90,53 +90,55 @@ export function SettingsPage() {
           <div className={styles.membersCard}>
             <h2 className={styles.cardTitle}>구성원과 승인 권한</h2>
 
-            <div className={styles.membersHeader}>
-              <span className={styles.membersHeaderIdentity}>이름 / 역할</span>
-              <span className={styles.membersHeaderApproval}>승인 가능</span>
-              <span className={styles.membersHeaderToggle} aria-hidden="true" />
-              <span className={styles.membersHeaderStatus}>상태</span>
-            </div>
-
-            {members.map((member, index) => (
-              <div
-                key={member.id}
-                className={`${styles.memberRow} ${index % 2 === 0 ? styles.memberRowShaded : ''}`}
-              >
-                <div className={styles.memberIdentity}>
-                  <p className={styles.memberName}>{member.name}</p>
-                  <p className={styles.memberRole}>{member.role}</p>
-                </div>
-
-                <span
-                  className={`${styles.memberApproval} ${
-                    member.approval === 'canApprove' ? styles.memberApprovalActive : ''
-                  }`}
-                >
-                  {member.approval === 'canApprove' ? '승인 가능' : '승인 요청만'}
-                </span>
-
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={member.approval === 'canApprove'}
-                  aria-label={`${member.name} 승인 권한`}
-                  className={`${styles.toggle} ${
-                    member.approval === 'canApprove' ? styles.toggleOn : ''
-                  }`}
-                  onClick={() => toggleApproval(member.id)}
-                >
-                  <span className={styles.toggleThumb} />
-                </button>
-
-                <span
-                  className={`${styles.memberStatus} ${
-                    member.status === '활성' ? styles.memberStatusActive : styles.memberStatusPending
-                  }`}
-                >
-                  {member.status}
-                </span>
+            <div className={styles.membersScroll}>
+              <div className={styles.membersHeader}>
+                <span className={styles.membersHeaderIdentity}>이름 / 역할</span>
+                <span className={styles.membersHeaderApproval}>승인 가능</span>
+                <span className={styles.membersHeaderToggle} aria-hidden="true" />
+                <span className={styles.membersHeaderStatus}>상태</span>
               </div>
-            ))}
+
+              {members.map((member, index) => (
+                <div
+                  key={member.id}
+                  className={`${styles.memberRow} ${index % 2 === 0 ? styles.memberRowShaded : ''}`}
+                >
+                  <div className={styles.memberIdentity}>
+                    <p className={styles.memberName}>{member.name}</p>
+                    <p className={styles.memberRole}>{member.role}</p>
+                  </div>
+
+                  <span
+                    className={`${styles.memberApproval} ${
+                      member.approval === 'canApprove' ? styles.memberApprovalActive : ''
+                    }`}
+                  >
+                    {member.approval === 'canApprove' ? '승인 가능' : '승인 요청만'}
+                  </span>
+
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={member.approval === 'canApprove'}
+                    aria-label={`${member.name} 승인 권한`}
+                    className={`${styles.toggle} ${
+                      member.approval === 'canApprove' ? styles.toggleOn : ''
+                    }`}
+                    onClick={() => toggleApproval(member.id)}
+                  >
+                    <span className={styles.toggleThumb} />
+                  </button>
+
+                  <span
+                    className={`${styles.memberStatus} ${
+                      member.status === '활성' ? styles.memberStatusActive : styles.memberStatusPending
+                    }`}
+                  >
+                    {member.status}
+                  </span>
+                </div>
+              ))}
+            </div>
 
             <button type="button" className={styles.inviteLink} onClick={handleInviteMember}>
               ＋ 구성원 초대
@@ -156,23 +158,25 @@ export function SettingsPage() {
 
           <div className={styles.membersCard}>
             <h2 className={styles.cardTitle}>최근 발급 이력</h2>
-            <div className={styles.membersHeader}>
-              <span className={styles.membersHeaderIdentity}>근로자</span>
-              <span className={styles.membersHeaderApproval}>발급 시각</span>
-              <span className={styles.membersHeaderStatus}>상태</span>
-            </div>
-            {SECURITY_LINK_HISTORY.map((entry, index) => (
-              <div
-                key={entry.id}
-                className={`${styles.memberRow} ${index % 2 === 0 ? styles.memberRowShaded : ''}`}
-              >
-                <div className={styles.memberIdentity}>
-                  <p className={styles.memberName}>{entry.workerName}</p>
-                </div>
-                <span className={styles.memberApproval}>{entry.issuedAt}</span>
-                <span className={styles.memberStatus}>{entry.status}</span>
+            <div className={styles.membersScroll}>
+              <div className={styles.membersHeader}>
+                <span className={styles.membersHeaderIdentity}>근로자</span>
+                <span className={styles.membersHeaderApproval}>발급 시각</span>
+                <span className={styles.membersHeaderStatus}>상태</span>
               </div>
-            ))}
+              {SECURITY_LINK_HISTORY.map((entry, index) => (
+                <div
+                  key={entry.id}
+                  className={`${styles.memberRow} ${index % 2 === 0 ? styles.memberRowShaded : ''}`}
+                >
+                  <div className={styles.memberIdentity}>
+                    <p className={styles.memberName}>{entry.workerName}</p>
+                  </div>
+                  <span className={styles.memberApproval}>{entry.issuedAt}</span>
+                  <span className={styles.memberStatus}>{entry.status}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}

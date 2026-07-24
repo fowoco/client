@@ -2,7 +2,8 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { DashboardPage } from './DashboardPage'
-import { AGENT_SUMMARY, TODAY_WORK_ITEMS, UPCOMING_TIMELINE } from './dashboardData'
+import styles from './DashboardPage.module.css'
+import { AGENT_SUMMARY, APPROVAL_QUEUE, TODAY_WORK_ITEMS, UPCOMING_TIMELINE } from './dashboardData'
 
 function renderPage(demoState = 'success') {
   render(
@@ -16,6 +17,12 @@ describe('DashboardPage', () => {
   it('renders the agent summary', () => {
     renderPage()
     expect(screen.getByText(AGENT_SUMMARY.headline)).toBeInTheDocument()
+  })
+
+  it('colors the approval count as warning while there are pending approvals', () => {
+    renderPage()
+    expect(APPROVAL_QUEUE.count).toBeGreaterThan(0)
+    expect(screen.getByText(`${APPROVAL_QUEUE.count}건`)).not.toHaveClass(styles.approvalCountClear)
   })
 
   it('renders every work item row', () => {

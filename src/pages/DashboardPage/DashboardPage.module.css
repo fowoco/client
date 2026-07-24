@@ -83,6 +83,10 @@
   color: var(--status-warning);
 }
 
+.approvalCountClear {
+  color: var(--fowoco-green-600);
+}
+
 .approvalOldest {
   margin: 0;
   font-size: 12px;

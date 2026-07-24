@@ -80,7 +80,13 @@ export function DashboardPage() {
 
             <div className={styles.approvalCard}>
               <p className={styles.approvalLabel}>내 승인 대기</p>
-              <p className={styles.approvalCount}>{APPROVAL_QUEUE.count}건</p>
+              <p
+                className={`${styles.approvalCount} ${
+                  APPROVAL_QUEUE.count === 0 ? styles.approvalCountClear : ''
+                }`}
+              >
+                {APPROVAL_QUEUE.count}건
+              </p>
               <p className={styles.approvalOldest}>
                 {APPROVAL_QUEUE.oldestLabel}
                 <br />

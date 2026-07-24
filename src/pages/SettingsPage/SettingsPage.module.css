@@ -99,17 +99,34 @@
 
 
 .membersCard {
+  position: relative;
   margin-top: 16px;
   padding: var(--fowoco-spacing-20) var(--fowoco-spacing-24);
-  overflow-x: auto;
   background: var(--surface-default);
   border: 1px solid var(--border-default);
   border-radius: var(--fowoco-radius-8);
 }
 
+.membersScroll {
+  overflow-x: auto;
+}
+
 .membersHeader,
 .memberRow {
   min-width: 560px;
+}
+
+@media (max-width: 720px) {
+  .membersCard::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 32px;
+    background: linear-gradient(to right, transparent, var(--surface-default));
+    pointer-events: none;
+  }
 }
 
 .membersHeader {

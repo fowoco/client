@@ -156,6 +156,10 @@
   width: 140px;
 }
 
+.membersHeaderAction {
+  width: 70px;
+}
+
 .memberRow {
   display: flex;
   align-items: center;
@@ -238,6 +242,18 @@
 
 .memberStatusPending {
   color: var(--status-warning);
+}
+
+.memberAction {
+  width: 70px;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--brand-primary);
+  cursor: pointer;
+  text-align: left;
 }
 
 .inviteLink {

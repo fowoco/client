@@ -77,6 +77,31 @@ describe('SettingsPage', () => {
     expect(screen.queryByText('구성원과 승인 권한')).not.toBeInTheDocument()
   })
 
+  it('walks through the link reissue flow end to end', async () => {
+    const user = userEvent.setup()
+    render(
+      <>
+        <SettingsPage />
+        <ToastViewport />
+      </>,
+    )
+
+    await user.click(screen.getByRole('tab', { name: SETTINGS_TABS[1] }))
+    await user.click(screen.getAllByRole('button', { name: '재발급' })[0])
+
+    expect(screen.getByRole('dialog', { name: '보안 링크 재발급' })).toBeInTheDocument()
+    expect(screen.getByText(`${SECURITY_LINK_HISTORY[0].workerName} · E-9`)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '새 링크 생성' }))
+
+    expect(screen.getByRole('dialog', { name: '새 링크가 준비되었습니다' })).toBeInTheDocument()
+
+    const closeButtons = screen.getAllByRole('button', { name: '닫기' })
+    await user.click(closeButtons[closeButtons.length - 1])
+
+    expect(screen.getByText('보안 링크를 재발급했습니다.')).toBeInTheDocument()
+  })
+
   it('switches to the completion evidence tab', async () => {
     const user = userEvent.setup()
     render(<SettingsPage />)

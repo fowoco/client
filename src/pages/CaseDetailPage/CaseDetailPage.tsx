@@ -27,11 +27,15 @@ import {
 import { ApprovalDecisionModal } from './overlays/ApprovalDecisionModal'
 import { ApprovalRequestModal } from './overlays/ApprovalRequestModal'
 import { ApprovalSnapshotDiffModal } from './overlays/ApprovalSnapshotDiffModal'
+import { ExternalCompletionModal } from './overlays/ExternalCompletionModal'
+import { InternalCompletionModal } from './overlays/InternalCompletionModal'
 import { OtherApproverHandledModal } from './overlays/OtherApproverHandledModal'
 import { RejectionReasonModal } from './overlays/RejectionReasonModal'
 
 type ApprovalOverlay = 'none' | 'request' | 'decision' | 'rejection' | 'other-handled' | 'snapshot-diff'
 type ApprovalState = 'pending' | 'approved' | 'rejected'
+type CompletionOverlay = 'none' | 'external' | 'internal-demo'
+type CompletionState = 'blocked' | 'completed'
 
 const APPROVAL_BADGE: Record<ApprovalState, { label: string; tone: StatusTone }> = {
   pending: { label: '승인 대기', tone: 'warning' },
@@ -73,6 +77,8 @@ export function CaseDetailPage() {
   const [contextDrawerOpen, setContextDrawerOpen] = useState(false)
   const [approvalOverlay, setApprovalOverlay] = useState<ApprovalOverlay>('none')
   const [approvalState, setApprovalState] = useState<ApprovalState>('pending')
+  const [completionOverlay, setCompletionOverlay] = useState<CompletionOverlay>('none')
+  const [completionState, setCompletionState] = useState<CompletionState>('blocked')
   const moreMenuRef = useRef<HTMLDivElement>(null)
   const showToast = useToastStore((state) => state.showToast)
 
@@ -132,6 +138,32 @@ export function CaseDetailPage() {
     setApprovalState('pending')
     setApprovalOverlay('none')
     showToast('재승인을 요청했습니다.')
+  }
+
+  function handleOpenExternalCompletion() {
+    if (approvalState !== 'approved' || completionState === 'completed') return
+    setCompletionOverlay('external')
+  }
+
+  function handleCompleteExternal(evidenceType: string, evidenceValue: string, memo: string) {
+    // TODO(backend): POST /api/work-items/:id/complete { evidenceType, evidenceValue, memo }
+    void evidenceType
+    void evidenceValue
+    void memo
+    setCompletionState('completed')
+    setCompletionOverlay('none')
+    showToast('완료 처리했습니다.')
+  }
+
+  function handleOpenInternalCompletionDemo() {
+    setCompletionOverlay('internal-demo')
+  }
+
+  function handleCompleteInternalDemo(memo: string) {
+    // 이 데모 케이스는 외부기관 유형이라 실제 완료 상태에는 반영하지 않는다.
+    void memo
+    setCompletionOverlay('none')
+    showToast('(데모) 내부업무를 완료 처리했습니다.')
   }
 
   function handleMoreActions() {
@@ -277,11 +309,44 @@ export function CaseDetailPage() {
               <h2 className={styles.cardTitle}>완료 조건</h2>
               <p className={styles.gatesDescription}>{COMPLETION_GATES.description}</p>
 
-              {COMPLETION_GATES.rows.map((row) => (
-                <DetailRow key={row.label} label={row.label} value={row.value} tone={row.tone} />
-              ))}
+              <DetailRow
+                label="승인"
+                value={
+                  approvalState === 'approved' ? '완료' : approvalState === 'rejected' ? '반려됨' : '대기'
+                }
+                tone={
+                  approvalState === 'approved' ? 'success' : approvalState === 'rejected' ? 'critical' : 'warning'
+                }
+              />
+              <DetailRow
+                label={COMPLETION_GATES.rows[1].label}
+                value={COMPLETION_GATES.rows[1].value}
+                tone={COMPLETION_GATES.rows[1].tone}
+              />
+              <DetailRow
+                label="완료 증빙"
+                value={completionState === 'completed' ? '접수번호 등록됨' : '접수번호 필요'}
+                tone={completionState === 'completed' ? 'success' : 'critical'}
+              />
+              <DetailRow
+                label="담당자 직접 처리"
+                value={completionState === 'completed' ? '확인됨' : '미확인'}
+                tone={completionState === 'completed' ? 'success' : 'critical'}
+              />
 
-              <p className={styles.gateBlocked}>{COMPLETION_GATES.blocked}</p>
+              {approvalState === 'approved' && completionState === 'blocked' ? (
+                <button type="button" className={styles.contextLink} onClick={handleOpenExternalCompletion}>
+                  완료 처리 시작 →
+                </button>
+              ) : completionState === 'completed' ? (
+                <p className={styles.gateComplete}>완료 처리되었습니다.</p>
+              ) : (
+                <p className={styles.gateBlocked}>{COMPLETION_GATES.blocked}</p>
+              )}
+
+              <button type="button" className={styles.draftSave} onClick={handleOpenInternalCompletionDemo}>
+                데모: 내부업무 완료 보기
+              </button>
             </div>
           </div>
         </div>
@@ -405,6 +470,16 @@ export function CaseDetailPage() {
         open={approvalOverlay === 'snapshot-diff'}
         onClose={() => setApprovalOverlay('none')}
         onRequestReapproval={handleRequestReapproval}
+      />
+      <ExternalCompletionModal
+        open={completionOverlay === 'external'}
+        onClose={() => setCompletionOverlay('none')}
+        onComplete={handleCompleteExternal}
+      />
+      <InternalCompletionModal
+        open={completionOverlay === 'internal-demo'}
+        onClose={() => setCompletionOverlay('none')}
+        onComplete={handleCompleteInternalDemo}
       />
 
       <Drawer open={contextDrawerOpen} onClose={() => setContextDrawerOpen(false)} title="관련 Context">

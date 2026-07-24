@@ -115,7 +115,7 @@ describe('CaseDetailPage', () => {
     await user.click(screen.getByRole('button', { name: '승인' }))
 
     expect(screen.getByText('승인했습니다.')).toBeInTheDocument()
-    expect(screen.getByText('승인 완료')).toBeInTheDocument()
+    expect(screen.getAllByText('승인 완료').length).toBeGreaterThan(0)
   })
 
   it('walks through the reject decision flow', async () => {
@@ -130,7 +130,7 @@ describe('CaseDetailPage', () => {
     await user.click(screen.getByRole('button', { name: '반려 확정' }))
 
     expect(screen.getByText('반려했습니다.')).toBeInTheDocument()
-    expect(screen.getByText('반려됨')).toBeInTheDocument()
+    expect(screen.getAllByText('반려됨').length).toBeGreaterThan(0)
   })
 
   it('shows the other-approver-handled overlay after a decision is already made', async () => {
@@ -217,5 +217,38 @@ describe('CaseDetailPage', () => {
 
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('blocks completion until approved, then completes via the external completion overlay', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    expect(screen.queryByRole('button', { name: '완료 처리 시작 →' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '데모: 승인자로 검토' }))
+    await user.click(screen.getByRole('button', { name: '승인' }))
+
+    await user.click(screen.getByRole('button', { name: '완료 처리 시작 →' }))
+    expect(screen.getByRole('dialog', { name: '외부기관 업무 완료' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '접수번호' }))
+    await user.type(screen.getByPlaceholderText('접수번호를 입력하세요'), 'HI-2026-0718-032')
+    await user.click(screen.getByLabelText('실제 제출은 담당자가 직접 수행했습니다.'))
+    await user.click(screen.getByRole('button', { name: '완료 처리' }))
+
+    expect(screen.getByText('완료 처리했습니다.')).toBeInTheDocument()
+    expect(screen.getByText('완료 처리되었습니다.')).toBeInTheDocument()
+  })
+
+  it('opens the internal completion demo overlay independent of approval state', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByRole('button', { name: '데모: 내부업무 완료 보기' }))
+    expect(screen.getByRole('dialog', { name: '일반 내부업무 완료' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '파일 없이 완료' }))
+
+    expect(screen.getByText('(데모) 내부업무를 완료 처리했습니다.')).toBeInTheDocument()
   })
 })

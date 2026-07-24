@@ -259,3 +259,130 @@
 .diffResultNeutral {
   color: var(--text-secondary);
 }
+
+/* 완료 처리 오버레이 공통 */
+.readyBanner {
+  margin: 0 0 var(--fowoco-spacing-20);
+  padding: var(--fowoco-spacing-16) var(--fowoco-spacing-24);
+  background: var(--fowoco-green-50);
+  border-radius: var(--fowoco-radius-8);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--fowoco-green-600);
+}
+
+.blockedBanner {
+  margin: 0 0 var(--fowoco-spacing-20);
+  padding: var(--fowoco-spacing-16) var(--fowoco-spacing-24);
+  background: var(--fowoco-red-50);
+  border-radius: var(--fowoco-radius-8);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--status-critical);
+}
+
+.plainRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  font-size: 12px;
+}
+
+.plainLabel {
+  color: var(--text-secondary);
+}
+
+.plainValue {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.plainValueSuccess {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fowoco-green-600);
+}
+
+.memoTextarea {
+  width: 100%;
+  min-height: 72px;
+  box-sizing: border-box;
+  margin-top: var(--fowoco-spacing-16);
+  padding: 20px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text-primary);
+  resize: vertical;
+}
+
+.memoTextarea:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
+.evidenceTypeLabel {
+  margin-top: var(--fowoco-spacing-20);
+}
+
+.chipRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.chip {
+  height: 40px;
+  padding: 0 20px;
+  background: var(--surface-subtle);
+  border: none;
+  border-radius: var(--fowoco-radius-999);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.chipSelected {
+  background: var(--fowoco-teal-50);
+  color: var(--brand-primary);
+}
+
+.evidenceInput {
+  width: 100%;
+  height: 48px;
+  box-sizing: border-box;
+  margin-top: var(--fowoco-spacing-16);
+  padding: 0 16px;
+  background: var(--surface-default);
+  border: 1px solid var(--status-critical);
+  border-radius: var(--fowoco-radius-8);
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text-primary);
+}
+
+.evidenceInput:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: var(--fowoco-spacing-20);
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.blockedNote {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--status-critical);
+}

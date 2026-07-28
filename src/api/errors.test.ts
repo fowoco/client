@@ -41,6 +41,11 @@ describe('getErrorMessage', () => {
     const error = new ApiError(makeBody({ code: 'UNKNOWN_ERROR', message: 'Not Found' }))
     expect(getErrorMessage(error)).toBe('요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.')
   })
+
+  it('maps EMAIL_ALREADY_REGISTERED to a Korean message', () => {
+    const error = new ApiError(makeBody({ code: 'EMAIL_ALREADY_REGISTERED', message: 'raw' }))
+    expect(getErrorMessage(error)).toBe('이미 가입된 이메일입니다.')
+  })
 })
 
 describe('networkApiError', () => {

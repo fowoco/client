@@ -1,21 +1,25 @@
-import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { ApiError, getErrorMessage } from '../../api/errors'
+import { cancelTask, fetchTaskById, updateChecklistItem } from '../../api/tasks'
 import { AgentSummary } from '../../components/ui/AgentSummary/AgentSummary'
 import { Button } from '../../components/ui/Button/Button'
 import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
 import { Drawer } from '../../components/ui/Drawer/Drawer'
+import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { StatusLabel, type StatusTone } from '../../components/ui/StatusLabel/StatusLabel'
 import { Tabs } from '../../components/ui/Tabs/Tabs'
+import { useApiQuery } from '../../hooks/useApiQuery'
 import { useToastStore } from '../../store/toastStore'
+import { TASK_SOURCE_LABEL, TASK_STATUS_LABEL, TASK_STATUS_TONE } from '../../utils/taskStatus'
+import { daysUntil } from '../../utils/urgency'
 import styles from './CaseDetailPage.module.css'
 import {
   ACTION_DOCK,
   AGENT_SUMMARY,
   CASE_ACTIVITY,
-  CASE_CHECKLIST,
   CASE_COMMUNICATION,
   CASE_DOCUMENTS,
-  CASE_HEADER,
   CASE_STEPS,
   CASE_TABS,
   COMPLETION_GATES,
@@ -72,6 +76,7 @@ const STEP_STATUS_CLASS: Record<StepStatus, string> = {
 }
 
 export function CaseDetailPage() {
+  const { caseId } = useParams()
   const [activeTab, setActiveTab] = useState(CASE_TABS[0])
   const [moreMenuOpen, setMoreMenuOpen] = useState(false)
   const [contextDrawerOpen, setContextDrawerOpen] = useState(false)
@@ -79,8 +84,12 @@ export function CaseDetailPage() {
   const [approvalState, setApprovalState] = useState<ApprovalState>('pending')
   const [completionOverlay, setCompletionOverlay] = useState<CompletionOverlay>('none')
   const [completionState, setCompletionState] = useState<CompletionState>('blocked')
+  const [togglingItemId, setTogglingItemId] = useState<string | null>(null)
   const moreMenuRef = useRef<HTMLDivElement>(null)
   const showToast = useToastStore((state) => state.showToast)
+
+  const taskFetcher = useCallback(() => fetchTaskById(caseId ?? ''), [caseId])
+  const { status: taskStatus, data: task, error: taskError, refetch: refetchTask } = useApiQuery(taskFetcher)
 
   useEffect(() => {
     if (!moreMenuOpen) return
@@ -170,9 +179,35 @@ export function CaseDetailPage() {
     setMoreMenuOpen((open) => !open)
   }
 
-  function handleCancelCase() {
-    // TODO(backend): POST /api/work-items/:id/cancel -> 업무 취소
+  async function handleToggleChecklistItem(itemId: string, completed: boolean, itemVersion: number) {
+    if (!task) return
+    setTogglingItemId(itemId)
+    try {
+      await updateChecklistItem(task.task_id, itemId, {
+        completed,
+        expected_version: itemVersion,
+        expected_task_version: task.version,
+      })
+      await refetchTask()
+    } catch (error) {
+      showToast(error instanceof ApiError ? getErrorMessage(error) : '체크리스트를 수정하지 못했습니다.')
+    } finally {
+      setTogglingItemId(null)
+    }
+  }
+
+  async function handleCancelCase() {
     setMoreMenuOpen(false)
+    if (!task) return
+    const reason = window.prompt('취소 사유를 입력해 주세요.')
+    if (!reason || !reason.trim()) return
+    try {
+      await cancelTask(task.task_id, { expected_version: task.version, reason: reason.trim() })
+      await refetchTask()
+      showToast('업무를 취소했습니다.')
+    } catch {
+      showToast('업무를 취소하지 못했습니다.')
+    }
   }
 
   function handleReassignCase() {
@@ -188,6 +223,31 @@ export function CaseDetailPage() {
     // TODO(backend): PATCH /api/work-items/:id/draft -> 현재 입력 상태 저장
     showToast('초안을 저장했습니다.')
   }
+
+  if (taskStatus === 'loading') {
+    return (
+      <div className={styles.stateWrap}>
+        <EmptyState kind="loading" title="업무 정보를 불러오는 중입니다" body="잠시만 기다려 주세요." />
+      </div>
+    )
+  }
+
+  if (taskStatus === 'error' || !task) {
+    return (
+      <div className={styles.stateWrap}>
+        <EmptyState
+          kind="error"
+          title="업무 정보를 불러오지 못했습니다"
+          body={taskError ? getErrorMessage(taskError) : '네트워크 상태를 확인한 뒤 다시 시도해 주세요.'}
+          actionLabel="다시 시도"
+          onAction={refetchTask}
+        />
+      </div>
+    )
+  }
+
+  const dueDays = daysUntil(task.due_date)
+  const dueLabel = dueDays === null ? '마감일 없음' : dueDays <= 0 ? '오늘 마감' : `D-${dueDays}`
 
   return (
     <div>
@@ -228,13 +288,16 @@ export function CaseDetailPage() {
       </div>
 
       <div className={styles.headerRow}>
-        <h1 className={styles.title}>{CASE_HEADER.title}</h1>
+        <h1 className={styles.title}>{task.title}</h1>
+        <StatusLabel tone={TASK_STATUS_TONE[task.status]}>{TASK_STATUS_LABEL[task.status]}</StatusLabel>
         <StatusLabel tone={APPROVAL_BADGE[approvalState].tone}>
           {APPROVAL_BADGE[approvalState].label}
         </StatusLabel>
-        <StatusLabel tone="info">{CASE_HEADER.badges[1]}</StatusLabel>
+        <StatusLabel tone="info">{TASK_SOURCE_LABEL[task.source]}</StatusLabel>
       </div>
-      <p className={styles.meta}>{CASE_HEADER.meta}</p>
+      <p className={styles.meta}>
+        {dueLabel} · {task.workflow_id}
+      </p>
 
       <Tabs
         tabs={CASE_TAB_ITEMS}
@@ -354,28 +417,40 @@ export function CaseDetailPage() {
 
       {activeTab === '체크리스트' && (
         <div id="case-panel-1" role="tabpanel" aria-labelledby="case-tab-1" className={styles.tabPanel}>
-          {/* TODO(backend): GET /api/work-items/:id/checklist -> CASE_CHECKLIST 대체, PATCH로 완료 토글 */}
-          <div className={styles.checklist}>
-            {CASE_CHECKLIST.map((item) => (
-              <div key={item.id} className={styles.checklistRow}>
-                <span
-                  className={`${styles.checklistMark} ${
-                    item.done ? styles.checklistMarkDone : ''
-                  }`}
-                  aria-hidden="true"
+          {task.checklist_items.length === 0 ? (
+            <EmptyState kind="empty" title="체크리스트가 없습니다" body="이 workflow에는 등록된 체크리스트가 없습니다." />
+          ) : (
+            <div className={styles.checklist}>
+              {task.checklist_items.map((item) => (
+                <button
+                  key={item.checklist_item_id}
+                  type="button"
+                  className={styles.checklistRow}
+                  disabled={togglingItemId === item.checklist_item_id}
+                  onClick={() =>
+                    handleToggleChecklistItem(item.checklist_item_id, !item.completed, item.version)
+                  }
                 >
-                  {item.done ? '✓' : ''}
-                </span>
-                <span
-                  className={`${styles.checklistLabel} ${
-                    item.done ? styles.checklistLabelDone : ''
-                  }`}
-                >
-                  {item.label}
-                </span>
-              </div>
-            ))}
-          </div>
+                  <span
+                    className={`${styles.checklistMark} ${
+                      item.completed ? styles.checklistMarkDone : ''
+                    }`}
+                    aria-hidden="true"
+                  >
+                    {item.completed ? '✓' : ''}
+                  </span>
+                  <span
+                    className={`${styles.checklistLabel} ${
+                      item.completed ? styles.checklistLabelDone : ''
+                    }`}
+                  >
+                    {item.label}
+                    {item.required ? '' : ' (선택)'}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

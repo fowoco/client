@@ -1,10 +1,5 @@
 // TODO(backend): GET /api/work-items/:id -> 아래 상수 전체 대체
-
-export const CASE_HEADER = {
-  title: '응웬반A 체류연장 준비',
-  badges: ['승인 대기', 'HR 직접 요청'],
-  meta: 'D-12 · 담당 김경민 · 체류 · 연결 근로자 1명 · 출입국 관련 기관',
-}
+// 제목·상태·체크리스트는 #153에서 실제 Task API로 대체됐다 (CaseDetailPage.tsx 참고).
 
 export const CASE_TABS = ['현재 단계', '체크리스트', '문서', '소통', '활동이력']
 
@@ -83,20 +78,6 @@ export const ACTION_DOCK = {
   approveLabel: '승인 요청',
   footnote: '승인 전에는 근로자 전달과 완료 처리가 차단됩니다. Agent는 승인자가 될 수 없습니다.',
 }
-
-export interface CaseChecklistItem {
-  id: string
-  label: string
-  done: boolean
-}
-
-export const CASE_CHECKLIST: CaseChecklistItem[] = [
-  { id: 'chk-1', label: '여권 사본 확인', done: true },
-  { id: 'chk-2', label: '체류연장 신청서 서명', done: true },
-  { id: 'chk-3', label: '출입국 접수번호 입력', done: true },
-  { id: 'chk-4', label: '근로자 서명 확인', done: false },
-  { id: 'chk-5', label: '완료 증빙 첨부', done: false },
-]
 
 export type CaseDocumentStatus = 'missing' | 'pending' | 'done'
 

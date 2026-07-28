@@ -107,19 +107,6 @@ export const CASE_COMMUNICATION: CaseCommunicationEntry[] = [
   { id: 'comm-3', time: '어제 09:05', actor: '응웬반A', message: '서류를 준비 중이라고 답장했습니다.' },
 ]
 
-export interface CaseActivityEntry {
-  date: string
-  label: string
-  highlighted: boolean
-}
-
-export const CASE_ACTIVITY: CaseActivityEntry[] = [
-  { date: '07.20', label: 'Agent가 체류연장 요청문 초안을 작성함', highlighted: true },
-  { date: '07.19', label: 'HR이 근로자 안내문 검토를 요청함', highlighted: false },
-  { date: '07.18', label: '보유서류와 필요서류 비교 완료', highlighted: false },
-  { date: '07.15', label: '체류만료일과 대상 확인', highlighted: false },
-]
-
 // 승인 플로우 오버레이 5종 데모 데이터 (Figma "05_States & Overlays" 기준)
 export const APPROVAL_REQUEST_FORM = {
   target: '체류연장 안내문 · 승인본 V1',

@@ -457,6 +457,7 @@
 }
 
 .timelineLabel {
+  flex: 1;
   font-size: 13px;
   color: var(--text-primary);
 }

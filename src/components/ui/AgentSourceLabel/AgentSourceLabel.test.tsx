@@ -10,6 +10,7 @@ describe('AgentSourceLabel', () => {
         <AgentSourceLabel source="data" />
         <AgentSourceLabel source="draft" />
         <AgentSourceLabel source="review" />
+        <AgentSourceLabel source="worker" />
       </>,
     )
 
@@ -17,5 +18,6 @@ describe('AgentSourceLabel', () => {
     expect(screen.getByText('보유 데이터')).toBeInTheDocument()
     expect(screen.getByText('Agent 초안')).toBeInTheDocument()
     expect(screen.getByText('HR 확인')).toBeInTheDocument()
+    expect(screen.getByText('근로자 응답')).toBeInTheDocument()
   })
 })

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { fetchTaskActivities } from '../../api/audit'
 import { ApiError, getErrorMessage } from '../../api/errors'
 import { cancelTask, fetchTaskById, updateChecklistItem } from '../../api/tasks'
+import { AgentSourceLabel } from '../../components/ui/AgentSourceLabel/AgentSourceLabel'
 import { AgentSummary } from '../../components/ui/AgentSummary/AgentSummary'
 import { Button } from '../../components/ui/Button/Button'
 import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
@@ -11,13 +13,14 @@ import { StatusLabel, type StatusTone } from '../../components/ui/StatusLabel/St
 import { Tabs } from '../../components/ui/Tabs/Tabs'
 import { useApiQuery } from '../../hooks/useApiQuery'
 import { useToastStore } from '../../store/toastStore'
+import { ACTOR_TYPE_TO_AGENT_SOURCE, AUDIT_ACTION_LABEL } from '../../utils/auditLabels'
+import { formatEventTime } from '../../utils/datetime'
 import { TASK_SOURCE_LABEL, TASK_STATUS_LABEL, TASK_STATUS_TONE } from '../../utils/taskStatus'
 import { daysUntil } from '../../utils/urgency'
 import styles from './CaseDetailPage.module.css'
 import {
   ACTION_DOCK,
   AGENT_SUMMARY,
-  CASE_ACTIVITY,
   CASE_COMMUNICATION,
   CASE_DOCUMENTS,
   CASE_STEPS,
@@ -90,6 +93,10 @@ export function CaseDetailPage() {
 
   const taskFetcher = useCallback(() => fetchTaskById(caseId ?? ''), [caseId])
   const { status: taskStatus, data: task, error: taskError, refetch: refetchTask } = useApiQuery(taskFetcher)
+
+  const activitiesFetcher = useCallback(() => fetchTaskActivities(caseId ?? ''), [caseId])
+  const { data: activities } = useApiQuery(activitiesFetcher)
+  const activityRows = activities ?? []
 
   useEffect(() => {
     if (!moreMenuOpen) return
@@ -488,20 +495,24 @@ export function CaseDetailPage() {
 
       {activeTab === '활동이력' && (
         <div id="case-panel-4" role="tabpanel" aria-labelledby="case-tab-4" className={styles.tabPanel}>
-          {/* TODO(backend): GET /api/work-items/:id/activity -> CASE_ACTIVITY 대체 */}
-          <div className={styles.timeline}>
-            {CASE_ACTIVITY.map((entry) => (
-              <div key={`${entry.date}-${entry.label}`} className={styles.timelineRow}>
-                <span className={styles.timelineDate}>{entry.date}</span>
-                <span
-                  className={`${styles.timelineDot} ${
-                    entry.highlighted ? styles.timelineDotHighlighted : ''
-                  }`}
-                />
-                <span className={styles.timelineLabel}>{entry.label}</span>
-              </div>
-            ))}
-          </div>
+          {activityRows.length === 0 ? (
+            <EmptyState kind="empty" title="활동 이력이 없습니다" body="업무가 진행되면 여기에 표시됩니다." />
+          ) : (
+            <div className={styles.timeline}>
+              {activityRows.map((entry, index) => (
+                <div key={entry.audit_event_id} className={styles.timelineRow}>
+                  <span className={styles.timelineDate}>{formatEventTime(entry.created_at)}</span>
+                  <span
+                    className={`${styles.timelineDot} ${index === 0 ? styles.timelineDotHighlighted : ''}`}
+                  />
+                  <span className={styles.timelineLabel}>
+                    {entry.change_summary ?? AUDIT_ACTION_LABEL[entry.action]}
+                  </span>
+                  <AgentSourceLabel source={ACTOR_TYPE_TO_AGENT_SOURCE[entry.actor_type]} />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -587,15 +598,15 @@ export function CaseDetailPage() {
         <div className={styles.contextSection}>
           <h3 className={styles.contextSectionTitle}>최근 활동</h3>
           <div className={styles.timeline}>
-            {CASE_ACTIVITY.slice(0, 3).map((entry) => (
-              <div key={`${entry.date}-${entry.label}`} className={styles.timelineRow}>
-                <span className={styles.timelineDate}>{entry.date}</span>
+            {activityRows.slice(0, 3).map((entry, index) => (
+              <div key={entry.audit_event_id} className={styles.timelineRow}>
+                <span className={styles.timelineDate}>{formatEventTime(entry.created_at)}</span>
                 <span
-                  className={`${styles.timelineDot} ${
-                    entry.highlighted ? styles.timelineDotHighlighted : ''
-                  }`}
+                  className={`${styles.timelineDot} ${index === 0 ? styles.timelineDotHighlighted : ''}`}
                 />
-                <span className={styles.timelineLabel}>{entry.label}</span>
+                <span className={styles.timelineLabel}>
+                  {entry.change_summary ?? AUDIT_ACTION_LABEL[entry.action]}
+                </span>
               </div>
             ))}
           </div>

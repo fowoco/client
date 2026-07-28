@@ -2,18 +2,12 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { AuditEventResponse } from '../../api/audit'
 import type { TaskDetailResponse } from '../../api/tasks'
 import { ToastViewport } from '../../components/ui/ToastViewport/ToastViewport'
 import { useToastStore } from '../../store/toastStore'
 import { CaseDetailPage } from './CaseDetailPage'
-import {
-  CASE_ACTIVITY,
-  CASE_COMMUNICATION,
-  CASE_DOCUMENTS,
-  CASE_STEPS,
-  CASE_TABS,
-  CONTEXT_DRAWER,
-} from './caseDetailData'
+import { CASE_COMMUNICATION, CASE_DOCUMENTS, CASE_STEPS, CASE_TABS, CONTEXT_DRAWER } from './caseDetailData'
 
 function jsonResponse(body: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' }, ...init })
@@ -55,6 +49,40 @@ function task(overrides: Partial<TaskDetailResponse> = {}): TaskDetailResponse {
   }
 }
 
+function activity(overrides: Partial<AuditEventResponse> = {}): AuditEventResponse {
+  return {
+    audit_event_id: 'evt-1',
+    actor_type: 'AI_AGENT',
+    actor_id: 'a-1',
+    user_role: null,
+    action: 'TASK_CREATED',
+    target_type: 'TASK',
+    target_id: 'T-1',
+    request_id: 'req-1',
+    trace_id: '0'.repeat(32),
+    event_version: '1',
+    change_summary: 'Agent가 체류연장 요청문 초안을 작성함',
+    created_at: '2026-07-20T00:00:00Z',
+    ...overrides,
+  }
+}
+
+function mockTaskAndActivities(taskOverrides: Partial<TaskDetailResponse> = {}, activities: AuditEventResponse[] = []) {
+  vi.mocked(fetch).mockImplementation((input) => {
+    const url = String(input)
+    if (url.includes('/activities')) return Promise.resolve(jsonResponse(activities))
+    return Promise.resolve(jsonResponse(task(taskOverrides)))
+  })
+}
+
+function mockTaskError(status: number, code: string, message: string) {
+  vi.mocked(fetch).mockImplementation((input) => {
+    const url = String(input)
+    if (url.includes('/activities')) return Promise.resolve(jsonResponse([]))
+    return Promise.resolve(errorResponse(status, code, message))
+  })
+}
+
 beforeEach(() => {
   useToastStore.setState({ toasts: [] })
   vi.stubGlobal('fetch', vi.fn())
@@ -91,14 +119,14 @@ describe('CaseDetailPage', () => {
   })
 
   it('shows an error state with a retry action', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(errorResponse(404, 'RESOURCE_NOT_FOUND', 'raw'))
+    mockTaskError(404, 'RESOURCE_NOT_FOUND', 'raw')
     renderPage()
 
     expect(await screen.findByRole('button', { name: '다시 시도' })).toBeInTheDocument()
   })
 
   it('renders the real task title/status and every demo agent step', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(task()))
+    mockTaskAndActivities()
     renderPage()
 
     expect(await screen.findByText('응웬반A 체류연장 준비')).toBeInTheDocument()
@@ -110,7 +138,7 @@ describe('CaseDetailPage', () => {
 
   it('switches to the checklist tab and toggles a real checklist item', async () => {
     const user = userEvent.setup()
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(task()))
+    mockTaskAndActivities()
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
@@ -148,7 +176,7 @@ describe('CaseDetailPage', () => {
 
   it('switches to the document tab and shows document content', async () => {
     const user = userEvent.setup()
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(task()))
+    mockTaskAndActivities()
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
@@ -159,7 +187,7 @@ describe('CaseDetailPage', () => {
 
   it('switches to the communication tab and shows message content', async () => {
     const user = userEvent.setup()
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(task()))
+    mockTaskAndActivities()
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
@@ -168,19 +196,20 @@ describe('CaseDetailPage', () => {
     expect(screen.getByText(CASE_COMMUNICATION[0].message)).toBeInTheDocument()
   })
 
-  it('switches to the activity tab and shows activity content', async () => {
+  it('switches to the activity tab and shows real activity content', async () => {
     const user = userEvent.setup()
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(task()))
+    mockTaskAndActivities({}, [activity()])
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
     await user.click(screen.getByRole('tab', { name: CASE_TABS[4] }))
 
-    expect(screen.getByText(CASE_ACTIVITY[0].label)).toBeInTheDocument()
+    expect(screen.getByText('Agent가 체류연장 요청문 초안을 작성함')).toBeInTheDocument()
+    expect(screen.getByText('Agent 초안')).toBeInTheDocument()
   })
 
   it('renders the blocked completion banner', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(task()))
+    mockTaskAndActivities()
     renderPage()
 
     expect(await screen.findByText('완료 처리 불가 · 승인과 증빙 필요')).toBeInTheDocument()
@@ -188,7 +217,7 @@ describe('CaseDetailPage', () => {
 
   it('shows a toast when a draft is saved', async () => {
     const user = userEvent.setup()
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(task()))
+    mockTaskAndActivities()
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
@@ -199,7 +228,7 @@ describe('CaseDetailPage', () => {
 
   it('opens the approval request modal and shows a toast on submit', async () => {
     const user = userEvent.setup()
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(task()))
+    mockTaskAndActivities()
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
@@ -214,7 +243,7 @@ describe('CaseDetailPage', () => {
 
   it('walks through the approve decision flow', async () => {
     const user = userEvent.setup()
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(task()))
+    mockTaskAndActivities()
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
@@ -229,7 +258,7 @@ describe('CaseDetailPage', () => {
 
   it('walks through the reject decision flow', async () => {
     const user = userEvent.setup()
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(task()))
+    mockTaskAndActivities()
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
@@ -246,7 +275,7 @@ describe('CaseDetailPage', () => {
 
   it('shows the other-approver-handled overlay after a decision is already made', async () => {
     const user = userEvent.setup()
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(task()))
+    mockTaskAndActivities()
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
@@ -260,7 +289,7 @@ describe('CaseDetailPage', () => {
 
   it('opens the snapshot diff overlay and re-requests approval', async () => {
     const user = userEvent.setup()
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(task()))
+    mockTaskAndActivities()
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
@@ -275,7 +304,7 @@ describe('CaseDetailPage', () => {
 
   it('opens and closes the more menu', async () => {
     const user = userEvent.setup()
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(task()))
+    mockTaskAndActivities()
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
@@ -293,7 +322,7 @@ describe('CaseDetailPage', () => {
 
   it('cancels the task via the more menu when a reason is entered', async () => {
     const user = userEvent.setup()
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(task()))
+    mockTaskAndActivities()
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
@@ -314,7 +343,7 @@ describe('CaseDetailPage', () => {
 
   it('does not cancel when the prompt is dismissed', async () => {
     const user = userEvent.setup()
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(task()))
+    mockTaskAndActivities()
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
@@ -328,7 +357,7 @@ describe('CaseDetailPage', () => {
 
   it('closes the more menu when clicking outside', async () => {
     const user = userEvent.setup()
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(task()))
+    mockTaskAndActivities()
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
@@ -341,7 +370,7 @@ describe('CaseDetailPage', () => {
 
   it('opens the context drawer with every section and closes on Escape', async () => {
     const user = userEvent.setup()
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(task()))
+    mockTaskAndActivities({}, [activity()])
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
@@ -357,7 +386,7 @@ describe('CaseDetailPage', () => {
     expect(screen.getByText('공식 출처')).toBeInTheDocument()
     expect(screen.getByText(CONTEXT_DRAWER.officialSources[0].label)).toBeInTheDocument()
     expect(screen.getByText('최근 활동')).toBeInTheDocument()
-    expect(screen.getByText(CASE_ACTIVITY[0].label)).toBeInTheDocument()
+    expect(screen.getByText('Agent가 체류연장 요청문 초안을 작성함')).toBeInTheDocument()
     expect(screen.getByText('HR이 할 일')).toBeInTheDocument()
     expect(screen.getByText(CONTEXT_DRAWER.hrTodo[0])).toBeInTheDocument()
 
@@ -367,7 +396,7 @@ describe('CaseDetailPage', () => {
 
   it('blocks completion until approved, then completes via the external completion overlay', async () => {
     const user = userEvent.setup()
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(task()))
+    mockTaskAndActivities()
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
@@ -390,7 +419,7 @@ describe('CaseDetailPage', () => {
 
   it('opens the internal completion demo overlay independent of approval state', async () => {
     const user = userEvent.setup()
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(task()))
+    mockTaskAndActivities()
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 

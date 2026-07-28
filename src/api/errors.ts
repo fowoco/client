@@ -51,6 +51,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   // 이 경우 raw HTTP status text("Not Found" 등)가 error.message에 담기므로,
   // 화면에는 그 원문 대신 이 문구를 보여준다.
   UNKNOWN_ERROR: '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+  EMAIL_ALREADY_REGISTERED: '이미 가입된 이메일입니다.',
 }
 
 const DEFAULT_MESSAGE = '알 수 없는 오류가 발생했습니다.'

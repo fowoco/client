@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { apiFetch } from '../../api/client'
+import { ApiError, getErrorMessage, type ApiFieldError } from '../../api/errors'
 import { Button } from '../../components/ui/Button/Button'
 import styles from './SignupPage.module.css'
 import { SIGNUP_BENEFITS } from './signupData'
@@ -12,6 +14,27 @@ interface FieldErrors {
   confirmPassword?: string
 }
 
+// fowoco/server SignupResponse (POST /api/v1/auth/signup) 중 화면에서 쓰는 필드만.
+interface SignupResponseBody {
+  email: string
+}
+
+const SERVER_FIELD_TO_SCREEN_FIELD: Record<string, keyof FieldErrors> = {
+  company_name: 'workplace',
+  display_name: 'name',
+  email: 'email',
+  password: 'password',
+}
+
+function mapServerFieldErrors(fieldErrors: ApiFieldError[]): FieldErrors {
+  const mapped: FieldErrors = {}
+  for (const fieldError of fieldErrors) {
+    const screenField = SERVER_FIELD_TO_SCREEN_FIELD[fieldError.field]
+    if (screenField) mapped[screenField] = fieldError.message
+  }
+  return mapped
+}
+
 export function SignupPage() {
   const navigate = useNavigate()
 
@@ -21,6 +44,7 @@ export function SignupPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const [submitting, setSubmitting] = useState(false)
 
   function validate(): FieldErrors {
     const errors: FieldErrors = {}
@@ -32,14 +56,36 @@ export function SignupPage() {
     return errors
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const errors = validate()
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
 
-    // TODO(backend): POST /api/auth/signup { workplace, name, email, password } -> 계정 생성
-    navigate('/?signup=success')
+    setSubmitting(true)
+    try {
+      await apiFetch<SignupResponseBody>('/auth/signup', {
+        method: 'POST',
+        body: JSON.stringify({
+          company_name: workplace,
+          display_name: name,
+          email,
+          password,
+        }),
+        skipAuthRetry: true,
+      })
+      navigate('/?signup=success')
+    } catch (error) {
+      if (error instanceof ApiError && error.fieldErrors.length > 0) {
+        setFieldErrors(mapServerFieldErrors(error.fieldErrors))
+      } else if (error instanceof ApiError) {
+        setFieldErrors({ email: getErrorMessage(error) })
+      } else {
+        setFieldErrors({ email: '알 수 없는 오류가 발생했습니다.' })
+      }
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -156,7 +202,7 @@ export function SignupPage() {
             </div>
           </div>
 
-          <Button type="submit" className={styles.submit}>
+          <Button type="submit" className={styles.submit} isLoading={submitting}>
             회원가입
           </Button>
 

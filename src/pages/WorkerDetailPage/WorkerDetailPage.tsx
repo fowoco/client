@@ -1,55 +1,82 @@
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useCallback } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { fetchWorkerById } from '../../api/workers'
+import { getErrorMessage } from '../../api/errors'
 import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
+import { useApiQuery } from '../../hooks/useApiQuery'
 import { DOCUMENT_STATUS_LABEL, DOCUMENT_STATUS_TONE, DOCUMENTS } from '../DocumentListPage/documentListData'
-import { getUrgencyTier, URGENCY_TONE } from '../../utils/urgency'
+import { daysUntil, getUrgencyTier, URGENCY_TONE } from '../../utils/urgency'
 import styles from './WorkerDetailPage.module.css'
-import { WORKERS } from '../WorkerListPage/workerListData'
+
+// 제품이 E-9(비전문취업) 근로자를 대상으로 하는 만큼 비자 유형은 항상 E-9다.
+const VISA_TYPE = 'E-9'
 
 export function WorkerDetailPage() {
   const { workerId } = useParams()
-  const navigate = useNavigate()
 
-  const worker = WORKERS.find((item) => item.id === workerId) ?? WORKERS[0]
-  const deadlineTier = getUrgencyTier(worker.deadlineDays)
-  // TODO(backend): GET /api/documents?workerId= -> 근로자 기준 서류 목록으로 대체 (현재는 이름으로 매칭)
-  const workerDocuments = DOCUMENTS.filter((document) => document.workerName === worker.name)
+  const fetcher = useCallback(() => fetchWorkerById(workerId ?? ''), [workerId])
+  const { status, data: worker, error, refetch } = useApiQuery(fetcher)
 
-  function handleOpenTask(caseId: string) {
-    navigate(`/tasks/${caseId}`)
+  if (status === 'loading') {
+    return (
+      <div className={styles.stateWrap}>
+        <EmptyState kind="loading" title="근로자 정보를 불러오는 중입니다" body="잠시만 기다려 주세요." />
+      </div>
+    )
   }
+
+  if (status === 'error' || !worker) {
+    return (
+      <div className={styles.stateWrap}>
+        <EmptyState
+          kind="error"
+          title="근로자 정보를 불러오지 못했습니다"
+          body={error ? getErrorMessage(error) : '네트워크 상태를 확인한 뒤 다시 시도해 주세요.'}
+          actionLabel="다시 시도"
+          onAction={refetch}
+        />
+      </div>
+    )
+  }
+
+  const deadlineDays = daysUntil(worker.stay_expiry_date)
+  const deadlineLabel = deadlineDays === null ? '정상' : `D-${deadlineDays} 체류만료`
+  const deadlineTier = getUrgencyTier(deadlineDays)
+  // TODO(backend): GET /api/documents?workerId= -> 근로자 기준 서류 목록으로 대체 (현재는 이름으로 매칭)
+  const workerDocuments = DOCUMENTS.filter((document) => document.workerName === worker.display_name)
 
   return (
     <div>
       <div className={styles.topBar}>
-        <Link to={`/workers/${worker.id}`} className={styles.back}>
+        <Link to={`/workers/${worker.worker_id}`} className={styles.back}>
           ← 근로자 목록
         </Link>
       </div>
 
       <div className={styles.headerRow}>
-        <h1 className={styles.title}>{worker.name}</h1>
+        <h1 className={styles.title}>{worker.display_name}</h1>
         {deadlineTier !== 'comfortable' && (
-          <StatusLabel tone={URGENCY_TONE[deadlineTier]}>{worker.deadlineLabel}</StatusLabel>
+          <StatusLabel tone={URGENCY_TONE[deadlineTier]}>{deadlineLabel}</StatusLabel>
         )}
       </div>
       <p className={styles.meta}>
-        {worker.nationality} · {worker.visaType} · {worker.employeeId} | 연락처 {worker.phone}
+        {worker.nationality_code} · {VISA_TYPE} | 연락처·사번 준비 중
       </p>
 
       <div className={styles.sectionCard}>
         <h2 className={styles.cardTitle}>기본정보</h2>
-        <DetailRow label="국적" value={worker.nationality} />
-        <DetailRow label="비자 유형" value={worker.visaType} />
-        <DetailRow label="사번" value={worker.employeeId} />
-        <DetailRow label="연락처" value={worker.phone} />
+        <DetailRow label="국적" value={worker.nationality_code} />
+        <DetailRow label="비자 유형" value={VISA_TYPE} />
+        {/* TODO(#48): worker_sensitive_data API 연동 후 사번·연락처 표시 */}
+        <DetailRow label="사번" value="준비 중" />
+        <DetailRow label="연락처" value="준비 중" />
         <DetailRow
           label="체류 상태"
-          value={worker.deadlineLabel}
+          value={deadlineLabel}
           tone={deadlineTier === 'urgent' ? 'critical' : deadlineTier === 'medium' ? 'warning' : 'default'}
         />
-        <DetailRow label="비고" value={worker.note} />
       </div>
 
       <div className={styles.sectionCard}>
@@ -73,43 +100,14 @@ export function WorkerDetailPage() {
 
       <div className={styles.sectionCard}>
         <h2 className={styles.cardTitle}>안내이력</h2>
-        {worker.timeline.length === 0 ? (
-          <EmptyState kind="empty" title="발송된 안내가 없습니다" body="근로자에게 안내가 발송되면 여기에 표시됩니다." />
-        ) : (
-          <div className={styles.noticeList}>
-            {worker.timeline.map((entry) => (
-              <div key={`${entry.date}-${entry.label}`} className={styles.noticeRow}>
-                <span className={styles.noticeDate}>{entry.date}</span>
-                <span className={styles.noticeChannel}>시스템 알림</span>
-                <p className={styles.noticeLabel}>{entry.label}</p>
-                <StatusLabel tone={entry.highlighted ? 'warning' : 'success'}>
-                  {entry.highlighted ? '응답 대기' : '확인됨'}
-                </StatusLabel>
-              </div>
-            ))}
-          </div>
-        )}
+        {/* TODO(#156): Audit API 연동 후 실제 활동 이력으로 대체 */}
+        <EmptyState kind="empty" title="안내이력 연동 준비 중입니다" body="Audit API 연동 후 표시됩니다." />
       </div>
 
       <div className={styles.sectionCard}>
         <h2 className={styles.cardTitle}>현재 업무</h2>
-        {worker.currentTasks.length === 0 ? (
-          <EmptyState kind="empty" title="진행 중인 업무가 없습니다" body="새 업무가 배정되면 여기에 표시됩니다." />
-        ) : (
-          <div className={styles.taskList}>
-            {worker.currentTasks.map((task) => (
-              <div key={task.caseId} className={styles.taskRow}>
-                <div>
-                  <p className={styles.taskTitle}>{task.title}</p>
-                  <p className={styles.taskDetail}>{task.detail}</p>
-                </div>
-                <button type="button" className={styles.taskLink} onClick={() => handleOpenTask(task.caseId)}>
-                  열기 →
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+        {/* TODO(#153): Task API 연동 후 실제 진행 업무로 대체 */}
+        <EmptyState kind="empty" title="업무 연동 준비 중입니다" body="Task API 연동 후 표시됩니다." />
       </div>
     </div>
   )

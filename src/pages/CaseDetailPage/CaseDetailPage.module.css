@@ -305,10 +305,25 @@
   border-radius: var(--fowoco-radius-8);
 }
 
+.stateWrap {
+  margin-top: 24px;
+}
+
 .checklistRow {
   display: flex;
   align-items: center;
   gap: 12px;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.checklistRow:disabled {
+  cursor: default;
+  opacity: 0.6;
 }
 
 .checklistMark {

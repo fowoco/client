@@ -18,17 +18,6 @@
   margin-top: 24px;
 }
 
-.advancedFilter {
-  margin-left: auto;
-  align-self: center;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-
 .stateWrap {
   margin-top: 24px;
 }

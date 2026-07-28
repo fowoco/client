@@ -24,3 +24,13 @@ export const URGENCY_LABEL: Record<UrgencyTier, string> = {
   medium: '중간',
   comfortable: '여유',
 }
+
+/** stay_expiry_date(YYYY-MM-DD) 같은 날짜 문자열과 오늘 사이의 일수를 계산한다. null이면 만료일이 없다는 뜻. */
+export function daysUntil(dateString: string | null): number | null {
+  if (!dateString) return null
+  const target = new Date(dateString)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  target.setHours(0, 0, 0, 0)
+  return Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+}

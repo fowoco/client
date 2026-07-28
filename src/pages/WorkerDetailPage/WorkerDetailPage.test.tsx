@@ -1,9 +1,41 @@
 import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { WorkerResponse } from '../../api/workers'
 import { WorkerDetailPage } from './WorkerDetailPage'
-import { WORKERS } from '../WorkerListPage/workerListData'
+
+function jsonResponse(body: unknown, init: ResponseInit = {}) {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+    ...init,
+  })
+}
+
+function errorResponse(status: number, code: string, message: string) {
+  return jsonResponse(
+    { timestamp: '2026-07-27T01:23:45Z', status, code, message, path: '/api/v1/workers/W-1', request_id: 'req-1', field_errors: [] },
+    { status },
+  )
+}
+
+function worker(overrides: Partial<WorkerResponse> = {}): WorkerResponse {
+  return {
+    worker_id: 'W-018',
+    company_id: 'C-1',
+    display_name: '쩐티B',
+    nationality_code: 'VN',
+    preferred_language: 'vi',
+    work_status: 'ACTIVE',
+    stay_expiry_date: null,
+    contract_start_date: null,
+    contract_end_date: null,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+    version: 1,
+    ...overrides,
+  }
+}
 
 function renderPage(workerId: string) {
   render(
@@ -11,49 +43,54 @@ function renderPage(workerId: string) {
       <Routes>
         <Route path="/workers/:workerId/detail" element={<WorkerDetailPage />} />
         <Route path="/workers/:workerId" element={<p>근로자 목록</p>} />
-        <Route path="/tasks/:caseId" element={<p>업무 상세</p>} />
       </Routes>
     </MemoryRouter>,
   )
 }
 
+beforeEach(() => {
+  vi.stubGlobal('fetch', vi.fn())
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
+
 describe('WorkerDetailPage', () => {
-  it('renders basic profile info for the selected worker', () => {
-    const worker = WORKERS[0]
-    renderPage(worker.id)
+  it('renders basic profile info for the selected worker', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(worker()))
+    renderPage('W-018')
 
-    expect(screen.getByRole('heading', { name: worker.name })).toBeInTheDocument()
-    expect(screen.getByText(worker.employeeId)).toBeInTheDocument()
-    expect(screen.getByText(worker.phone)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '쩐티B' })).toBeInTheDocument()
+    expect(screen.getByText('VN')).toBeInTheDocument()
+    expect(screen.getAllByText('준비 중').length).toBeGreaterThan(0)
   })
 
-  it('shows documents matched by worker name', () => {
-    const worker = WORKERS.find((item) => item.name === '쩐티B')!
-    renderPage(worker.id)
+  it('shows documents matched by worker name', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(worker({ display_name: '쩐티B' })))
+    renderPage('W-018')
 
-    expect(screen.getByText('표준근로계약서')).toBeInTheDocument()
+    expect(await screen.findByText('표준근로계약서')).toBeInTheDocument()
   })
 
-  it('shows an empty state when the worker has no matching documents', () => {
-    const worker = WORKERS.find((item) => item.name !== '쩐티B' && item.name !== '수라즈C' && item.name !== '아흐메드D' && item.name !== '응웬반A')!
-    renderPage(worker.id)
+  it('shows an empty state when the worker has no matching documents', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(worker({ display_name: '이름없음' })))
+    renderPage('W-999')
 
-    expect(screen.getByText('제출된 서류가 없습니다')).toBeInTheDocument()
+    expect(await screen.findByText('제출된 서류가 없습니다')).toBeInTheDocument()
   })
 
-  it('navigates to the task detail when opening a current task', async () => {
-    const user = userEvent.setup()
-    const worker = WORKERS[0]
-    renderPage(worker.id)
+  it('shows a loading state', () => {
+    vi.mocked(fetch).mockReturnValue(new Promise(() => {}))
+    renderPage('W-018')
 
-    await user.click(screen.getAllByRole('button', { name: '열기 →' })[0])
-
-    expect(await screen.findByText('업무 상세')).toBeInTheDocument()
+    expect(screen.getByText('근로자 정보를 불러오는 중입니다')).toBeInTheDocument()
   })
 
-  it('falls back to the first worker when the workerId is invalid', () => {
+  it('shows an error state with a retry action', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(errorResponse(404, 'RESOURCE_NOT_FOUND', 'raw'))
     renderPage('does-not-exist')
 
-    expect(screen.getByRole('heading', { name: WORKERS[0].name })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: '다시 시도' })).toBeInTheDocument()
   })
 })

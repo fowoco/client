@@ -176,91 +176,10 @@
   color: var(--text-primary);
 }
 
-.taskList {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.taskRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 16px;
-  background: var(--surface-subtle);
-  border-radius: var(--fowoco-radius-6);
-}
-
-.taskTitle {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.taskDetail {
-  margin: 4px 0 0;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.taskLink {
-  background: none;
-  border: none;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.taskLinkWarning {
-  color: var(--status-warning);
-}
-
-.taskLinkPrimary {
-  color: var(--brand-primary);
-}
-
 .emptyTasks {
   margin: 0;
   font-size: 13px;
   color: var(--text-secondary);
-}
-
-.timeline {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.timelineRow {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.timelineDate {
-  flex-shrink: 0;
-  width: 70px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-.timelineDot {
-  flex-shrink: 0;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--border-default);
-}
-
-.timelineDotHighlighted {
-  background: var(--brand-primary);
-}
-
-.timelineLabel {
-  font-size: 13px;
-  color: var(--text-primary);
 }
 
 .moreLink {

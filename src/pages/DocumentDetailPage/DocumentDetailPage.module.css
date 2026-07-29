@@ -1,3 +1,7 @@
+.stateWrap {
+  margin-top: 24px;
+}
+
 .topBar {
   display: flex;
   align-items: center;

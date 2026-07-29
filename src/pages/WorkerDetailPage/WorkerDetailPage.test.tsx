@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { DocumentItemResponse } from '../../api/documents'
 import type { WorkerResponse } from '../../api/workers'
 import { WorkerDetailPage } from './WorkerDetailPage'
 
@@ -37,6 +38,39 @@ function worker(overrides: Partial<WorkerResponse> = {}): WorkerResponse {
   }
 }
 
+function document(overrides: Partial<DocumentItemResponse> = {}): DocumentItemResponse {
+  return {
+    worker_document_id: 'D-1',
+    worker_id: 'W-018',
+    display_name: '쩐티B',
+    document_type: 'CONTRACT',
+    submission_status: 'SUBMITTED',
+    expiry_date: '2027-07-18',
+    file_id: null,
+    ...overrides,
+  }
+}
+
+function mockWorkerAndDocuments(workerOverrides: Partial<WorkerResponse> = {}, documents: DocumentItemResponse[] = []) {
+  vi.mocked(fetch).mockImplementation((input) => {
+    const url = String(input)
+    if (url.includes('/documents')) {
+      return Promise.resolve(jsonResponse({ items: documents, page: 0, size: 100, total_elements: documents.length }))
+    }
+    return Promise.resolve(jsonResponse(worker(workerOverrides)))
+  })
+}
+
+function mockWorkerError(status: number, code: string, message: string) {
+  vi.mocked(fetch).mockImplementation((input) => {
+    const url = String(input)
+    if (url.includes('/documents')) {
+      return Promise.resolve(jsonResponse({ items: [], page: 0, size: 100, total_elements: 0 }))
+    }
+    return Promise.resolve(errorResponse(status, code, message))
+  })
+}
+
 function renderPage(workerId: string) {
   render(
     <MemoryRouter initialEntries={[`/workers/${workerId}/detail`]}>
@@ -58,7 +92,7 @@ afterEach(() => {
 
 describe('WorkerDetailPage', () => {
   it('renders basic profile info for the selected worker', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(worker()))
+    mockWorkerAndDocuments()
     renderPage('W-018')
 
     expect(await screen.findByRole('heading', { name: '쩐티B' })).toBeInTheDocument()
@@ -66,15 +100,16 @@ describe('WorkerDetailPage', () => {
     expect(screen.getAllByText('준비 중').length).toBeGreaterThan(0)
   })
 
-  it('shows documents matched by worker name', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(worker({ display_name: '쩐티B' })))
+  it("shows the worker's real documents", async () => {
+    mockWorkerAndDocuments({ display_name: '쩐티B' }, [document()])
     renderPage('W-018')
 
-    expect(await screen.findByText('표준근로계약서')).toBeInTheDocument()
+    expect(await screen.findByText('근로계약서')).toBeInTheDocument()
+    expect(screen.getByText('확인 대기')).toBeInTheDocument()
   })
 
-  it('shows an empty state when the worker has no matching documents', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(worker({ display_name: '이름없음' })))
+  it('shows an empty state when the worker has no documents', async () => {
+    mockWorkerAndDocuments({ display_name: '이름없음' }, [])
     renderPage('W-999')
 
     expect(await screen.findByText('제출된 서류가 없습니다')).toBeInTheDocument()
@@ -88,7 +123,7 @@ describe('WorkerDetailPage', () => {
   })
 
   it('shows an error state with a retry action', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(errorResponse(404, 'RESOURCE_NOT_FOUND', 'raw'))
+    mockWorkerError(404, 'RESOURCE_NOT_FOUND', 'raw')
     renderPage('does-not-exist')
 
     expect(await screen.findByRole('button', { name: '다시 시도' })).toBeInTheDocument()

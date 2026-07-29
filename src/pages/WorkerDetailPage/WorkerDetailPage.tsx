@@ -1,12 +1,13 @@
 import { useCallback } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { fetchDocuments } from '../../api/documents'
 import { fetchWorkerById } from '../../api/workers'
 import { getErrorMessage } from '../../api/errors'
 import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import { useApiQuery } from '../../hooks/useApiQuery'
-import { DOCUMENT_STATUS_LABEL, DOCUMENT_STATUS_TONE, DOCUMENTS } from '../DocumentListPage/documentListData'
+import { DOCUMENT_TYPE_LABEL, SUBMISSION_STATUS_LABEL, SUBMISSION_STATUS_TONE } from '../../utils/documentLabels'
 import { daysUntil, getUrgencyTier, URGENCY_TONE } from '../../utils/urgency'
 import styles from './WorkerDetailPage.module.css'
 
@@ -18,6 +19,11 @@ export function WorkerDetailPage() {
 
   const fetcher = useCallback(() => fetchWorkerById(workerId ?? ''), [workerId])
   const { status, data: worker, error, refetch } = useApiQuery(fetcher)
+
+  const { data: documentPage } = useApiQuery(
+    useCallback(() => fetchDocuments({ workerId: workerId ?? '', size: 100 }), [workerId]),
+  )
+  const workerDocuments = documentPage?.items ?? []
 
   if (status === 'loading') {
     return (
@@ -44,8 +50,6 @@ export function WorkerDetailPage() {
   const deadlineDays = daysUntil(worker.stay_expiry_date)
   const deadlineLabel = deadlineDays === null ? '정상' : `D-${deadlineDays} 체류만료`
   const deadlineTier = getUrgencyTier(deadlineDays)
-  // TODO(backend): GET /api/documents?workerId= -> 근로자 기준 서류 목록으로 대체 (현재는 이름으로 매칭)
-  const workerDocuments = DOCUMENTS.filter((document) => document.workerName === worker.display_name)
 
   return (
     <div>
@@ -86,12 +90,12 @@ export function WorkerDetailPage() {
         ) : (
           <div className={styles.documentList}>
             {workerDocuments.map((document) => (
-              <div key={document.id} className={styles.documentRow}>
-                <span className={styles.documentName}>{document.docType}</span>
-                <StatusLabel tone={DOCUMENT_STATUS_TONE[document.status]}>
-                  {DOCUMENT_STATUS_LABEL[document.status]}
+              <div key={document.worker_document_id} className={styles.documentRow}>
+                <span className={styles.documentName}>{DOCUMENT_TYPE_LABEL[document.document_type]}</span>
+                <StatusLabel tone={SUBMISSION_STATUS_TONE[document.submission_status]}>
+                  {SUBMISSION_STATUS_LABEL[document.submission_status]}
                 </StatusLabel>
-                <span className={styles.documentUpdatedAt}>{document.submittedAt}</span>
+                <span className={styles.documentUpdatedAt}>{document.expiry_date ?? '없음'}</span>
               </div>
             ))}
           </div>

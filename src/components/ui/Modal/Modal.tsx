@@ -1,4 +1,4 @@
-import { useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react'
+import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from 'react'
 import styles from './Modal.module.css'
 
 export interface ModalProps {
@@ -21,6 +21,9 @@ const SIZE_CLASS: Record<NonNullable<ModalProps['size']>, string> = {
 
 export function Modal({ open, onClose, title, children, size = 'default' }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null)
+  // 두 Modal이 동시에 열릴 때(예: 마법사 위에 오버레이) 하드코딩된 id가 충돌해
+  // aria-labelledby가 엉뚱한 첫 번째 모달의 제목을 가리키는 문제를 막는다.
+  const titleId = useId()
 
   useEffect(() => {
     if (!open) return
@@ -71,12 +74,12 @@ export function Modal({ open, onClose, title, children, size = 'default' }: Moda
         className={`${styles.panel} ${SIZE_CLASS[size]}`}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="modal-title"
+        aria-labelledby={titleId}
         onClick={(event) => event.stopPropagation()}
         onKeyDown={handleKeyDown}
       >
         <div className={styles.header}>
-          <h2 id="modal-title" className={styles.title}>
+          <h2 id={titleId} className={styles.title}>
             {title}
           </h2>
           <button type="button" className={styles.close} aria-label="닫기" onClick={onClose}>

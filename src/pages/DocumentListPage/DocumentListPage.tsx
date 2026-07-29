@@ -1,54 +1,63 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { fetchDocuments, type SubmissionStatus } from '../../api/documents'
+import { getErrorMessage } from '../../api/errors'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { ListRow } from '../../components/ui/ListRow/ListRow'
 import { SearchInput } from '../../components/ui/SearchInput/SearchInput'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import { Tabs } from '../../components/ui/Tabs/Tabs'
-import { useAsyncDemoData } from '../../hooks/useAsyncDemoData'
+import { useApiQuery } from '../../hooks/useApiQuery'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
+import { DOCUMENT_TYPE_LABEL, SUBMISSION_STATUS_LABEL, SUBMISSION_STATUS_TONE } from '../../utils/documentLabels'
 import styles from './DocumentListPage.module.css'
-import {
-  DOCUMENT_STATUS_LABEL,
-  DOCUMENT_STATUS_TONE,
-  DOCUMENT_TABS,
-  DOCUMENTS,
-  TOTAL_DOCUMENT_COUNT,
-  type DocumentStatus,
-} from './documentListData'
 import { FileUploadModal } from './FileUploadModal'
 
-const TAB_STATUS: Record<string, DocumentStatus | null> = {
-  all: null,
-  missing: 'missing',
-  pending: 'pending',
-  done: 'done',
-}
+type TabId = 'all' | SubmissionStatus
+
+const DOCUMENT_TABS: { id: TabId; label: string }[] = [
+  { id: 'all', label: '전체' },
+  { id: 'MISSING', label: '미제출' },
+  { id: 'SUBMITTED', label: '확인 대기' },
+  { id: 'VERIFIED', label: '확인 완료' },
+]
 
 export function DocumentListPage() {
   const navigate = useNavigate()
-  const status = useAsyncDemoData(DOCUMENTS.length === 0)
-  const [activeTab, setActiveTab] = useState(DOCUMENT_TABS[0].id)
+  const [activeTab, setActiveTab] = useState<TabId>('all')
   const [query, setQuery] = useState('')
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const debouncedQuery = useDebouncedValue(query)
 
-  const visibleDocuments = useMemo(() => {
-    const tabStatus = TAB_STATUS[activeTab]
-    const normalized = debouncedQuery.trim().toLowerCase()
+  const { status, data, error, refetch } = useApiQuery(
+    useCallback(() => fetchDocuments({ size: 100 }), []),
+    useCallback((page: { items: unknown[] }) => page.items.length === 0, []),
+  )
+  const documents = useMemo(() => data?.items ?? [], [data])
 
-    return DOCUMENTS.filter((document) => {
-      const matchesTab = tabStatus === null || document.status === tabStatus
+  const tabsWithCounts = useMemo(
+    () =>
+      DOCUMENT_TABS.map((tab) => ({
+        ...tab,
+        count: tab.id === 'all' ? documents.length : documents.filter((doc) => doc.submission_status === tab.id).length,
+      })),
+    [documents],
+  )
+
+  const visibleDocuments = useMemo(() => {
+    const normalized = debouncedQuery.trim().toLowerCase()
+    return documents.filter((document) => {
+      const matchesTab = activeTab === 'all' || document.submission_status === activeTab
       const matchesQuery =
         !normalized ||
-        document.workerName.toLowerCase().includes(normalized) ||
-        document.docType.toLowerCase().includes(normalized)
+        (document.display_name ?? '').toLowerCase().includes(normalized) ||
+        DOCUMENT_TYPE_LABEL[document.document_type].toLowerCase().includes(normalized)
       return matchesTab && matchesQuery
     })
-  }, [activeTab, debouncedQuery])
+  }, [documents, activeTab, debouncedQuery])
 
-  function handleReviewDocument(documentId: string) {
-    navigate(`/documents/${documentId}`)
+  function handleReviewDocument(workerDocumentId: string) {
+    navigate(`/documents/${workerDocumentId}`)
   }
 
   return (
@@ -58,7 +67,7 @@ export function DocumentListPage() {
         미제출·확인 대기 서류를 우선 보여주며, 확인이 끝나면 상태가 자동으로 갱신됩니다.
       </p>
 
-      <Tabs tabs={DOCUMENT_TABS} activeId={activeTab} onChange={setActiveTab} ariaLabel="서류 탭" />
+      <Tabs tabs={tabsWithCounts} activeId={activeTab} onChange={(id) => setActiveTab(id as TabId)} ariaLabel="서류 탭" />
 
       <div className={styles.toolbar}>
         <SearchInput
@@ -85,7 +94,9 @@ export function DocumentListPage() {
           <EmptyState
             kind="error"
             title="서류 목록을 불러오지 못했습니다"
-            body="네트워크 상태를 확인한 뒤 다시 시도해 주세요."
+            body={error ? getErrorMessage(error) : '네트워크 상태를 확인한 뒤 다시 시도해 주세요.'}
+            actionLabel="다시 시도"
+            onAction={refetch}
           />
         </div>
       )}
@@ -101,7 +112,7 @@ export function DocumentListPage() {
           <div className={styles.columnHeader}>
             <span>근로자 · 서류 종류</span>
             <span>상태</span>
-            <span>제출일</span>
+            <span>만료일</span>
             <span />
           </div>
 
@@ -112,19 +123,19 @@ export function DocumentListPage() {
           ) : (
             <div className={styles.list}>
               {visibleDocuments.map((document) => (
-                <ListRow key={document.id} columns="1fr 120px 120px 88px">
+                <ListRow key={document.worker_document_id} columns="1fr 120px 120px 88px">
                   <div className={styles.rowMain}>
-                    <p className={styles.workerName}>{document.workerName}</p>
-                    <p className={styles.docType}>{document.docType}</p>
+                    <p className={styles.workerName}>{document.display_name ?? '알 수 없음'}</p>
+                    <p className={styles.docType}>{DOCUMENT_TYPE_LABEL[document.document_type]}</p>
                   </div>
-                  <StatusLabel tone={DOCUMENT_STATUS_TONE[document.status]}>
-                    {DOCUMENT_STATUS_LABEL[document.status]}
+                  <StatusLabel tone={SUBMISSION_STATUS_TONE[document.submission_status]}>
+                    {SUBMISSION_STATUS_LABEL[document.submission_status]}
                   </StatusLabel>
-                  <span className={styles.submittedAt}>{document.submittedAt}</span>
+                  <span className={styles.submittedAt}>{document.expiry_date ?? '없음'}</span>
                   <button
                     type="button"
                     className={styles.reviewButton}
-                    onClick={() => handleReviewDocument(document.id)}
+                    onClick={() => handleReviewDocument(document.worker_document_id)}
                   >
                     확인하기 →
                   </button>
@@ -134,7 +145,7 @@ export function DocumentListPage() {
           )}
 
           <p className={styles.footerText}>
-            {TOTAL_DOCUMENT_COUNT}건 중 {visibleDocuments.length}건 표시
+            {data?.total_elements ?? documents.length}건 중 {visibleDocuments.length}건 표시
           </p>
         </>
       )}

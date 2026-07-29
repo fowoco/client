@@ -104,6 +104,16 @@ describe('CreateWorkPage', () => {
     expect(fileMode.className).toMatch(/modeCardActive/)
   })
 
+  it('opens the file import wizard from 파일 가져오기 mode', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByRole('button', { name: /파일 가져오기/ }))
+    await user.click(screen.getByRole('button', { name: '파일 선택하기 →' }))
+
+    expect(screen.getByRole('dialog', { name: '파일 가져오기 · 파일 확인' })).toBeInTheDocument()
+  })
+
   it('shows a toast when a draft is saved', async () => {
     const user = userEvent.setup()
     renderPage()

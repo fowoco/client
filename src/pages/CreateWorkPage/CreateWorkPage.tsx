@@ -17,6 +17,7 @@ import {
   MAX_LENGTH,
   type InputModeId,
 } from './createWorkData'
+import { ImportWizardModal } from './importWizard/ImportWizardModal'
 
 const TASK_TYPE_OPTIONS = [
   { value: '', label: '업무 유형 선택' },
@@ -30,6 +31,7 @@ export function CreateWorkPage() {
   const navigate = useNavigate()
   const [mode, setMode] = useState<InputModeId>('nl')
   const [request, setRequest] = useState('')
+  const [importWizardOpen, setImportWizardOpen] = useState(false)
   const showToast = useToastStore((state) => state.showToast)
 
   // fowoco/server Task API에는 자연어 분석 엔드포인트가 없어(#153 조사 결과), 실제 생성은
@@ -153,22 +155,34 @@ export function CreateWorkPage() {
       </div>
 
       <div className={styles.workspace}>
-        <div className={styles.textareaWrap}>
-          <textarea
-            className={styles.textarea}
-            maxLength={MAX_LENGTH}
-            value={request}
-            onChange={(event) => setRequest(event.target.value)}
-            placeholder="신규 베트남 근로자 3명의 입사서류와 4대보험 가입자료를 금요일까지 준비해야 합니다."
-            aria-label="업무 요청 내용"
-          />
-          <p className={styles.textareaHint}>
-            대상·기한·요청 내용을 자연스럽게 입력하세요. 부족한 정보만 다음 단계에서 확인합니다.
-          </p>
-          <span className={styles.charCount}>
-            {request.length} / {MAX_LENGTH}
-          </span>
-        </div>
+        {mode === 'file' ? (
+          <div className={styles.textareaWrap}>
+            <p className={styles.textareaHint}>
+              Excel·PDF·이미지 파일로 근로자 명단을 한 번에 가져옵니다. 파일 확인 → 컬럼 매핑 →
+              오류·충돌 검토 → 등록 결과 순서로 진행됩니다.
+            </p>
+            <button type="button" className={styles.fileImportButton} onClick={() => setImportWizardOpen(true)}>
+              파일 선택하기 →
+            </button>
+          </div>
+        ) : (
+          <div className={styles.textareaWrap}>
+            <textarea
+              className={styles.textarea}
+              maxLength={MAX_LENGTH}
+              value={request}
+              onChange={(event) => setRequest(event.target.value)}
+              placeholder="신규 베트남 근로자 3명의 입사서류와 4대보험 가입자료를 금요일까지 준비해야 합니다."
+              aria-label="업무 요청 내용"
+            />
+            <p className={styles.textareaHint}>
+              대상·기한·요청 내용을 자연스럽게 입력하세요. 부족한 정보만 다음 단계에서 확인합니다.
+            </p>
+            <span className={styles.charCount}>
+              {request.length} / {MAX_LENGTH}
+            </span>
+          </div>
+        )}
 
         <div className={styles.contextPanel}>
           <p className={styles.contextTitle}>Agent가 참고할 Context</p>
@@ -298,6 +312,8 @@ export function CreateWorkPage() {
           업무 생성
         </Button>
       </div>
+
+      <ImportWizardModal open={importWizardOpen} onClose={() => setImportWizardOpen(false)} />
     </div>
   )
 }

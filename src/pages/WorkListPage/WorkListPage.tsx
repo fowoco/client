@@ -164,6 +164,13 @@ export function WorkListPage() {
             <span>다음 행동</span>
           </div>
 
+          {data && data.total_elements > data.items.length && (
+            <p className={styles.capNotice}>
+              전체 {data.total_elements}개 중 {data.items.length}개만 불러왔습니다. 찾는 업무가 안 보이면 검색어를
+              바꿔보세요.
+            </p>
+          )}
+
           {visibleItems.length === 0 ? (
             <div className={styles.stateWrap}>
               <EmptyState kind="empty" title="표시할 업무가 없습니다" body="다른 탭이나 필터로 다시 시도해 보세요." />

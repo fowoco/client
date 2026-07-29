@@ -166,6 +166,15 @@ describe('WorkerListPage', () => {
     expect(await screen.findByText('등록된 근로자가 없습니다')).toBeInTheDocument()
   })
 
+  it('shows a cap notice when the server has more workers than the fetched page', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      jsonResponse({ items: WORKERS, page: 0, size: 100, total_elements: 150 }),
+    )
+    renderPage()
+
+    expect(await screen.findByText(/전체 150명 중 6명만 불러왔습니다/)).toBeInTheDocument()
+  })
+
   it('renders the deep-linked worker as selected when visiting /workers/:workerId', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(pageResponse(WORKERS)))
     renderPage(`/workers/${WORKERS[1].worker_id}`)

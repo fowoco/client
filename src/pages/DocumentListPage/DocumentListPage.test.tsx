@@ -150,6 +150,15 @@ describe('DocumentListPage', () => {
     expect(await screen.findByText('등록된 서류가 없습니다')).toBeInTheDocument()
   })
 
+  it('shows a cap notice when the server has more documents than the fetched page', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      jsonResponse({ items: DOCUMENTS, page: 0, size: 100, total_elements: 150 }),
+    )
+    renderPage()
+
+    expect(await screen.findByText(/전체 150건 중 3건만 불러왔습니다/)).toBeInTheDocument()
+  })
+
   it('opens the HWP/HWPX upload modal', async () => {
     const user = userEvent.setup()
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(pageResponse(DOCUMENTS)))

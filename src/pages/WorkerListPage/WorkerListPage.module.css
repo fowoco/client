@@ -62,6 +62,13 @@
   color: var(--text-primary);
 }
 
+.capNotice {
+  margin: 0;
+  padding: 0 19px 12px;
+  font-size: 12px;
+  color: var(--status-warning);
+}
+
 .workerRow {
   display: block;
   width: 100%;

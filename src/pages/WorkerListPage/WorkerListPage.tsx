@@ -134,6 +134,12 @@ export function WorkerListPage() {
         <div className={styles.workspace}>
           <div className={styles.listPanel}>
             <p className={styles.listHeader}>근로자 {data?.total_elements ?? rows.length}명</p>
+            {data && data.total_elements > data.items.length && (
+              <p className={styles.capNotice}>
+                전체 {data.total_elements}명 중 {data.items.length}명만 불러왔습니다. 찾는 근로자가 안 보이면
+                검색어를 바꿔보세요.
+              </p>
+            )}
 
             {visibleRows.length === 0 ? (
               <div className={styles.searchEmpty}>

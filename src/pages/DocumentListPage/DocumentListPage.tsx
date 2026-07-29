@@ -116,6 +116,13 @@ export function DocumentListPage() {
             <span />
           </div>
 
+          {data && data.total_elements > data.items.length && (
+            <p className={styles.capNotice}>
+              전체 {data.total_elements}건 중 {data.items.length}건만 불러왔습니다. 찾는 서류가 안 보이면
+              검색어를 바꿔보세요.
+            </p>
+          )}
+
           {visibleDocuments.length === 0 ? (
             <div className={styles.stateWrap}>
               <EmptyState kind="empty" title="검색 결과가 없습니다" body="다른 검색어로 다시 시도해 보세요." />

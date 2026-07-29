@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
 import { Tabs } from '../../components/ui/Tabs/Tabs'
 import { useToastStore } from '../../store/toastStore'
+import { InviteMemberModal, type MemberInvite } from './overlays/InviteMemberModal'
 import { LinkReissueModal, type ReissueSubmission } from './overlays/LinkReissueModal'
 import { LinkReissuedModal } from './overlays/LinkReissuedModal'
 import styles from './SettingsPage.module.css'
@@ -30,6 +31,7 @@ export function SettingsPage() {
   const [linkOverlay, setLinkOverlay] = useState<LinkOverlay>('none')
   const [activeLinkEntry, setActiveLinkEntry] = useState<SecurityLinkHistoryEntry | null>(null)
   const [reissueSubmission, setReissueSubmission] = useState<ReissueSubmission | null>(null)
+  const [inviteOpen, setInviteOpen] = useState(false)
   const showToast = useToastStore((state) => state.showToast)
 
   function toggleApproval(id: string) {
@@ -66,9 +68,24 @@ export function SettingsPage() {
     showToast('보안 링크를 재발급했습니다.')
   }
 
-  function handleInviteMember() {
+  function handleOpenInvite() {
+    setInviteOpen(true)
+  }
+
+  function handleSubmitInvite(invite: MemberInvite) {
     // TODO(backend): POST /api/settings/members/invite { email, role } -> 구성원 초대 발송
-    showToast('구성원 초대를 보냈습니다.')
+    setMembers((current) => [
+      ...current,
+      {
+        id: `M-invite-${Date.now()}`,
+        name: invite.email,
+        role: invite.role,
+        approval: 'requestOnly',
+        status: '초대 중',
+      },
+    ])
+    setInviteOpen(false)
+    showToast(`${invite.email}님에게 초대를 보냈습니다.`)
   }
 
   return (
@@ -166,7 +183,7 @@ export function SettingsPage() {
               ))}
             </div>
 
-            <button type="button" className={styles.inviteLink} onClick={handleInviteMember}>
+            <button type="button" className={styles.inviteLink} onClick={handleOpenInvite}>
               ＋ 구성원 초대
             </button>
           </div>
@@ -269,6 +286,7 @@ export function SettingsPage() {
         submission={reissueSubmission}
         onClose={handleCloseReissued}
       />
+      <InviteMemberModal open={inviteOpen} onClose={() => setInviteOpen(false)} onSubmit={handleSubmitInvite} />
     </div>
   )
 }

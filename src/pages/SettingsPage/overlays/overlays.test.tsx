@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { InviteMemberModal } from './InviteMemberModal'
 import { LinkReissueModal } from './LinkReissueModal'
 import { LinkReissuedModal } from './LinkReissuedModal'
 import { ToastViewport } from '../../../components/ui/ToastViewport/ToastViewport'
@@ -85,6 +86,43 @@ describe('LinkReissuedModal', () => {
     // Modal 자체의 닫기(X) 버튼도 접근성 이름이 "닫기"라 마지막(본문의 텍스트 링크)을 선택한다.
     const closeButtons = screen.getAllByRole('button', { name: '닫기' })
     await user.click(closeButtons[closeButtons.length - 1])
+
+    expect(onClose).toHaveBeenCalledOnce()
+  })
+})
+
+describe('InviteMemberModal', () => {
+  it('defaults to HR_STAFF and submits the entered email with the selected role', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+    render(<InviteMemberModal open onClose={vi.fn()} onSubmit={onSubmit} />)
+
+    await user.type(screen.getByPlaceholderText('name@company.com'), 'invite@fowoco.com')
+    await user.click(screen.getByRole('button', { name: '조회 전용' }))
+    await user.click(screen.getByRole('button', { name: '초대 보내기' }))
+
+    expect(onSubmit).toHaveBeenCalledWith({ email: 'invite@fowoco.com', role: 'VIEWER' })
+  })
+
+  it('shows a validation error and does not submit for an invalid email', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+    render(<InviteMemberModal open onClose={vi.fn()} onSubmit={onSubmit} />)
+
+    await user.type(screen.getByPlaceholderText('name@company.com'), '이메일아님')
+    await user.click(screen.getByRole('button', { name: '초대 보내기' }))
+
+    expect(screen.getByText('올바른 이메일 형식이 아닙니다.')).toBeInTheDocument()
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
+
+  it('calls onClose when cancelled', async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    render(<InviteMemberModal open onClose={onClose} onSubmit={vi.fn()} />)
+
+    await user.type(screen.getByPlaceholderText('name@company.com'), 'invite@fowoco.com')
+    await user.click(screen.getByRole('button', { name: '취소' }))
 
     expect(onClose).toHaveBeenCalledOnce()
   })

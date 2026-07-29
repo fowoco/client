@@ -209,4 +209,15 @@ describe('WorkListPage', () => {
     await user.click(screen.getByRole('button', { name: '업무 만들기' }))
     expect(await screen.findByText('업무 생성')).toBeInTheDocument()
   })
+
+  it('shows a cap notice when the server has more tasks than the fetched page', async () => {
+    vi.mocked(fetch).mockImplementation((input) => {
+      const url = String(input)
+      if (url.includes('/workflow-catalogs')) return Promise.resolve(jsonResponse(catalogResponse()))
+      return Promise.resolve(jsonResponse({ items: TASKS, page: 0, size: 100, total_elements: 150, total_pages: 2 }))
+    })
+    renderPage()
+
+    expect(await screen.findByText(/전체 150개 중 6개만 불러왔습니다/)).toBeInTheDocument()
+  })
 })

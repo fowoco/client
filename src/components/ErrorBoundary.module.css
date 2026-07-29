@@ -1,0 +1,42 @@
+.page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: var(--fowoco-spacing-24);
+  background: var(--surface-subtle);
+}
+
+.card {
+  max-width: 420px;
+  padding: var(--fowoco-spacing-24);
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
+  text-align: center;
+}
+
+.title {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.body {
+  margin: 0 0 20px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.action {
+  padding: 10px 20px;
+  background: var(--brand-primary);
+  border: none;
+  border-radius: var(--fowoco-radius-6);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}

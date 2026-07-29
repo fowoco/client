@@ -68,7 +68,6 @@ export function AppLayout() {
 
       <div className={styles.main}>
         <header className={styles.topBar}>
-          {/* TODO(backend): GET /api/me -> 사업장명·담당자명 최신화 */}
           <p className={styles.workspace}>
             {user ? `${user.workplace} · ${user.name} ${user.role}` : ''}
           </p>

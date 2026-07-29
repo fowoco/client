@@ -51,7 +51,7 @@ describe('SettingsPage', () => {
     expect(screen.getByText('김경민님의 승인 권한을 변경했습니다.')).toBeInTheDocument()
   })
 
-  it('shows a toast when inviting a member', async () => {
+  it('opens the invite modal and shows a validation error for a bad email', async () => {
     const user = userEvent.setup()
     render(
       <>
@@ -61,8 +61,31 @@ describe('SettingsPage', () => {
     )
 
     await user.click(screen.getByRole('button', { name: '＋ 구성원 초대' }))
+    expect(screen.getByRole('dialog', { name: '구성원 초대' })).toBeInTheDocument()
 
-    expect(screen.getByText('구성원 초대를 보냈습니다.')).toBeInTheDocument()
+    await user.type(screen.getByPlaceholderText('name@company.com'), '이상한값')
+    await user.click(screen.getByRole('button', { name: '초대 보내기' }))
+
+    expect(screen.getByText('올바른 이메일 형식이 아닙니다.')).toBeInTheDocument()
+  })
+
+  it('invites a member with a valid email and adds them to the member list', async () => {
+    const user = userEvent.setup()
+    render(
+      <>
+        <SettingsPage />
+        <ToastViewport />
+      </>,
+    )
+
+    await user.click(screen.getByRole('button', { name: '＋ 구성원 초대' }))
+    await user.type(screen.getByPlaceholderText('name@company.com'), 'new-member@fowoco.com')
+    await user.click(screen.getByRole('button', { name: 'HR 매니저' }))
+    await user.click(screen.getByRole('button', { name: '초대 보내기' }))
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByText('new-member@fowoco.com님에게 초대를 보냈습니다.')).toBeInTheDocument()
+    expect(screen.getByText('new-member@fowoco.com')).toBeInTheDocument()
   })
 
   it('switches to the security link tab and shows link history', async () => {

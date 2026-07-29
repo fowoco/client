@@ -8,9 +8,10 @@ import styles from './HelpModal.module.css'
 export interface HelpModalProps {
   open: boolean
   onClose: () => void
+  onReplayTour: () => void
 }
 
-export function HelpModal({ open, onClose }: HelpModalProps) {
+export function HelpModal({ open, onClose, onReplayTour }: HelpModalProps) {
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0)
   const showToast = useToastStore((state) => state.showToast)
 
@@ -30,6 +31,12 @@ export function HelpModal({ open, onClose }: HelpModalProps) {
 
   return (
     <Modal open={open} onClose={onClose} title="도움말">
+      <section className={styles.section}>
+        <button type="button" className={styles.replayTour} onClick={onReplayTour}>
+          시작 가이드 다시 보기 →
+        </button>
+      </section>
+
       <section className={styles.section}>
         <h3 className={styles.sectionTitle}>자주 쓰는 흐름</h3>
         <ol className={styles.flowList}>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getUrgencyTier, URGENCY_LABEL, URGENCY_TONE } from './urgency'
+import { daysUntil, getUrgencyTier, URGENCY_LABEL, URGENCY_TONE } from './urgency'
 
 describe('getUrgencyTier', () => {
   it('returns urgent within 7 days', () => {
@@ -19,6 +19,24 @@ describe('getUrgencyTier', () => {
 
   it('treats null as comfortable (no imminent deadline)', () => {
     expect(getUrgencyTier(null)).toBe('comfortable')
+  })
+})
+
+describe('daysUntil', () => {
+  it('returns null when there is no date', () => {
+    expect(daysUntil(null)).toBeNull()
+  })
+
+  it('computes the day count from today to the given date', () => {
+    const date = new Date()
+    date.setDate(date.getDate() + 10)
+    expect(daysUntil(date.toISOString().slice(0, 10))).toBe(10)
+  })
+
+  it('returns a negative count for a date in the past', () => {
+    const date = new Date()
+    date.setDate(date.getDate() - 3)
+    expect(daysUntil(date.toISOString().slice(0, 10))).toBe(-3)
   })
 })
 

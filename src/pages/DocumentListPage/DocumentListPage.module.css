@@ -14,8 +14,21 @@
 .toolbar {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 16px;
   margin-top: 24px;
+}
+
+.uploadButton {
+  margin-left: auto;
+  padding: 8px 16px;
+  background: var(--brand-primary);
+  border: none;
+  border-radius: var(--fowoco-radius-6);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
 }
 
 .stateWrap {
@@ -32,6 +45,13 @@
   font-size: 12px;
   font-weight: 500;
   color: var(--text-secondary);
+}
+
+.capNotice {
+  margin: 8px 0 0;
+  padding: 0 20px;
+  font-size: 12px;
+  color: var(--status-warning);
 }
 
 .list {

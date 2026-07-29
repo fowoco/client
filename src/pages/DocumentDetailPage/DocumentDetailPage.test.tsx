@@ -1,9 +1,42 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { DocumentItemResponse, DocumentPageResponse } from '../../api/documents'
 import { DocumentDetailPage } from './DocumentDetailPage'
-import { DOCUMENTS } from '../DocumentListPage/documentListData'
+
+function document(overrides: Partial<DocumentItemResponse>): DocumentItemResponse {
+  return {
+    worker_document_id: 'D-1',
+    worker_id: 'W-1',
+    display_name: '응웬반A',
+    document_type: 'ARC',
+    submission_status: 'MISSING',
+    expiry_date: null,
+    file_id: null,
+    ...overrides,
+  }
+}
+
+const DOCUMENTS: DocumentItemResponse[] = [
+  document({ worker_document_id: 'D-1', worker_id: 'W-1', display_name: '응웬반A' }),
+  document({ worker_document_id: 'D-2', worker_id: 'W-2', display_name: '박서준', document_type: 'PERMIT' }),
+]
+
+function jsonResponse(body: unknown, init: ResponseInit = {}) {
+  return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' }, ...init })
+}
+
+function errorResponse(status: number, code: string, message: string) {
+  return jsonResponse(
+    { timestamp: '2026-07-27T01:23:45Z', status, code, message, path: '/api/v1/documents', request_id: 'req-1', field_errors: [] },
+    { status },
+  )
+}
+
+function pageResponse(items: DocumentItemResponse[]): DocumentPageResponse {
+  return { items, page: 0, size: 100, total_elements: items.length }
+}
 
 function renderPage(documentId: string) {
   render(
@@ -12,43 +45,50 @@ function renderPage(documentId: string) {
         <Route path="/documents/:documentId" element={<DocumentDetailPage />} />
         <Route path="/documents" element={<p>서류 목록</p>} />
         <Route path="/workers/:workerId" element={<p>근로자 상세</p>} />
-        <Route path="/tasks/:caseId" element={<p>업무 상세</p>} />
       </Routes>
     </MemoryRouter>,
   )
 }
 
-describe('DocumentDetailPage', () => {
-  it('renders the document type and worker name', () => {
-    const document = DOCUMENTS[0]
-    renderPage(document.id)
+beforeEach(() => {
+  vi.stubGlobal('fetch', vi.fn())
+})
 
-    expect(screen.getByRole('heading', { name: document.docType })).toBeInTheDocument()
-    expect(screen.getAllByText(document.workerName, { exact: false }).length).toBeGreaterThan(0)
-    expect(screen.getByText(`${document.docType}.pdf`)).toBeInTheDocument()
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
+
+describe('DocumentDetailPage', () => {
+  it('renders the document type and worker name', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(pageResponse(DOCUMENTS)))
+    renderPage('D-1')
+
+    expect(await screen.findByRole('heading', { name: '외국인등록증' })).toBeInTheDocument()
+    expect(screen.getAllByText(/응웬반A/).length).toBeGreaterThan(0)
   })
 
-  it('navigates to the related worker and task', async () => {
+  it('navigates to the related worker', async () => {
     const user = userEvent.setup()
-    const document = DOCUMENTS.find((item) => item.workerName === '응웬반A')!
-    renderPage(document.id)
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(pageResponse(DOCUMENTS)))
+    renderPage('D-1')
 
-    await user.click(screen.getByRole('button', { name: '응웬반A 근로자 정보 →' }))
+    await user.click(await screen.findByRole('button', { name: '응웬반A 정보 →' }))
 
     expect(await screen.findByText('근로자 상세')).toBeInTheDocument()
   })
 
-  it('shows an empty state when there is no matching worker', () => {
-    const document = DOCUMENTS.find((item) => item.workerName === '박서준')!
-    renderPage(document.id)
+  it('shows an empty state when the documentId does not match any document', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(pageResponse(DOCUMENTS)))
+    renderPage('does-not-exist')
 
-    expect(screen.getByText('연결된 근로자를 찾을 수 없습니다')).toBeInTheDocument()
+    expect(await screen.findByText('서류를 찾을 수 없습니다')).toBeInTheDocument()
   })
 
-  it('approves and rejects the document, toggling status', async () => {
+  it('approves and rejects the document locally, toggling status', async () => {
     const user = userEvent.setup()
-    const document = DOCUMENTS[0]
-    renderPage(document.id)
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(pageResponse(DOCUMENTS)))
+    renderPage('D-1')
+    await screen.findByRole('heading', { name: '외국인등록증' })
 
     await user.click(screen.getByRole('button', { name: '확인 완료 처리' }))
     expect(screen.getByText('확인 완료')).toBeInTheDocument()
@@ -57,9 +97,16 @@ describe('DocumentDetailPage', () => {
     expect(screen.getByText('미제출')).toBeInTheDocument()
   })
 
-  it('falls back to the first document when the documentId is invalid', () => {
-    renderPage('does-not-exist')
+  it('shows a loading state', () => {
+    vi.mocked(fetch).mockReturnValue(new Promise(() => {}))
+    renderPage('D-1')
+    expect(screen.getByText('서류 정보를 불러오는 중입니다')).toBeInTheDocument()
+  })
 
-    expect(screen.getByRole('heading', { name: DOCUMENTS[0].docType })).toBeInTheDocument()
+  it('shows an error state with a retry action', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(errorResponse(500, 'INTERNAL_SERVER_ERROR', 'raw'))
+    renderPage('D-1')
+
+    expect(await screen.findByRole('button', { name: '다시 시도' })).toBeInTheDocument()
   })
 })

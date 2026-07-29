@@ -1,0 +1,339 @@
+.description {
+  margin: 0 0 20px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.fieldLabel {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.fieldLabelSpaced {
+  margin-top: 16px;
+}
+
+.actionRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 24px;
+}
+
+.actionRowEnd {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+.textLink {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.primaryButton {
+  padding: 10px 20px;
+  background: var(--brand-primary);
+  border: none;
+  border-radius: var(--fowoco-radius-6);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.primaryButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.secondaryButton {
+  padding: 10px 20px;
+  background: var(--surface-subtle);
+  border: none;
+  border-radius: var(--fowoco-radius-6);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* 진행 표시 */
+.stepper {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.stepDot {
+  flex: 1;
+  height: 4px;
+  border-radius: var(--fowoco-radius-999);
+  background: var(--border-default);
+}
+
+.stepDotDone,
+.stepDotActive {
+  background: var(--brand-primary);
+}
+
+/* 파일 확인 */
+.fileCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: var(--fowoco-spacing-16);
+  background: var(--surface-subtle);
+  border-radius: var(--fowoco-radius-8);
+  margin-bottom: 16px;
+}
+
+.fileName {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.fileMeta {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.previewTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.previewTable th,
+.previewTable td {
+  padding: 8px 10px;
+  border: 1px solid var(--border-default);
+  text-align: left;
+}
+
+.previewTable th {
+  background: var(--surface-subtle);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* 컬럼 매핑 */
+.mappingGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mappingRow {
+  display: grid;
+  grid-template-columns: 1fr 24px 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.mappingSource {
+  padding: 10px 12px;
+  background: var(--surface-subtle);
+  border-radius: var(--fowoco-radius-6);
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.mappingArrow {
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+/* 오류·충돌 검토 */
+.rowList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reviewRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
+}
+
+.reviewRowInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.reviewRowName {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.reviewRowDetail {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.reviewRowAction {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  background: var(--surface-subtle);
+  border: none;
+  border-radius: var(--fowoco-radius-6);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.bundleLink {
+  margin-top: 16px;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--brand-primary);
+  cursor: pointer;
+}
+
+/* 결과 */
+.resultGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.resultCard {
+  padding: var(--fowoco-spacing-16);
+  background: var(--surface-subtle);
+  border-radius: var(--fowoco-radius-8);
+  text-align: center;
+}
+
+.resultCount {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.resultLabel {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* 충돌/재처리/누락서류 공용 */
+.compareGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 12px 0 20px;
+}
+
+.compareCard {
+  padding: var(--fowoco-spacing-16);
+  border: 2px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
+  cursor: pointer;
+  text-align: left;
+  background: var(--surface-default);
+}
+
+.compareCardSelected {
+  border-color: var(--brand-primary);
+  background: var(--fowoco-teal-50);
+}
+
+.compareLabel {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.compareValue {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.errorBox {
+  padding: var(--fowoco-spacing-12);
+  background: var(--fowoco-red-50);
+  border-radius: var(--fowoco-radius-6);
+  font-size: 13px;
+  color: var(--status-critical);
+  margin-bottom: 16px;
+}
+
+.errorBoxSpaced {
+  margin-top: 12px;
+  margin-bottom: 0;
+}
+
+.textInput {
+  width: 100%;
+  box-sizing: border-box;
+  height: 44px;
+  padding: 0 14px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text-primary);
+}
+
+.draftBox {
+  padding: var(--fowoco-spacing-16);
+  background: var(--surface-subtle);
+  border-radius: var(--fowoco-radius-8);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+}
+
+.bundleList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bundleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--surface-subtle);
+  border-radius: var(--fowoco-radius-6);
+}
+
+.bundleFileName {
+  flex: 1;
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.bundleMeta {
+  font-size: 12px;
+  color: var(--text-secondary);
+}

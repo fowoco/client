@@ -1,19 +1,15 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { fetchWorkers, type WorkerResponse } from '../../api/workers'
+import { getErrorMessage } from '../../api/errors'
 import { Dropdown } from '../../components/ui/Dropdown/Dropdown'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { SearchInput } from '../../components/ui/SearchInput/SearchInput'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
-import { useAsyncDemoData } from '../../hooks/useAsyncDemoData'
+import { useApiQuery } from '../../hooks/useApiQuery'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
-import { getUrgencyTier, URGENCY_TONE } from '../../utils/urgency'
+import { daysUntil, getUrgencyTier, URGENCY_TONE } from '../../utils/urgency'
 import styles from './WorkerListPage.module.css'
-import { TOTAL_WORKER_COUNT, WORKERS } from './workerListData'
-
-const TASK_LINK_CLASS = {
-  warning: styles.taskLinkWarning,
-  primary: styles.taskLinkPrimary,
-}
 
 const DEADLINE_TIER_CLASS = {
   urgent: styles.workerDeadlineUrgent,
@@ -29,61 +25,78 @@ const DEADLINE_OPTIONS = [
 
 const PRIORITY_COUNT = 5
 
+// 제품이 E-9(비전문취업) 근로자를 대상으로 하는 만큼 비자 유형은 항상 E-9다.
+// WorkerResponse에는 별도 visa_type 필드가 없다.
+const VISA_TYPE = 'E-9'
+
+function deadlineLabel(deadlineDays: number | null): string {
+  if (deadlineDays === null) return '정상'
+  return `D-${deadlineDays} 체류만료`
+}
+
+function toRow(worker: WorkerResponse) {
+  const deadlineDays = daysUntil(worker.stay_expiry_date)
+  return { worker, deadlineDays, label: deadlineLabel(deadlineDays) }
+}
+
 export function WorkerListPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { workerId } = useParams()
-  const status = useAsyncDemoData(WORKERS.length === 0)
   const [query, setQuery] = useState('')
   const [deadlineFilter, setDeadlineFilter] = useState('90')
   const [showAll, setShowAll] = useState(false)
   const debouncedQuery = useDebouncedValue(query)
 
+  // 서버 GET /api/v1/workers에는 자유 텍스트 검색 파라미터가 없어, 한 페이지(최대 100건)를
+  // 받아온 뒤 클라이언트에서 검색·기한 필터링한다. 근로자가 100명을 넘으면 이후 페이지는
+  // 아직 반영되지 않는다.
+  const fetcher = useCallback(() => fetchWorkers({ size: 100 }), [])
+  const isEmpty = useCallback((data: { items: WorkerResponse[] }) => data.items.length === 0, [])
+  const { status, data, error, refetch } = useApiQuery(fetcher, isEmpty)
+
+  const rows = useMemo(() => {
+    const items = data?.items ?? []
+    return items
+      .map(toRow)
+      .sort((a, b) => (a.deadlineDays ?? Infinity) - (b.deadlineDays ?? Infinity))
+  }, [data])
+
   const isDefaultView = debouncedQuery.trim() === '' && deadlineFilter === '90'
 
-  const filteredWorkers = useMemo(() => {
+  const filteredRows = useMemo(() => {
     const normalized = debouncedQuery.trim().toLowerCase()
-    return WORKERS.filter((worker) => {
+    return rows.filter((row) => {
       const matchesQuery =
-        !normalized ||
-        [worker.name, worker.nationality, worker.employeeId].some((field) =>
-          field.toLowerCase().includes(normalized),
-        )
-      const matchesDeadline =
-        worker.deadlineDays === null || worker.deadlineDays <= Number(deadlineFilter)
+        !normalized || row.worker.display_name.toLowerCase().includes(normalized)
+      const matchesDeadline = row.deadlineDays === null || row.deadlineDays <= Number(deadlineFilter)
       return matchesQuery && matchesDeadline
     })
-  }, [debouncedQuery, deadlineFilter])
+  }, [rows, debouncedQuery, deadlineFilter])
 
-  const visibleWorkers =
-    isDefaultView && !showAll ? filteredWorkers.slice(0, PRIORITY_COUNT) : filteredWorkers
+  const visibleRows = isDefaultView && !showAll ? filteredRows.slice(0, PRIORITY_COUNT) : filteredRows
 
-  const selectedWorker = WORKERS.find((worker) => worker.id === workerId) ?? WORKERS[0]
-  const selectedDeadlineTier = getUrgencyTier(selectedWorker.deadlineDays)
+  const selectedRow = rows.find((row) => row.worker.worker_id === workerId) ?? rows[0]
+  const selectedDeadlineTier = selectedRow ? getUrgencyTier(selectedRow.deadlineDays) : 'comfortable'
 
   function handleViewAllWorkers() {
-    // TODO(backend): GET /api/workers?page= -> 실제 서버 페이지네이션으로 대체
     setShowAll(true)
   }
 
-  function handleOpenTask(caseId: string) {
-    navigate(`/tasks/${caseId}`)
-  }
-
   function handleShowMoreDetail() {
-    navigate(`/workers/${selectedWorker.id}/detail`)
+    if (!selectedRow) return
+    navigate(`/workers/${selectedRow.worker.worker_id}/detail`)
   }
 
   return (
     <div>
-      <h1 className={styles.headline}>체류·서류 확인이 필요한 근로자 {visibleWorkers.length}명</h1>
+      <h1 className={styles.headline}>체류·서류 확인이 필요한 근로자 {visibleRows.length}명</h1>
       <p className={styles.description}>
         기한과 진행 중인 업무를 먼저 보여주며, 개인정보는 필요한 범위에서만 확인합니다.
       </p>
 
       <div className={styles.toolbar}>
-        <SearchInput value={query} onChange={setQuery} placeholder="이름·사번·국적 검색" ariaLabel="근로자 검색" />
-        {/* TODO(backend): GET /api/workers?deadline= -> 현재는 클라이언트에서 deadlineDays로 필터링, 추후 서버 쿼리로 대체 */}
+        <SearchInput value={query} onChange={setQuery} placeholder="이름 검색" ariaLabel="근로자 검색" />
         <Dropdown
           options={DEADLINE_OPTIONS}
           value={deadlineFilter}
@@ -104,9 +117,9 @@ export function WorkerListPage() {
           <EmptyState
             kind="error"
             title="근로자 목록을 불러오지 못했습니다"
-            body="네트워크 상태를 확인한 뒤 다시 시도해 주세요."
+            body={error ? getErrorMessage(error) : '네트워크 상태를 확인한 뒤 다시 시도해 주세요.'}
             actionLabel="다시 시도"
-            onAction={() => navigate('/workers', { replace: true })}
+            onAction={refetch}
           />
         </div>
       )}
@@ -117,12 +130,18 @@ export function WorkerListPage() {
         </div>
       )}
 
-      {status === 'success' && (
+      {status === 'success' && selectedRow && (
         <div className={styles.workspace}>
           <div className={styles.listPanel}>
-            <p className={styles.listHeader}>근로자 {TOTAL_WORKER_COUNT}명</p>
+            <p className={styles.listHeader}>근로자 {data?.total_elements ?? rows.length}명</p>
+            {data && data.total_elements > data.items.length && (
+              <p className={styles.capNotice}>
+                전체 {data.total_elements}명 중 {data.items.length}명만 불러왔습니다. 찾는 근로자가 안 보이면
+                검색어를 바꿔보세요.
+              </p>
+            )}
 
-            {visibleWorkers.length === 0 ? (
+            {visibleRows.length === 0 ? (
               <div className={styles.searchEmpty}>
                 <EmptyState
                   kind="empty"
@@ -131,34 +150,35 @@ export function WorkerListPage() {
                 />
               </div>
             ) : (
-              visibleWorkers.map((worker) => (
+              visibleRows.map((row) => (
                 <button
-                  key={worker.id}
+                  key={row.worker.worker_id}
                   type="button"
                   className={`${styles.workerRow} ${
-                    worker.id === selectedWorker.id ? styles.workerRowActive : ''
+                    row.worker.worker_id === selectedRow.worker.worker_id ? styles.workerRowActive : ''
                   }`}
-                  onClick={() => navigate({ pathname: `/workers/${worker.id}`, search: location.search })}
+                  onClick={() =>
+                    navigate({ pathname: `/workers/${row.worker.worker_id}`, search: location.search })
+                  }
                 >
                   <div className={styles.workerRowTop}>
-                    <p className={styles.workerName}>{worker.name}</p>
+                    <p className={styles.workerName}>{row.worker.display_name}</p>
                     <span
                       className={`${styles.workerDeadline} ${
-                        DEADLINE_TIER_CLASS[getUrgencyTier(worker.deadlineDays)]
+                        DEADLINE_TIER_CLASS[getUrgencyTier(row.deadlineDays)]
                       }`}
                     >
-                      {worker.deadlineLabel}
+                      {row.label}
                     </span>
                   </div>
                   <p className={styles.workerMeta}>
-                    {worker.nationality} · {worker.visaType} · 사번 {worker.employeeId}
+                    {row.worker.nationality_code} · {VISA_TYPE}
                   </p>
-                  <p className={styles.workerNote}>{worker.note}</p>
                 </button>
               ))
             )}
 
-            {isDefaultView && !showAll && (
+            {isDefaultView && !showAll && filteredRows.length > PRIORITY_COUNT && (
               <button type="button" className={styles.viewAll} onClick={handleViewAllWorkers}>
                 전체 근로자 보기 →
               </button>
@@ -167,59 +187,26 @@ export function WorkerListPage() {
 
           <div className={styles.detailPanel}>
             <div className={styles.detailHeader}>
-              <h2 className={styles.detailName}>{selectedWorker.name}</h2>
+              <h2 className={styles.detailName}>{selectedRow.worker.display_name}</h2>
               {selectedDeadlineTier !== 'comfortable' && (
-                <StatusLabel tone={URGENCY_TONE[selectedDeadlineTier]}>
-                  {selectedWorker.deadlineLabel}
-                </StatusLabel>
+                <StatusLabel tone={URGENCY_TONE[selectedDeadlineTier]}>{selectedRow.label}</StatusLabel>
               )}
             </div>
             <p className={styles.detailMeta}>
-              {selectedWorker.nationality} · {selectedWorker.visaType} ·{' '}
-              {selectedWorker.employeeId} | 연락처 {selectedWorker.phone}
+              {selectedRow.worker.nationality_code} · {VISA_TYPE} | 연락처·사번 준비 중
             </p>
 
             <hr className={styles.divider} />
 
             <h3 className={styles.sectionTitle}>현재 업무</h3>
-            {selectedWorker.currentTasks.length === 0 ? (
-              <p className={styles.emptyTasks}>진행 중인 업무가 없습니다.</p>
-            ) : (
-              <div className={styles.taskList}>
-                {selectedWorker.currentTasks.map((task) => (
-                  <div key={task.caseId} className={styles.taskRow}>
-                    <div>
-                      <p className={styles.taskTitle}>{task.title}</p>
-                      <p className={styles.taskDetail}>{task.detail}</p>
-                    </div>
-                    <button
-                      type="button"
-                      className={`${styles.taskLink} ${TASK_LINK_CLASS[task.linkTone]}`}
-                      onClick={() => handleOpenTask(task.caseId)}
-                    >
-                      열기 →
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+            {/* TODO(#153): Task API 연동 후 실제 진행 업무로 대체 */}
+            <p className={styles.emptyTasks}>업무 연동 준비 중입니다.</p>
 
             <hr className={styles.divider} />
 
             <h3 className={styles.sectionTitle}>최근 Timeline</h3>
-            <div className={styles.timeline}>
-              {selectedWorker.timeline.map((entry) => (
-                <div key={`${entry.date}-${entry.label}`} className={styles.timelineRow}>
-                  <span className={styles.timelineDate}>{entry.date}</span>
-                  <span
-                    className={`${styles.timelineDot} ${
-                      entry.highlighted ? styles.timelineDotHighlighted : ''
-                    }`}
-                  />
-                  <span className={styles.timelineLabel}>{entry.label}</span>
-                </div>
-              ))}
-            </div>
+            {/* TODO(#156): Audit API 연동 후 실제 활동 이력으로 대체 */}
+            <p className={styles.emptyTasks}>활동 이력 연동 준비 중입니다.</p>
 
             <button type="button" className={styles.moreLink} onClick={handleShowMoreDetail}>
               기본정보·서류·안내이력 더 보기 ▾

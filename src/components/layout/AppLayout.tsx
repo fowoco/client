@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
+import { OnboardingTour } from '../onboarding/OnboardingTour'
+import { hasCompletedOnboarding, markOnboardingCompleted } from '../onboarding/onboardingStorage'
 import { useAuthStore } from '../../store/authStore'
 import { Button } from '../ui/Button/Button'
 import { ToastViewport } from '../ui/ToastViewport/ToastViewport'
@@ -13,6 +15,21 @@ export function AppLayout() {
   const user = useAuthStore((state) => state.user)
   const logout = useAuthStore((state) => state.logout)
   const [helpOpen, setHelpOpen] = useState(false)
+  const [tourOpen, setTourOpen] = useState(false)
+
+  useEffect(() => {
+    if (!hasCompletedOnboarding()) setTourOpen(true)
+  }, [])
+
+  function handleFinishTour() {
+    markOnboardingCompleted()
+    setTourOpen(false)
+  }
+
+  function handleReplayTour() {
+    setHelpOpen(false)
+    setTourOpen(true)
+  }
 
   function handleLogout() {
     logout()
@@ -51,7 +68,6 @@ export function AppLayout() {
 
       <div className={styles.main}>
         <header className={styles.topBar}>
-          {/* TODO(backend): GET /api/me -> 사업장명·담당자명 최신화 */}
           <p className={styles.workspace}>
             {user ? `${user.workplace} · ${user.name} ${user.role}` : ''}
           </p>
@@ -63,7 +79,8 @@ export function AppLayout() {
         </main>
       </div>
 
-      <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} onReplayTour={handleReplayTour} />
+      <OnboardingTour open={tourOpen} onFinish={handleFinishTour} />
       <ToastViewport />
     </div>
   )

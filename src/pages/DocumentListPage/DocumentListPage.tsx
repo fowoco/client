@@ -16,6 +16,7 @@ import {
   TOTAL_DOCUMENT_COUNT,
   type DocumentStatus,
 } from './documentListData'
+import { FileUploadModal } from './FileUploadModal'
 
 const TAB_STATUS: Record<string, DocumentStatus | null> = {
   all: null,
@@ -29,6 +30,7 @@ export function DocumentListPage() {
   const status = useAsyncDemoData(DOCUMENTS.length === 0)
   const [activeTab, setActiveTab] = useState(DOCUMENT_TABS[0].id)
   const [query, setQuery] = useState('')
+  const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const debouncedQuery = useDebouncedValue(query)
 
   const visibleDocuments = useMemo(() => {
@@ -65,7 +67,12 @@ export function DocumentListPage() {
           placeholder="근로자명·서류 종류 검색"
           ariaLabel="서류 검색"
         />
+        <button type="button" className={styles.uploadButton} onClick={() => setUploadModalOpen(true)}>
+          ＋ HWP/HWPX 업로드
+        </button>
       </div>
+
+      <FileUploadModal open={uploadModalOpen} onClose={() => setUploadModalOpen(false)} />
 
       {status === 'loading' && (
         <div className={styles.stateWrap}>

@@ -77,4 +77,13 @@ describe('DocumentListPage', () => {
     renderPage('error')
     expect(screen.getByText('서류 목록을 불러오지 못했습니다')).toBeInTheDocument()
   })
+
+  it('opens the HWP/HWPX upload modal', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByRole('button', { name: '＋ HWP/HWPX 업로드' }))
+
+    expect(screen.getByRole('dialog', { name: 'HWP/HWPX 문서 업로드' })).toBeInTheDocument()
+  })
 })

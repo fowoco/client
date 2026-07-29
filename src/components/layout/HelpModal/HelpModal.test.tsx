@@ -28,13 +28,13 @@ function stubClipboardWriteText(writeText: ReturnType<typeof vi.fn>) {
 
 describe('HelpModal', () => {
   it('renders nothing when closed', () => {
-    renderHelpModal({ open: false, onClose: vi.fn() })
+    renderHelpModal({ open: false, onClose: vi.fn(), onReplayTour: vi.fn() })
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('shows the first FAQ answer expanded by default and toggles others', async () => {
     const user = userEvent.setup()
-    renderHelpModal({ open: true, onClose: vi.fn() })
+    renderHelpModal({ open: true, onClose: vi.fn(), onReplayTour: vi.fn() })
 
     expect(screen.getByText(HELP_FAQ[0].answer)).toBeInTheDocument()
     expect(screen.queryByText(HELP_FAQ[1].answer)).not.toBeInTheDocument()
@@ -51,7 +51,7 @@ describe('HelpModal', () => {
     const user = userEvent.setup()
     const writeText = vi.fn().mockResolvedValue(undefined)
     stubClipboardWriteText(writeText)
-    renderHelpModal({ open: true, onClose: vi.fn() })
+    renderHelpModal({ open: true, onClose: vi.fn(), onReplayTour: vi.fn() })
 
     await user.click(screen.getByRole('button', { name: '복사' }))
 
@@ -63,10 +63,20 @@ describe('HelpModal', () => {
     const user = userEvent.setup()
     const writeText = vi.fn().mockRejectedValue(new Error('denied'))
     stubClipboardWriteText(writeText)
-    renderHelpModal({ open: true, onClose: vi.fn() })
+    renderHelpModal({ open: true, onClose: vi.fn(), onReplayTour: vi.fn() })
 
     await user.click(screen.getByRole('button', { name: '복사' }))
 
     expect(screen.getByText('복사에 실패했습니다. 직접 선택해 복사해 주세요.')).toBeInTheDocument()
+  })
+
+  it('calls onReplayTour when "시작 가이드 다시 보기" is clicked', async () => {
+    const user = userEvent.setup()
+    const onReplayTour = vi.fn()
+    renderHelpModal({ open: true, onClose: vi.fn(), onReplayTour })
+
+    await user.click(screen.getByRole('button', { name: '시작 가이드 다시 보기 →' }))
+
+    expect(onReplayTour).toHaveBeenCalled()
   })
 })

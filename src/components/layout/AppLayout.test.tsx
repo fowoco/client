@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppLayout } from './AppLayout'
 import { NAV_ITEMS } from './navItems'
 
@@ -13,8 +13,30 @@ function renderLayout() {
   render(<RouterProvider router={router} />)
 }
 
+// 이 테스트 환경은 Node 내장 localStorage가 jsdom 것보다 먼저 잡혀서 메서드 호출이 아예
+// 실패한다 (authStore.test.ts와 동일한 이슈, 여기선 항상 재현됨). fetch를 stub하는 것과
+// 같은 방식으로 실제 동작하는 in-memory 구현을 매 테스트마다 새로 주입한다.
+function stubWorkingLocalStorage() {
+  const store = new Map<string, string>()
+  vi.stubGlobal('localStorage', {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => store.set(key, value),
+    removeItem: (key: string) => store.delete(key),
+    clear: () => store.clear(),
+  })
+}
+
+beforeEach(() => {
+  stubWorkingLocalStorage()
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
+
 describe('AppLayout', () => {
   it('renders the FOWOCO logo and every nav item', () => {
+    localStorage.setItem('fowoco.onboarding.completed', 'true')
     renderLayout()
 
     expect(screen.getByText('FOWOCO')).toBeInTheDocument()
@@ -24,6 +46,7 @@ describe('AppLayout', () => {
   })
 
   it('opens and closes the help modal', async () => {
+    localStorage.setItem('fowoco.onboarding.completed', 'true')
     const user = userEvent.setup()
     renderLayout()
 
@@ -32,7 +55,59 @@ describe('AppLayout', () => {
     await user.click(screen.getByRole('button', { name: '? 도움말' }))
     expect(screen.getByRole('dialog', { name: '도움말' })).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: '닫기' }))
+    const closeButtons = screen.getAllByRole('button', { name: '닫기' })
+    await user.click(closeButtons[closeButtons.length - 1])
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('shows the onboarding tour automatically on first visit', () => {
+    renderLayout()
+
+    expect(screen.getByRole('dialog', { name: 'FOWOCO에 오신 것을 환영합니다' })).toBeInTheDocument()
+  })
+
+  it('does not show the onboarding tour again once completed', () => {
+    localStorage.setItem('fowoco.onboarding.completed', 'true')
+    renderLayout()
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('walks through every onboarding step and persists completion on finish', async () => {
+    const user = userEvent.setup()
+    renderLayout()
+
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    expect(screen.getByRole('dialog', { name: 'Today·업무함에서 우선순위를 확인하세요' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    expect(screen.getByRole('dialog', { name: '무엇이든 요청하면 Agent가 초안을 준비합니다' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '시작하기' }))
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(localStorage.getItem('fowoco.onboarding.completed')).toBe('true')
+  })
+
+  it('skips the tour and still marks it completed', async () => {
+    const user = userEvent.setup()
+    renderLayout()
+
+    await user.click(screen.getByRole('button', { name: '건너뛰기' }))
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(localStorage.getItem('fowoco.onboarding.completed')).toBe('true')
+  })
+
+  it('replays the tour from the help modal', async () => {
+    localStorage.setItem('fowoco.onboarding.completed', 'true')
+    const user = userEvent.setup()
+    renderLayout()
+
+    await user.click(screen.getByRole('button', { name: '? 도움말' }))
+    await user.click(screen.getByRole('button', { name: '시작 가이드 다시 보기 →' }))
+
+    expect(screen.queryByRole('dialog', { name: '도움말' })).not.toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'FOWOCO에 오신 것을 환영합니다' })).toBeInTheDocument()
   })
 })

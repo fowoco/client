@@ -74,7 +74,7 @@ export function LoginPage() {
       </aside>
 
       <div className={styles.formSide}>
-        <form className={styles.form} onSubmit={handleSubmit}>
+        <form className={styles.form} onSubmit={handleSubmit} noValidate>
           <h2 className={styles.title}>업무를 이어서 시작하세요</h2>
           <p className={styles.description}>
             Agent가 준비한 업무를 검토하고, 중요한 결정은 직접 승인하세요.

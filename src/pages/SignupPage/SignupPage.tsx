@@ -6,7 +6,7 @@ import { Button } from '../../components/ui/Button/Button'
 import { Checkbox } from '../../components/ui/Checkbox/Checkbox'
 import { EyeIcon, EyeOffIcon } from '../../components/ui/icons/EyeIcons'
 import { LockIcon, MailIcon } from '../../components/ui/icons/FieldIcons'
-import { getPasswordStrength } from './passwordStrength'
+import { getPasswordStrength } from '../../utils/passwordStrength'
 import styles from './SignupPage.module.css'
 
 interface FieldErrors {

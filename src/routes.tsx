@@ -7,6 +7,7 @@ import { CreateWorkPage } from './pages/CreateWorkPage/CreateWorkPage'
 import { DashboardPage } from './pages/DashboardPage/DashboardPage'
 import { DocumentDetailPage } from './pages/DocumentDetailPage/DocumentDetailPage'
 import { DocumentListPage } from './pages/DocumentListPage/DocumentListPage'
+import { IntroPage } from './pages/IntroPage/IntroPage'
 import { LinkExpiredPage } from './pages/LinkExpiredPage/LinkExpiredPage'
 import { LinkRequestPage } from './pages/LinkRequestPage/LinkRequestPage'
 import { LinkUploadPage } from './pages/LinkUploadPage/LinkUploadPage'
@@ -22,7 +23,8 @@ import { WorkerListPage } from './pages/WorkerListPage/WorkerListPage'
 import { WorkListPage } from './pages/WorkListPage/WorkListPage'
 
 export const router = createBrowserRouter([
-  { path: '/', element: <LoginPage />, errorElement: <NotFoundPage /> },
+  { path: '/', element: <IntroPage />, errorElement: <NotFoundPage /> },
+  { path: '/login', element: <LoginPage />, errorElement: <NotFoundPage /> },
   { path: '/signup', element: <SignupPage />, errorElement: <NotFoundPage /> },
   {
     element: <RequireAuth />,

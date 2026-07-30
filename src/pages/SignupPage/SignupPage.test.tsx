@@ -37,7 +37,7 @@ function renderPage() {
     <MemoryRouter initialEntries={['/signup']}>
       <Routes>
         <Route path="/signup" element={<SignupPage />} />
-        <Route path="/" element={<p>login screen</p>} />
+        <Route path="/login" element={<p>login screen</p>} />
       </Routes>
     </MemoryRouter>,
   )

@@ -74,7 +74,7 @@ export function SignupPage() {
         }),
         skipAuthRetry: true,
       })
-      navigate('/?signup=success')
+      navigate('/login?signup=success')
     } catch (error) {
       if (error instanceof ApiError && error.fieldErrors.length > 0) {
         setFieldErrors(mapServerFieldErrors(error.fieldErrors))
@@ -207,7 +207,7 @@ export function SignupPage() {
           </Button>
 
           <p className={styles.loginPrompt}>
-            이미 계정이 있으신가요? <Link to="/" className={styles.loginLink}>로그인</Link>
+            이미 계정이 있으신가요? <Link to="/login" className={styles.loginLink}>로그인</Link>
           </p>
 
           <p className={styles.terms}>

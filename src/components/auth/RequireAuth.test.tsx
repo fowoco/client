@@ -15,7 +15,7 @@ function jsonResponse(body: unknown, init: ResponseInit = {}) {
 function renderWithAuth(initialPath: string) {
   const router = createMemoryRouter(
     [
-      { path: '/', element: <p>login screen</p> },
+      { path: '/login', element: <p>login screen</p> },
       {
         element: <RequireAuth />,
         children: [{ path: '/dashboard', element: <p>dashboard screen</p> }],

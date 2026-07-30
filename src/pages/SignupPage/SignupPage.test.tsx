@@ -44,11 +44,13 @@ function renderPage() {
 }
 
 async function fillValidForm(user: ReturnType<typeof userEvent.setup>) {
-  await user.type(screen.getByLabelText('사업장명'), '한빛정밀')
   await user.type(screen.getByLabelText('이름'), '김경민')
-  await user.type(screen.getByLabelText('이메일'), 'mini@naver.com')
+  await user.type(screen.getByLabelText('업무용 이메일'), 'mini@naver.com')
+  await user.type(screen.getByLabelText('회사명'), '한빛정밀')
   await user.type(screen.getByLabelText('비밀번호'), 'password123')
   await user.type(screen.getByLabelText('비밀번호 확인'), 'password123')
+  await user.click(screen.getByLabelText('[필수] 서비스 이용약관 동의'))
+  await user.click(screen.getByLabelText('[필수] 개인정보 수집 및 이용 동의'))
 }
 
 beforeEach(() => {
@@ -60,30 +62,30 @@ afterEach(() => {
 })
 
 describe('SignupPage', () => {
-  it('shows field errors when submitted empty', async () => {
+  it('blocks submit and does not call the API when required terms are not agreed', async () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(screen.getByRole('button', { name: '회원가입' }))
+    await user.type(screen.getByLabelText('이름'), '김경민')
+    await user.type(screen.getByLabelText('업무용 이메일'), 'mini@naver.com')
+    await user.type(screen.getByLabelText('회사명'), '한빛정밀')
+    await user.type(screen.getByLabelText('비밀번호'), 'password123')
+    await user.type(screen.getByLabelText('비밀번호 확인'), 'password123')
+    await user.click(screen.getByRole('button', { name: '계정 만들기' }))
 
-    expect(screen.getByText('사업장명을 입력해 주세요.')).toBeInTheDocument()
-    expect(screen.getByText('이름을 입력해 주세요.')).toBeInTheDocument()
+    expect(screen.getByText('필수 약관에 동의해 주세요.')).toBeInTheDocument()
     expect(fetch).not.toHaveBeenCalled()
   })
 
-  it('shows an error when passwords do not match', async () => {
+  it('shows a password strength meter once typing starts', async () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.type(screen.getByLabelText('사업장명'), '한빛정밀')
-    await user.type(screen.getByLabelText('이름'), '김경민')
-    await user.type(screen.getByLabelText('이메일'), 'mini@naver.com')
-    await user.type(screen.getByLabelText('비밀번호'), 'password123')
-    await user.type(screen.getByLabelText('비밀번호 확인'), 'different123')
-    await user.click(screen.getByRole('button', { name: '회원가입' }))
+    expect(screen.queryByText(/비밀번호 강도/)).not.toBeInTheDocument()
 
-    expect(screen.getByText('비밀번호가 일치하지 않습니다.')).toBeInTheDocument()
-    expect(fetch).not.toHaveBeenCalled()
+    await user.type(screen.getByLabelText('비밀번호'), 'password123')
+
+    expect(screen.getByText(/비밀번호 강도/)).toBeInTheDocument()
   })
 
   it('calls the signup API with the mapped request body and navigates on success', async () => {
@@ -105,7 +107,7 @@ describe('SignupPage', () => {
     renderPage()
 
     await fillValidForm(user)
-    await user.click(screen.getByRole('button', { name: '회원가입' }))
+    await user.click(screen.getByRole('button', { name: '계정 만들기' }))
 
     expect(await screen.findByText('login screen')).toBeInTheDocument()
     const [, requestInit] = vi.mocked(fetch).mock.calls[0]
@@ -125,7 +127,7 @@ describe('SignupPage', () => {
     renderPage()
 
     await fillValidForm(user)
-    await user.click(screen.getByRole('button', { name: '회원가입' }))
+    await user.click(screen.getByRole('button', { name: '계정 만들기' }))
 
     expect(await screen.findByText('이미 가입된 이메일입니다.')).toBeInTheDocument()
   })
@@ -140,7 +142,7 @@ describe('SignupPage', () => {
     renderPage()
 
     await fillValidForm(user)
-    await user.click(screen.getByRole('button', { name: '회원가입' }))
+    await user.click(screen.getByRole('button', { name: '계정 만들기' }))
 
     expect(await screen.findByText('사업장명 형식이 올바르지 않습니다.')).toBeInTheDocument()
   })

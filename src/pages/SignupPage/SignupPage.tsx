@@ -3,8 +3,11 @@ import { Link, useNavigate } from 'react-router-dom'
 import { apiFetch } from '../../api/client'
 import { ApiError, getErrorMessage, type ApiFieldError } from '../../api/errors'
 import { Button } from '../../components/ui/Button/Button'
+import { Checkbox } from '../../components/ui/Checkbox/Checkbox'
+import { EyeIcon, EyeOffIcon } from '../../components/ui/icons/EyeIcons'
+import { LockIcon, MailIcon } from '../../components/ui/icons/FieldIcons'
+import { getPasswordStrength } from './passwordStrength'
 import styles from './SignupPage.module.css'
-import { SIGNUP_BENEFITS } from './signupData'
 
 interface FieldErrors {
   workplace?: string
@@ -12,6 +15,7 @@ interface FieldErrors {
   email?: string
   password?: string
   confirmPassword?: string
+  terms?: string
 }
 
 // fowoco/server SignupResponse (POST /api/v1/auth/signup) 중 화면에서 쓰는 필드만.
@@ -38,21 +42,29 @@ function mapServerFieldErrors(fieldErrors: ApiFieldError[]): FieldErrors {
 export function SignupPage() {
   const navigate = useNavigate()
 
-  const [workplace, setWorkplace] = useState('')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [workplace, setWorkplace] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [termsAgreed, setTermsAgreed] = useState(false)
+  const [privacyAgreed, setPrivacyAgreed] = useState(false)
+  const [marketingOptIn, setMarketingOptIn] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [submitting, setSubmitting] = useState(false)
 
+  const passwordStrength = getPasswordStrength(password)
+
   function validate(): FieldErrors {
     const errors: FieldErrors = {}
-    if (!workplace.trim()) errors.workplace = '사업장명을 입력해 주세요.'
-    if (!name.trim()) errors.name = '이름을 입력해 주세요.'
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = '올바른 이메일 형식이 아닙니다.'
+    if (!name.trim() || name.trim().length < 2) errors.name = '2자 이상 입력해 주세요.'
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = '이메일 형식을 확인합니다.'
+    if (!workplace.trim()) errors.workplace = '회사명을 입력해 주세요.'
     if (password.length < 8) errors.password = '비밀번호는 8자 이상이어야 합니다.'
-    if (confirmPassword !== password) errors.confirmPassword = '비밀번호가 일치하지 않습니다.'
+    if (confirmPassword !== password) errors.confirmPassword = '비밀번호를 다시 입력해 주세요.'
+    if (!termsAgreed || !privacyAgreed) errors.terms = '필수 약관에 동의해 주세요.'
     return errors
   }
 
@@ -92,126 +104,214 @@ export function SignupPage() {
     <div className={styles.page}>
       <aside className={styles.promo}>
         <p className={styles.brand}>FOWOCO</p>
-        <p className={styles.kicker}>GUIDED AGENTIC OPERATIONS</p>
+        <p className={styles.kicker}>CREATE YOUR WORKSPACE</p>
         <h1 className={styles.headline}>
-          우리 회사의 업무 방식을
+          회사 업무 공간을
           <br />
-          FOWOCO에 등록하세요
+          안전하게 시작하세요.
         </h1>
         <p className={styles.subtext}>
-          사업장 정보를 등록하면 담당자 초대와 승인 정책을
-          <br />
-          바로 설정할 수 있습니다.
+          계정과 회사 정보를 입력하면 FOWOCO가 검토·승인 중심의 업무 공간을 준비합니다.
         </p>
 
-        <div className={styles.benefits}>
-          {SIGNUP_BENEFITS.map((benefit) => (
-            <div key={benefit} className={styles.benefitRow}>
-              <span className={styles.benefitDot} aria-hidden="true" />
-              <span>{benefit}</span>
-            </div>
-          ))}
-        </div>
-
-        <p className={styles.disclaimer}>
-          Agent는 자동 제출·법률 판단·급여 지급을 하지 않습니다.
-        </p>
+        <p className={styles.disclaimer}>Agent는 준비하고, 중요한 결정은 사람이 수행합니다.</p>
       </aside>
 
       <div className={styles.formSide}>
         <form className={styles.form} onSubmit={handleSubmit} noValidate>
-          <h2 className={styles.title}>회원가입</h2>
-          <p className={styles.description}>사업장 정보와 담당자 계정을 등록합니다.</p>
-
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="workplace">
-              사업장명
-            </label>
-            <input
-              id="workplace"
-              className={`${styles.input} ${fieldErrors.workplace ? styles.inputError : ''}`}
-              placeholder="한빛정밀"
-              value={workplace}
-              onChange={(event) => setWorkplace(event.target.value)}
-            />
-            {fieldErrors.workplace && <p className={styles.fieldError}>{fieldErrors.workplace}</p>}
-          </div>
+          <h2 className={styles.title}>FOWOCO 업무 공간 만들기</h2>
+          <p className={styles.description}>
+            회사 정보를 입력하고 안전한 HR Operations 업무 공간을 시작하세요.
+          </p>
 
           <div className={styles.field}>
             <label className={styles.label} htmlFor="name">
               이름
             </label>
-            <input
-              id="name"
-              className={`${styles.input} ${fieldErrors.name ? styles.inputError : ''}`}
-              placeholder="김경민"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-            />
-            {fieldErrors.name && <p className={styles.fieldError}>{fieldErrors.name}</p>}
+            <div className={`${styles.inputShell} ${fieldErrors.name ? styles.inputShellError : ''}`}>
+              <input
+                id="name"
+                className={styles.input}
+                placeholder="김하늘"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+              />
+            </div>
+            <p className={fieldErrors.name ? styles.fieldError : styles.helperText}>
+              {fieldErrors.name ?? '2자 이상 입력해 주세요.'}
+            </p>
           </div>
 
           <div className={styles.field}>
             <label className={styles.label} htmlFor="email">
-              이메일
+              업무용 이메일
             </label>
-            <input
-              id="email"
-              type="email"
-              className={`${styles.input} ${fieldErrors.email ? styles.inputError : ''}`}
-              placeholder="name@company.com"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-            {fieldErrors.email && <p className={styles.fieldError}>{fieldErrors.email}</p>}
+            <div
+              className={`${styles.inputShell} ${fieldErrors.email ? styles.inputShellError : ''}`}
+            >
+              <MailIcon className={styles.inputIcon} />
+              <input
+                id="email"
+                type="email"
+                className={styles.input}
+                placeholder="name@company.com"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+            </div>
+            <p className={fieldErrors.email ? styles.fieldError : styles.helperText}>
+              {fieldErrors.email ?? '이메일 형식을 확인합니다.'}
+            </p>
           </div>
 
-          <div className={styles.fieldRow}>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="password">
-                비밀번호
-              </label>
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="workplace">
+              회사명
+            </label>
+            <div
+              className={`${styles.inputShell} ${fieldErrors.workplace ? styles.inputShellError : ''}`}
+            >
+              <input
+                id="workplace"
+                className={styles.input}
+                placeholder="FOWOCO 데모 회사"
+                value={workplace}
+                onChange={(event) => setWorkplace(event.target.value)}
+              />
+            </div>
+            <p className={fieldErrors.workplace ? styles.fieldError : styles.helperText}>
+              {fieldErrors.workplace ?? '회사명을 입력해 주세요.'}
+            </p>
+          </div>
+
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="password">
+              비밀번호
+            </label>
+            <div
+              className={`${styles.inputShell} ${fieldErrors.password ? styles.inputShellError : ''}`}
+            >
+              <LockIcon className={styles.inputIcon} />
               <input
                 id="password"
-                type="password"
-                className={`${styles.input} ${fieldErrors.password ? styles.inputError : ''}`}
+                type={showPassword ? 'text' : 'password'}
+                className={styles.input}
                 placeholder="8자 이상 입력"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
               />
-              {fieldErrors.password && <p className={styles.fieldError}>{fieldErrors.password}</p>}
+              <button
+                type="button"
+                className={styles.togglePassword}
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 표시'}
+              >
+                {showPassword ? (
+                  <EyeOffIcon className={styles.toggleIcon} />
+                ) : (
+                  <EyeIcon className={styles.toggleIcon} />
+                )}
+              </button>
             </div>
+            <p className={fieldErrors.password ? styles.fieldError : styles.helperText}>
+              {fieldErrors.password ?? '영문과 숫자를 포함해 8자 이상 입력해 주세요.'}
+            </p>
+          </div>
 
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="confirmPassword">
-                비밀번호 확인
-              </label>
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="confirmPassword">
+              비밀번호 확인
+            </label>
+            <div
+              className={`${styles.inputShell} ${
+                fieldErrors.confirmPassword ? styles.inputShellError : ''
+              }`}
+            >
+              <LockIcon className={styles.inputIcon} />
               <input
                 id="confirmPassword"
-                type="password"
-                className={`${styles.input} ${
-                  fieldErrors.confirmPassword ? styles.inputError : ''
-                }`}
+                type={showConfirmPassword ? 'text' : 'password'}
+                className={styles.input}
                 placeholder="다시 입력"
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
               />
-              {fieldErrors.confirmPassword && (
-                <p className={styles.fieldError}>{fieldErrors.confirmPassword}</p>
-              )}
+              <button
+                type="button"
+                className={styles.togglePassword}
+                onClick={() => setShowConfirmPassword((prev) => !prev)}
+                aria-label={showConfirmPassword ? '비밀번호 숨기기' : '비밀번호 표시'}
+              >
+                {showConfirmPassword ? (
+                  <EyeOffIcon className={styles.toggleIcon} />
+                ) : (
+                  <EyeIcon className={styles.toggleIcon} />
+                )}
+              </button>
             </div>
+            <p className={fieldErrors.confirmPassword ? styles.fieldError : styles.helperText}>
+              {fieldErrors.confirmPassword ?? '비밀번호를 다시 입력해 주세요.'}
+            </p>
+          </div>
+
+          {passwordStrength && (
+            <div className={styles.strength}>
+              <p className={styles.strengthLabel}>비밀번호 강도 · {passwordStrength.label}</p>
+              <div className={styles.strengthBars}>
+                {[1, 2, 3].map((bar) => (
+                  <span
+                    key={bar}
+                    className={`${styles.strengthBar} ${
+                      bar <= passwordStrength.score
+                        ? styles[`strengthBar-${passwordStrength.tone}`]
+                        : ''
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className={styles.termsGroup}>
+            <div className={styles.termsRow}>
+              <Checkbox
+                id="terms-agree"
+                label="[필수] 서비스 이용약관 동의"
+                checked={termsAgreed}
+                onChange={(event) => setTermsAgreed(event.target.checked)}
+              />
+              <button type="button" className={styles.termsLink}>
+                약관 보기
+              </button>
+            </div>
+            <div className={styles.termsRow}>
+              <Checkbox
+                id="privacy-agree"
+                label="[필수] 개인정보 수집 및 이용 동의"
+                checked={privacyAgreed}
+                onChange={(event) => setPrivacyAgreed(event.target.checked)}
+              />
+              <button type="button" className={styles.termsLink}>
+                개인정보 보기
+              </button>
+            </div>
+            <div className={styles.termsRow}>
+              <Checkbox
+                id="marketing-opt-in"
+                label="[선택] 제품 소식 수신"
+                checked={marketingOptIn}
+                onChange={(event) => setMarketingOptIn(event.target.checked)}
+              />
+            </div>
+            {fieldErrors.terms && <p className={styles.fieldError}>{fieldErrors.terms}</p>}
           </div>
 
           <Button type="submit" className={styles.submit} isLoading={submitting}>
-            회원가입
+            계정 만들기
           </Button>
 
           <p className={styles.loginPrompt}>
             이미 계정이 있으신가요? <Link to="/login" className={styles.loginLink}>로그인</Link>
-          </p>
-
-          <p className={styles.terms}>
-            가입하면 개인정보 처리방침과 서비스 이용약관에 동의합니다.
           </p>
         </form>
       </div>

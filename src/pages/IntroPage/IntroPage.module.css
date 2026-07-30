@@ -8,6 +8,12 @@
   text-decoration: none;
 }
 
+.page h1,
+.page h2,
+.page p {
+  word-break: keep-all;
+}
+
 .scrollContainer {
   height: 100svh;
   overflow-y: scroll;
@@ -72,7 +78,7 @@
 .stepCard,
 .trustCard,
 .heroCopy,
-.agentPreview {
+.previewFrame {
   opacity: 0;
   transform: translateY(24px);
   transition:
@@ -84,7 +90,7 @@
 .inView .stepCard,
 .inView .trustCard,
 .inView .heroCopy,
-.inView .agentPreview {
+.inView .previewFrame {
   opacity: 1;
   transform: translateY(0);
 }
@@ -115,7 +121,7 @@
   transition-delay: 300ms;
 }
 
-.agentPreview {
+.previewFrame {
   transition-delay: 120ms;
 }
 
@@ -124,7 +130,7 @@
   .stepCard,
   .trustCard,
   .heroCopy,
-  .agentPreview {
+  .previewFrame {
     opacity: 1;
     transform: none;
     transition: none;
@@ -134,17 +140,25 @@
 /* 히어로 섹션 */
 
 .heroSection {
-  background: linear-gradient(180deg, var(--surface-subtle) 0%, var(--surface-default) 55%);
+  background:
+    radial-gradient(circle, rgba(7, 132, 127, 0.1) 1.4px, transparent 1.4px),
+    linear-gradient(180deg, var(--surface-subtle) 0%, var(--surface-default) 55%);
+  background-size:
+    28px 28px,
+    100% 100%;
+  background-position:
+    -14px -14px,
+    0 0;
 }
 
 .heroGlow {
   position: absolute;
   top: -220px;
-  right: -160px;
-  width: 640px;
-  height: 640px;
+  right: -220px;
+  width: 720px;
+  height: 720px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(7, 132, 127, 0.16) 0%, rgba(7, 132, 127, 0) 70%);
+  background: radial-gradient(circle, rgba(7, 132, 127, 0.18) 0%, rgba(7, 132, 127, 0) 70%);
   pointer-events: none;
 }
 
@@ -225,7 +239,7 @@
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 64px;
+  gap: 56px;
   padding: 48px 96px;
   max-width: 1440px;
   width: 100%;
@@ -234,8 +248,8 @@
 }
 
 .heroCopy {
-  flex: 0 0 auto;
-  max-width: 640px;
+  flex: 1 1 520px;
+  max-width: 680px;
 }
 
 .kicker {
@@ -248,8 +262,8 @@
 
 .headline {
   margin: 12px 0 0;
-  font-size: 42px;
-  line-height: 56px;
+  font-size: 38px;
+  line-height: 50px;
   font-weight: 800;
   letter-spacing: -0.01em;
   color: var(--text-primary);
@@ -328,18 +342,95 @@
   border-radius: var(--fowoco-radius-999);
 }
 
-.agentPreview {
-  flex: 0 0 auto;
+.previewFrame {
+  flex: 1 1 480px;
   width: 100%;
-  max-width: 590px;
-  padding: 24px;
+  max-width: 640px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
+  box-shadow: 0 32px 64px rgba(7, 94, 91, 0.16);
+  overflow: hidden;
+}
+
+.previewChrome {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--surface-subtle);
+  border-bottom: 1px solid var(--border-default);
+}
+
+.previewChromeDots {
+  display: flex;
+  gap: 6px;
+}
+
+.previewChromeDots span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--border-default);
+}
+
+.previewChromeTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.previewChromeBadge {
+  margin-left: auto;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--brand-primary);
+  background: var(--fowoco-teal-50);
+  border-radius: var(--fowoco-radius-999);
+}
+
+.previewBody {
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  background: var(--surface-default);
+  gap: 20px;
+}
+
+.previewMetricRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.previewMetric {
+  padding: 12px;
+  background: var(--surface-subtle);
+  border-radius: var(--fowoco-radius-6);
+}
+
+.previewMetricValue {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.previewMetricLabel {
+  margin: 2px 0 0;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.agentPreview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: var(--surface-subtle);
   border: 1px solid var(--brand-primary);
   border-radius: var(--fowoco-radius-8);
-  box-shadow: 0 24px 48px rgba(7, 94, 91, 0.14);
 }
 
 .agentPreviewHeader {
@@ -356,7 +447,7 @@
   align-items: center;
   justify-content: center;
   font-size: 16px;
-  background: var(--surface-subtle);
+  background: var(--surface-default);
   border-radius: var(--fowoco-radius-8);
 }
 
@@ -378,14 +469,15 @@
   align-items: center;
   gap: 12px;
   padding: 0 12px;
-  height: 52px;
-  background: var(--surface-subtle);
+  height: 48px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
   border-radius: var(--fowoco-radius-6);
-  transition: background var(--fowoco-motion-fast) var(--fowoco-easing-standard);
+  transition: border-color var(--fowoco-motion-fast) var(--fowoco-easing-standard);
 }
 
 .agentPreviewRow:hover {
-  background: var(--fowoco-teal-100);
+  border-color: var(--brand-primary);
 }
 
 .agentPreviewIcon {
@@ -472,6 +564,7 @@
 }
 
 .featureCard {
+  position: relative;
   padding: 24px;
   display: flex;
   flex-direction: column;
@@ -479,10 +572,28 @@
   background: var(--surface-default);
   border: 1px solid var(--border-default);
   border-radius: var(--fowoco-radius-8);
+  overflow: hidden;
   transition:
     transform var(--fowoco-motion-base) var(--fowoco-easing-standard),
     box-shadow var(--fowoco-motion-base) var(--fowoco-easing-standard),
     border-color var(--fowoco-motion-base) var(--fowoco-easing-standard);
+}
+
+.featureCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--brand-primary), var(--fowoco-teal-100));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--fowoco-motion-base) var(--fowoco-easing-standard);
+}
+
+.featureCard:hover::before {
+  transform: scaleX(1);
 }
 
 .featureCard:hover {
@@ -573,12 +684,11 @@
 
 .stepConnector {
   position: absolute;
-  top: 50%;
-  right: -32px;
-  transform: translateY(-50%);
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--brand-primary);
+  top: 39px;
+  right: -25px;
+  width: 26px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--brand-primary), var(--fowoco-teal-100));
 }
 
 @media (max-width: 1180px) {
@@ -597,16 +707,28 @@
 }
 
 .trustCard {
-  padding: 20px;
+  position: relative;
+  padding: 20px 20px 20px 24px;
   display: flex;
   align-items: flex-start;
   gap: 14px;
   background: var(--surface-default);
   border: 1px solid var(--border-default);
   border-radius: var(--fowoco-radius-8);
+  overflow: hidden;
   transition:
     transform var(--fowoco-motion-base) var(--fowoco-easing-standard),
     box-shadow var(--fowoco-motion-base) var(--fowoco-easing-standard);
+}
+
+.trustCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--brand-primary);
 }
 
 .trustCard:hover {

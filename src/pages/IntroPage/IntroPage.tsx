@@ -16,6 +16,7 @@ import {
   AGENT_PREVIEW_ITEMS,
   FEATURES,
   INTRO_SECTIONS,
+  PREVIEW_METRICS,
   STEPS,
   TRUST_ITEMS,
   type FeatureIconKey,
@@ -143,30 +144,53 @@ export function IntroPage() {
               </div>
             </div>
 
-            <div className={styles.agentPreview}>
-              <div className={styles.agentPreviewHeader}>
-                <span className={styles.agentPreviewGlyph} aria-hidden="true">
-                  ✨
+            <div className={styles.previewFrame}>
+              <div className={styles.previewChrome}>
+                <span className={styles.previewChromeDots} aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
                 </span>
-                <div>
-                  <p className={styles.agentPreviewTitle}>Agent가 먼저 준비한 내용</p>
-                  <p className={styles.agentPreviewSubtext}>
-                    체류연장 요청을 확인해 필요한 정보와 다음 행동을 정리했습니다.
-                  </p>
+                <span className={styles.previewChromeTitle}>FOWOCO · Today</span>
+                <span className={styles.previewChromeBadge}>Live Demo</span>
+              </div>
+
+              <div className={styles.previewBody}>
+                <div className={styles.previewMetricRow}>
+                  {PREVIEW_METRICS.map((metric) => (
+                    <div key={metric.label} className={styles.previewMetric}>
+                      <p className={styles.previewMetricValue}>{metric.value}</p>
+                      <p className={styles.previewMetricLabel}>{metric.label}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className={styles.agentPreview}>
+                  <div className={styles.agentPreviewHeader}>
+                    <span className={styles.agentPreviewGlyph} aria-hidden="true">
+                      ✨
+                    </span>
+                    <div>
+                      <p className={styles.agentPreviewTitle}>Agent가 먼저 준비한 내용</p>
+                      <p className={styles.agentPreviewSubtext}>
+                        체류연장 요청을 확인해 필요한 정보와 다음 행동을 정리했습니다.
+                      </p>
+                    </div>
+                  </div>
+                  {AGENT_PREVIEW_ITEMS.map((item) => (
+                    <div key={item.label} className={styles.agentPreviewRow}>
+                      <span
+                        className={`${styles.agentPreviewIcon} ${AGENT_PREVIEW_TONE[item.icon]}`}
+                        aria-hidden="true"
+                      >
+                        {item.icon}
+                      </span>
+                      <span className={styles.agentPreviewLabel}>{item.label}</span>
+                      <span className={styles.agentPreviewTag}>{item.tag}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
-              {AGENT_PREVIEW_ITEMS.map((item) => (
-                <div key={item.label} className={styles.agentPreviewRow}>
-                  <span
-                    className={`${styles.agentPreviewIcon} ${AGENT_PREVIEW_TONE[item.icon]}`}
-                    aria-hidden="true"
-                  >
-                    {item.icon}
-                  </span>
-                  <span className={styles.agentPreviewLabel}>{item.label}</span>
-                  <span className={styles.agentPreviewTag}>{item.tag}</span>
-                </div>
-              ))}
             </div>
           </div>
         </section>
@@ -218,9 +242,7 @@ export function IntroPage() {
                   <p className={styles.stepTitle}>{step.title}</p>
                   <p className={styles.stepDescription}>{step.description}</p>
                   {index < STEPS.length - 1 && (
-                    <span className={styles.stepConnector} aria-hidden="true">
-                      →
-                    </span>
+                    <span className={styles.stepConnector} aria-hidden="true" />
                   )}
                 </div>
               ))}

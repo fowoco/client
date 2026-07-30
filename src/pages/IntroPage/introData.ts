@@ -11,6 +11,18 @@ export const AGENT_PREVIEW_ITEMS: AgentPreviewItem[] = [
   { icon: '→', label: '요청문 초안 준비', tag: 'Agent 초안' },
 ]
 
+export interface PreviewMetric {
+  label: string
+  value: string
+}
+
+export const PREVIEW_METRICS: PreviewMetric[] = [
+  { label: '승인 대기', value: '2' },
+  { label: '오늘 업무', value: '6' },
+  { label: '기한 위험', value: '1' },
+  { label: '오늘 완료', value: '8' },
+]
+
 export type FeatureIconKey =
   | 'agent'
   | 'calendar'

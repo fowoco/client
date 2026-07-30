@@ -1,8 +1,11 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button/Button'
+import { Checkbox } from '../../components/ui/Checkbox/Checkbox'
+import { EyeIcon, EyeOffIcon } from '../../components/ui/icons/EyeIcons'
+import { LockIcon, MailIcon } from '../../components/ui/icons/FieldIcons'
 import { DEMO_ACCOUNT, useAuthStore } from '../../store/authStore'
-import { AGENT_TRACE_STEPS } from './agentTrace'
+import { LOGIN_PROMISES } from './loginData'
 import styles from './LoginPage.module.css'
 
 export function LoginPage() {
@@ -13,28 +16,36 @@ export function LoginPage() {
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [demoSubmitting, setDemoSubmitting] = useState(false)
 
   const canSubmit = email.trim() !== '' && password.trim() !== '' && !submitting
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  async function attemptLogin(loginEmail: string, loginPassword: string) {
     setError('')
-    setSubmitting(true)
-
-    const result = await login(email, password)
-
-    setSubmitting(false)
+    const result = await login(loginEmail, loginPassword)
     if (result.success) {
       navigate('/dashboard')
     } else {
       setError(result.message ?? '이메일 또는 비밀번호가 올바르지 않습니다.')
     }
+    return result.success
   }
 
-  function handleForgotPassword() {
-    // TODO(backend): POST /api/auth/password-reset { email } -> 재설정 메일 발송
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setSubmitting(true)
+    await attemptLogin(email, password)
+    setSubmitting(false)
+  }
+
+  async function handleDemoLogin() {
+    setDemoSubmitting(true)
+    await attemptLogin(DEMO_ACCOUNT.email, DEMO_ACCOUNT.password)
+    setDemoSubmitting(false)
   }
 
   return (
@@ -43,38 +54,30 @@ export function LoginPage() {
         <p className={styles.brand}>FOWOCO</p>
         <p className={styles.kicker}>GUIDED AGENTIC OPERATIONS</p>
         <h1 className={styles.headline}>
-          회사의 업무방식을
+          Agent가 먼저 준비하고,
           <br />
-          FOWOCO에 올리세요
+          사람이 검토하고 결정합니다.
         </h1>
-        <p className={styles.subtext}>
-          Agent가 기한·서류·승인 조건을 먼저 확인
-          <br />
-          중요한 결정과 실제 실행은 담당자가 통제가능
-        </p>
+        <p className={styles.subtext}>체류·계약·문서 업무의 현재 상황과 다음 행동을 확인하세요.</p>
 
-        <div className={styles.trace}>
-          <p className={styles.traceTitle}>업무가 진행되는 방식</p>
-          {AGENT_TRACE_STEPS.map((step) => (
-            <p
-              key={step.no}
-              className={`${styles.traceStep} ${step.active ? styles.traceStepActive : ''}`}
-            >
-              {step.no}&nbsp;&nbsp;{step.label}
-            </p>
+        <ul className={styles.promiseList}>
+          {LOGIN_PROMISES.map((promise) => (
+            <li key={promise} className={styles.promiseRow}>
+              ✓ {promise}
+            </li>
           ))}
-        </div>
+        </ul>
 
         <p className={styles.disclaimer}>
-          Agent는 자동 제출·법률 판단·급여 지급을 하지 않습니다.
+          Agent는 자동 승인·법률 판단·급여 지급을 하지 않습니다.
         </p>
       </aside>
 
       <div className={styles.formSide}>
         <form className={styles.form} onSubmit={handleSubmit}>
-          <h2 className={styles.title}>업무를 시작하세요</h2>
+          <h2 className={styles.title}>업무를 이어서 시작하세요</h2>
           <p className={styles.description}>
-            오늘 처리할 업무와 Agent가 준비한 다음 행동을 확인합니다.
+            Agent가 준비한 업무를 검토하고, 중요한 결정은 직접 승인하세요.
           </p>
 
           {justSignedUp && (
@@ -87,35 +90,60 @@ export function LoginPage() {
             <label className={styles.label} htmlFor="email">
               이메일
             </label>
-            <input
-              id="email"
-              type="email"
-              className={styles.input}
-              placeholder="name@company.com"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
+            <div className={styles.inputShell}>
+              <MailIcon className={styles.inputIcon} />
+              <input
+                id="email"
+                type="email"
+                className={styles.input}
+                placeholder="name@company.com"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+            </div>
+            <p className={styles.helperText}>업무용 이메일을 입력해 주세요.</p>
           </div>
 
           <div className={styles.field}>
             <label className={styles.label} htmlFor="password">
               비밀번호
             </label>
-            <input
-              id="password"
-              type="password"
-              className={styles.input}
-              placeholder="8자 이상 입력"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
+            <div className={styles.inputShell}>
+              <LockIcon className={styles.inputIcon} />
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                className={styles.input}
+                placeholder="8자 이상 입력"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+              <button
+                type="button"
+                className={styles.togglePassword}
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 표시'}
+              >
+                {showPassword ? (
+                  <EyeOffIcon className={styles.toggleIcon} />
+                ) : (
+                  <EyeIcon className={styles.toggleIcon} />
+                )}
+              </button>
+            </div>
+            <p className={styles.helperText}>영문과 숫자를 포함해 8자 이상 입력해 주세요.</p>
+          </div>
+
+          <div className={styles.rememberRow}>
+            <Checkbox
+              id="remember-me"
+              label="로그인 상태 유지"
+              checked={rememberMe}
+              onChange={(event) => setRememberMe(event.target.checked)}
             />
-            <button
-              type="button"
-              className={styles.forgotPassword}
-              onClick={handleForgotPassword}
-            >
+            <Link to="/forgot-password" className={styles.forgotPassword}>
               비밀번호를 잊으셨나요?
-            </button>
+            </Link>
           </div>
 
           {error && <p className={styles.errorMessage}>{error}</p>}
@@ -125,23 +153,46 @@ export function LoginPage() {
           </Button>
 
           <p className={styles.signupPrompt}>
-            계정이 없으신가요?{' '}
+            아직 계정이 없으신가요?{' '}
             <Link to="/signup" className={styles.signupLink}>
               회원가입
             </Link>
           </p>
 
-          <div className={styles.notice}>
-            <p className={styles.noticeTitle}>데모 계정으로 시작합니다</p>
-            <p className={styles.noticeBody}>
-              {DEMO_ACCOUNT.email} / {DEMO_ACCOUNT.password}
-              <br />
-              실제 개인정보나 외부 발송 없이 대표 업무 흐름을 체험할 수 있습니다.
+          <div className={styles.divider}>
+            <span className={styles.dividerLine} />
+            <span className={styles.dividerLabel}>또는</span>
+            <span className={styles.dividerLine} />
+          </div>
+
+          <div className={styles.demoCard}>
+            <p className={styles.demoEyebrow}>DEMO</p>
+            <p className={styles.demoTitle}>샘플 데이터로 바로 둘러보기</p>
+            <p className={styles.demoBody}>
+              실제 개인정보 없이 대표 업무 흐름을 빠르게 체험할 수 있습니다.
             </p>
+            <Button
+              type="button"
+              variant="secondary"
+              className={styles.demoButton}
+              isLoading={demoSubmitting}
+              onClick={handleDemoLogin}
+            >
+              데모로 시작 →
+            </Button>
+          </div>
+
+          <div className={styles.legalRow}>
+            <button type="button" className={styles.legalLink}>
+              개인정보처리방침
+            </button>
+            <button type="button" className={styles.legalLink}>
+              서비스 이용약관
+            </button>
           </div>
 
           <p className={styles.terms}>
-            로그인하면 개인정보 처리방침과 서비스 이용약관에 동의합니다.
+            개인정보는 로그인과 회사 업무 공간 제공을 위해서만 사용합니다.
           </p>
         </form>
       </div>

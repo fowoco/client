@@ -33,7 +33,7 @@ export function AppLayout() {
 
   function handleLogout() {
     logout()
-    navigate('/')
+    navigate('/login')
   }
 
   return (

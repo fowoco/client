@@ -1,0 +1,152 @@
+.wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.menu {
+  position: relative;
+}
+
+.bellButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  font-size: 16px;
+  background: var(--surface-subtle);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--fowoco-white);
+  background: var(--fowoco-red-600);
+  border-radius: var(--fowoco-radius-999);
+}
+
+.profileButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 10px 0 4px;
+  background: var(--surface-subtle);
+  border: none;
+  border-radius: var(--fowoco-radius-999);
+  cursor: pointer;
+}
+
+.profileAvatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--fowoco-white);
+  background: var(--brand-primary);
+  border-radius: 50%;
+}
+
+.profileLabel {
+  font-size: 13px;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.arrow {
+  font-size: 10px;
+  color: var(--text-secondary);
+  transition: transform var(--fowoco-motion-fast) var(--fowoco-easing-standard);
+}
+
+.arrowOpen {
+  transform: rotate(180deg);
+}
+
+.panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 320px;
+  padding: 8px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
+  box-shadow: 0 12px 24px rgba(23, 43, 45, 0.14);
+}
+
+.profilePanel {
+  width: 200px;
+}
+
+.panelTitle {
+  margin: 4px 8px 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.panelEmpty {
+  margin: 0;
+  padding: 16px 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.notificationRow {
+  padding: 10px 8px;
+  border-radius: var(--fowoco-radius-6);
+}
+
+.notificationRowUnread {
+  background: var(--fowoco-teal-50);
+}
+
+.notificationTitle {
+  margin: 0;
+  font-size: 13px;
+  line-height: 19px;
+  color: var(--text-primary);
+}
+
+.notificationTime {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.menuItem {
+  display: block;
+  width: 100%;
+  padding: 10px 8px;
+  text-align: left;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: none;
+  border: none;
+  border-radius: var(--fowoco-radius-6);
+  cursor: pointer;
+}
+
+.menuItem:hover {
+  background: var(--surface-subtle);
+}

@@ -6,6 +6,7 @@ import { useAuthStore } from '../../store/authStore'
 import { Button } from '../ui/Button/Button'
 import { ToastViewport } from '../ui/ToastViewport/ToastViewport'
 import styles from './AppLayout.module.css'
+import { HeaderActions } from './HeaderActions/HeaderActions'
 import { HelpModal } from './HelpModal/HelpModal'
 import { NAV_ITEMS } from './navItems'
 import { RouteTransition } from './RouteTransition'
@@ -68,10 +69,10 @@ export function AppLayout() {
 
       <div className={styles.main}>
         <header className={styles.topBar}>
-          <p className={styles.workspace}>
-            {user ? `${user.workplace} · ${user.name} ${user.role}` : ''}
-          </p>
-          <Button onClick={() => navigate('/tasks/new')}>＋ 업무 만들기</Button>
+          <div className={styles.topBarActions}>
+            <Button onClick={() => navigate('/tasks/new')}>＋ 업무 만들기</Button>
+            <HeaderActions user={user} onLogout={handleLogout} />
+          </div>
         </header>
 
         <main className={styles.content}>

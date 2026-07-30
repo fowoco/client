@@ -11,18 +11,51 @@ export const AGENT_PREVIEW_ITEMS: AgentPreviewItem[] = [
   { icon: '→', label: '요청문 초안 준비', tag: 'Agent 초안' },
 ]
 
+export type FeatureIconKey =
+  | 'agent'
+  | 'calendar'
+  | 'contract'
+  | 'folder'
+  | 'globe'
+  | 'radar'
+
 export interface Feature {
+  icon: FeatureIconKey
   title: string
   description: string
 }
 
 export const FEATURES: Feature[] = [
-  { title: '업무 준비 Agent', description: '자연어와 파일에서 요청을 이해하고 업무 초안을 준비합니다.' },
-  { title: '체류 기한 관리', description: '만료일과 필요서류를 확인해 우선 업무를 알려줍니다.' },
-  { title: '계약 업무 관리', description: '갱신과 확인 일정을 업무 흐름에 맞게 연결합니다.' },
-  { title: '문서 준비 상태', description: '필요·보유·누락·만료 문서를 비교합니다.' },
-  { title: '다국어 안내 초안', description: '보유 자료를 바탕으로 근로자 안내문을 준비합니다.' },
-  { title: '기한·누락 감지', description: '지연 가능성과 부족한 정보를 찾아 먼저 알립니다.' },
+  {
+    icon: 'agent',
+    title: '업무 준비 Agent',
+    description: '자연어와 파일에서 요청을 이해하고 업무 초안을 준비합니다.',
+  },
+  {
+    icon: 'calendar',
+    title: '체류 기한 관리',
+    description: '만료일과 필요서류를 확인해 우선 업무를 알려줍니다.',
+  },
+  {
+    icon: 'contract',
+    title: '계약 업무 관리',
+    description: '갱신과 확인 일정을 업무 흐름에 맞게 연결합니다.',
+  },
+  {
+    icon: 'folder',
+    title: '문서 준비 상태',
+    description: '필요·보유·누락·만료 문서를 비교합니다.',
+  },
+  {
+    icon: 'globe',
+    title: '다국어 안내 초안',
+    description: '보유 자료를 바탕으로 근로자 안내문을 준비합니다.',
+  },
+  {
+    icon: 'radar',
+    title: '기한·누락 감지',
+    description: '지연 가능성과 부족한 정보를 찾아 먼저 알립니다.',
+  },
 ]
 
 export interface Step {
@@ -38,16 +71,35 @@ export const STEPS: Step[] = [
   { no: '04', title: '직접 실행·기록', description: '전달·제출·증빙 기록' },
 ]
 
+export type TrustIconKey = 'person' | 'shield' | 'lock' | 'audit'
+
 export interface TrustItem {
+  icon: TrustIconKey
   title: string
   description: string
 }
 
 export const TRUST_ITEMS: TrustItem[] = [
-  { title: '사람의 최종 결정', description: 'Agent는 분석·추천·초안 작성까지만 수행합니다.' },
-  { title: '안전한 실행 경계', description: '외부 전달과 기관 제출은 담당자가 직접 수행합니다.' },
-  { title: '개인정보 보호', description: '업무에 필요한 범위와 보관 정책을 지킵니다.' },
-  { title: '근거와 감사 기록', description: '승인·변경·재발급·완료 이력을 확인합니다.' },
+  {
+    icon: 'person',
+    title: '사람의 최종 결정',
+    description: 'Agent는 분석·추천·초안 작성까지만 수행합니다.',
+  },
+  {
+    icon: 'shield',
+    title: '안전한 실행 경계',
+    description: '외부 전달과 기관 제출은 담당자가 직접 수행합니다.',
+  },
+  {
+    icon: 'lock',
+    title: '개인정보 보호',
+    description: '업무에 필요한 범위와 보관 정책을 지킵니다.',
+  },
+  {
+    icon: 'audit',
+    title: '근거와 감사 기록',
+    description: '승인·변경·재발급·완료 이력을 확인합니다.',
+  },
 ]
 
 export interface IntroSection {

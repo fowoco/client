@@ -30,12 +30,11 @@ describe('IntroPage', () => {
     renderPage()
 
     expect(
-      screen.getByRole('heading', { name: /Agent가 준비하고 사람이 결정합니다\./ }),
+      screen.getByRole('heading', { name: /준비하고 사람이 결정합니다\./ }),
     ).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'FOWOCO 시작하기 →' })).toHaveAttribute(
-      'href',
-      '/signup',
-    )
+    const startLinks = screen.getAllByRole('link', { name: 'FOWOCO 시작하기 →' })
+    expect(startLinks.length).toBeGreaterThan(0)
+    startLinks.forEach((link) => expect(link).toHaveAttribute('href', '/signup'))
     expect(screen.getAllByRole('link', { name: '로그인' })[0]).toHaveAttribute('href', '/login')
   })
 

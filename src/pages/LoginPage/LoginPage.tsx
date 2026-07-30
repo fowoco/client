@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/Button/Button'
 import { Checkbox } from '../../components/ui/Checkbox/Checkbox'
 import { EyeIcon, EyeOffIcon } from '../../components/ui/icons/EyeIcons'
 import { LockIcon, MailIcon } from '../../components/ui/icons/FieldIcons'
+import { isOnboardingImportPending } from '../OnboardingImportPage/onboardingImportStorage'
 import { DEMO_ACCOUNT, useAuthStore } from '../../store/authStore'
 import { LOGIN_PROMISES } from './loginData'
 import styles from './LoginPage.module.css'
@@ -28,7 +29,7 @@ export function LoginPage() {
     setError('')
     const result = await login(loginEmail, loginPassword)
     if (result.success) {
-      navigate('/dashboard')
+      navigate(isOnboardingImportPending() ? '/onboarding/import' : '/dashboard')
     } else {
       setError(result.message ?? '이메일 또는 비밀번호가 올바르지 않습니다.')
     }

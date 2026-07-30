@@ -15,6 +15,7 @@ import { LinkRequestPage } from './pages/LinkRequestPage/LinkRequestPage'
 import { LinkUploadPage } from './pages/LinkUploadPage/LinkUploadPage'
 import { LoginPage } from './pages/LoginPage/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage/NotFoundPage'
+import { OnboardingImportPage } from './pages/OnboardingImportPage/OnboardingImportPage'
 import { ResetCompletePage } from './pages/ResetCompletePage/ResetCompletePage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage/ResetPasswordPage'
 import { ReviewWorkPage } from './pages/ReviewWorkPage/ReviewWorkPage'
@@ -38,6 +39,7 @@ export const router = createBrowserRouter([
     element: <RequireAuth />,
     errorElement: <NotFoundPage />,
     children: [
+      { path: '/onboarding/import', element: <OnboardingImportPage /> },
       {
         element: <AppLayout />,
         children: [

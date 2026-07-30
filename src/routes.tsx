@@ -7,12 +7,16 @@ import { CreateWorkPage } from './pages/CreateWorkPage/CreateWorkPage'
 import { DashboardPage } from './pages/DashboardPage/DashboardPage'
 import { DocumentDetailPage } from './pages/DocumentDetailPage/DocumentDetailPage'
 import { DocumentListPage } from './pages/DocumentListPage/DocumentListPage'
+import { EmailSentPage } from './pages/EmailSentPage/EmailSentPage'
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage/ForgotPasswordPage'
 import { IntroPage } from './pages/IntroPage/IntroPage'
 import { LinkExpiredPage } from './pages/LinkExpiredPage/LinkExpiredPage'
 import { LinkRequestPage } from './pages/LinkRequestPage/LinkRequestPage'
 import { LinkUploadPage } from './pages/LinkUploadPage/LinkUploadPage'
 import { LoginPage } from './pages/LoginPage/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage/NotFoundPage'
+import { ResetCompletePage } from './pages/ResetCompletePage/ResetCompletePage'
+import { ResetPasswordPage } from './pages/ResetPasswordPage/ResetPasswordPage'
 import { ReviewWorkPage } from './pages/ReviewWorkPage/ReviewWorkPage'
 import { SettingsPage } from './pages/SettingsPage/SettingsPage'
 import { SignupPage } from './pages/SignupPage/SignupPage'
@@ -26,6 +30,10 @@ export const router = createBrowserRouter([
   { path: '/', element: <IntroPage />, errorElement: <NotFoundPage /> },
   { path: '/login', element: <LoginPage />, errorElement: <NotFoundPage /> },
   { path: '/signup', element: <SignupPage />, errorElement: <NotFoundPage /> },
+  { path: '/forgot-password', element: <ForgotPasswordPage />, errorElement: <NotFoundPage /> },
+  { path: '/email-sent', element: <EmailSentPage />, errorElement: <NotFoundPage /> },
+  { path: '/reset-password', element: <ResetPasswordPage />, errorElement: <NotFoundPage /> },
+  { path: '/reset-complete', element: <ResetCompletePage />, errorElement: <NotFoundPage /> },
   {
     element: <RequireAuth />,
     errorElement: <NotFoundPage />,

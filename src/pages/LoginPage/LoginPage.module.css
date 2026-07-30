@@ -35,7 +35,7 @@
     line-height: 32px;
   }
 
-  .trace {
+  .promiseList {
     margin-top: 24px;
   }
 }
@@ -67,33 +67,25 @@
   color: var(--fowoco-teal-100);
 }
 
-.trace {
-  margin-top: auto;
-  padding: 21px 23px;
-  border: 1px solid var(--brand-dark);
-  border-radius: var(--fowoco-radius-8);
+.promiseList {
+  margin: 40px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.traceTitle {
-  margin: 0 0 12px;
+.promiseRow {
+  margin: 0;
   font-size: 13px;
   font-weight: 500;
   color: var(--fowoco-teal-100);
 }
 
-.traceStep {
-  margin: 0;
-  padding: 6px 0;
-  font-size: 14px;
-  color: var(--fowoco-teal-100);
-}
-
-.traceStepActive {
-  color: var(--fowoco-white);
-}
-
 .disclaimer {
-  margin: 16px 0 0;
+  margin-top: auto;
+  padding-top: 40px;
   font-size: 12px;
   color: var(--fowoco-teal-100);
 }
@@ -137,31 +129,74 @@
   color: var(--text-primary);
 }
 
-.input {
-  width: 100%;
-  height: 48px;
-  padding: 0 15px;
-  font-size: 14px;
-  font-family: inherit;
+.inputShell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 12px;
   border: 1px solid var(--border-default);
   border-radius: var(--fowoco-radius-6);
 }
 
-.input:focus-visible {
+.inputShell:focus-within {
   outline: 2px solid var(--brand-primary);
   outline-offset: 2px;
 }
 
+.inputIcon {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  color: var(--text-secondary);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text-primary);
+  background: transparent;
+}
+
+.togglePassword {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.toggleIcon {
+  width: 18px;
+  height: 18px;
+}
+
+.helperText {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.rememberRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
 .forgotPassword {
-  display: block;
-  margin-top: 8px;
   font-size: 13px;
   font-weight: 500;
   color: var(--brand-primary);
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
 }
 
 .errorMessage {
@@ -202,29 +237,81 @@
   color: var(--brand-primary);
 }
 
-.notice {
-  margin-top: 20px;
-  padding: 18px 24px;
-  background: var(--surface-subtle);
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.dividerLine {
+  flex: 1;
+  height: 1px;
+  background: var(--border-default);
+}
+
+.dividerLabel {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.demoCard {
+  margin-top: 24px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--surface-default);
+  border: 2px solid var(--brand-primary);
   border-radius: var(--fowoco-radius-8);
 }
 
-.noticeTitle {
-  margin: 0 0 8px;
-  font-size: 13px;
-  font-weight: 500;
+.demoEyebrow {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--brand-primary);
+}
+
+.demoTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
   color: var(--text-primary);
 }
 
-.noticeBody {
+.demoBody {
   margin: 0;
   font-size: 13px;
   line-height: 20px;
   color: var(--text-secondary);
 }
 
-.terms {
+.demoButton {
+  width: auto;
+}
+
+.legalRow {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
   margin-top: 24px;
+}
+
+.legalLink {
+  padding: 0;
   font-size: 12px;
+  font-weight: 500;
+  color: var(--brand-primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.terms {
+  margin-top: 16px;
+  font-size: 11px;
+  text-align: center;
   color: var(--text-secondary);
 }

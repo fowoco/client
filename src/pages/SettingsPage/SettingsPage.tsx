@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
 import { Tabs } from '../../components/ui/Tabs/Tabs'
 import { useToastStore } from '../../store/toastStore'
@@ -26,6 +27,7 @@ const SETTINGS_TAB_ITEMS = SETTINGS_TABS.map((label) => ({ id: label, label }))
 type LinkOverlay = 'none' | 'reissue' | 'reissued'
 
 export function SettingsPage() {
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState(SETTINGS_TABS[0])
   const [members, setMembers] = useState<Member[]>(MEMBERS)
   const [linkOverlay, setLinkOverlay] = useState<LinkOverlay>('none')
@@ -80,6 +82,7 @@ export function SettingsPage() {
         id: `M-invite-${Date.now()}`,
         name: invite.email,
         role: invite.role,
+        responsibility: '업무 생성·승인 요청',
         approval: 'requestOnly',
         status: '초대 중',
       },
@@ -109,14 +112,20 @@ export function SettingsPage() {
             <div className={styles.card}>
               <div className={styles.cardHeader}>
                 <h2 className={styles.cardTitle}>승인 정책</h2>
-                <span className={styles.cardBadge}>{APPROVAL_POLICY.badge}</span>
+                <button
+                  type="button"
+                  className={styles.cardLinkButton}
+                  onClick={() => showToast('변경 이력 보기는 준비 중입니다.')}
+                >
+                  변경 이력 보기 →
+                </button>
               </div>
               <p className={styles.policyName}>{APPROVAL_POLICY.title}</p>
               <p className={styles.policyDescription}>{APPROVAL_POLICY.description}</p>
 
               <div className={styles.modeRow}>
-                <span className={styles.modePill}>{APPROVAL_POLICY.mode}</span>
-                <span className={styles.modeNote}>{APPROVAL_POLICY.modeNote}</span>
+                <span className={styles.modePill}>{APPROVAL_POLICY.badge}</span>
+                <span className={styles.modeNote}>{APPROVAL_POLICY.riskNote}</span>
               </div>
 
               <p className={styles.policyWarning}>{APPROVAL_POLICY.warning}</p>
@@ -135,10 +144,11 @@ export function SettingsPage() {
 
             <div className={styles.membersScroll}>
               <div className={styles.membersHeader}>
-                <span className={styles.membersHeaderIdentity}>이름 / 역할</span>
-                <span className={styles.membersHeaderApproval}>승인 가능</span>
+                <span className={styles.membersHeaderIdentity}>구성원 / 역할</span>
+                <span className={styles.membersHeaderResponsibility}>주요 책임</span>
+                <span className={styles.membersHeaderApproval}>승인 권한</span>
                 <span className={styles.membersHeaderToggle} aria-hidden="true" />
-                <span className={styles.membersHeaderStatus}>상태</span>
+                <span className={styles.membersHeaderStatus}>계정 상태</span>
               </div>
 
               {members.map((member, index) => (
@@ -150,6 +160,8 @@ export function SettingsPage() {
                     <p className={styles.memberName}>{member.name}</p>
                     <p className={styles.memberRole}>{member.role}</p>
                   </div>
+
+                  <span className={styles.memberResponsibility}>{member.responsibility}</span>
 
                   <span
                     className={`${styles.memberApproval} ${
@@ -269,6 +281,21 @@ export function SettingsPage() {
             {DATA_LOG_SETTINGS.map((setting) => (
               <DetailRow key={setting.label} label={setting.label} value={setting.value} tone={setting.tone} />
             ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === SETTINGS_TABS[5] && (
+        <div id="settings-panel-5" role="tabpanel" aria-labelledby="settings-tab-5" className={styles.tabPanel}>
+          <div className={styles.card}>
+            <h2 className={styles.cardTitle}>초기 데이터 가져오기</h2>
+            <p className={styles.policyDescription}>
+              근로자·문서 초기 데이터를 다시 가져와야 하면 온보딩 가져오기 마법사를 다시 실행할 수
+              있습니다.
+            </p>
+            <button type="button" className={styles.cardLinkButton} onClick={() => navigate('/onboarding/import')}>
+              가져오기 마법사 다시 실행 →
+            </button>
           </div>
         </div>
       )}

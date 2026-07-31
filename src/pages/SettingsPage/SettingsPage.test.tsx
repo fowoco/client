@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { ToastViewport } from '../../components/ui/ToastViewport/ToastViewport'
 import { useToastStore } from '../../store/toastStore'
@@ -13,13 +14,32 @@ import {
   SETTINGS_TABS,
 } from './settingsData'
 
+function renderPage(withToasts = false) {
+  const body = withToasts ? (
+    <>
+      <SettingsPage />
+      <ToastViewport />
+    </>
+  ) : (
+    <SettingsPage />
+  )
+  render(
+    <MemoryRouter initialEntries={['/settings']}>
+      <Routes>
+        <Route path="/settings" element={body} />
+        <Route path="/onboarding/import" element={<p>온보딩 가져오기 페이지</p>} />
+      </Routes>
+    </MemoryRouter>,
+  )
+}
+
 beforeEach(() => {
   useToastStore.setState({ toasts: [] })
 })
 
 describe('SettingsPage', () => {
   it('renders every member row', () => {
-    render(<SettingsPage />)
+    renderPage()
     for (const member of MEMBERS) {
       expect(screen.getByText(member.name)).toBeInTheDocument()
     }
@@ -27,7 +47,7 @@ describe('SettingsPage', () => {
 
   it('toggles a member approval permission', async () => {
     const user = userEvent.setup()
-    render(<SettingsPage />)
+    renderPage()
 
     const toggle = screen.getByRole('switch', { name: '김경민 승인 권한' })
     expect(toggle).toHaveAttribute('aria-checked', 'false')
@@ -39,12 +59,7 @@ describe('SettingsPage', () => {
 
   it('shows a toast when a member approval permission is toggled', async () => {
     const user = userEvent.setup()
-    render(
-      <>
-        <SettingsPage />
-        <ToastViewport />
-      </>,
-    )
+    renderPage(true)
 
     await user.click(screen.getByRole('switch', { name: '김경민 승인 권한' }))
 
@@ -53,12 +68,7 @@ describe('SettingsPage', () => {
 
   it('opens the invite modal and shows a validation error for a bad email', async () => {
     const user = userEvent.setup()
-    render(
-      <>
-        <SettingsPage />
-        <ToastViewport />
-      </>,
-    )
+    renderPage(true)
 
     await user.click(screen.getByRole('button', { name: '＋ 구성원 초대' }))
     expect(screen.getByRole('dialog', { name: '구성원 초대' })).toBeInTheDocument()
@@ -71,12 +81,7 @@ describe('SettingsPage', () => {
 
   it('invites a member with a valid email and adds them to the member list', async () => {
     const user = userEvent.setup()
-    render(
-      <>
-        <SettingsPage />
-        <ToastViewport />
-      </>,
-    )
+    renderPage(true)
 
     await user.click(screen.getByRole('button', { name: '＋ 구성원 초대' }))
     await user.type(screen.getByPlaceholderText('name@company.com'), 'new-member@fowoco.com')
@@ -90,7 +95,7 @@ describe('SettingsPage', () => {
 
   it('switches to the security link tab and shows link history', async () => {
     const user = userEvent.setup()
-    render(<SettingsPage />)
+    renderPage()
 
     const securityTab = screen.getByRole('tab', { name: SETTINGS_TABS[1] })
     await user.click(securityTab)
@@ -102,12 +107,7 @@ describe('SettingsPage', () => {
 
   it('walks through the link reissue flow end to end', async () => {
     const user = userEvent.setup()
-    render(
-      <>
-        <SettingsPage />
-        <ToastViewport />
-      </>,
-    )
+    renderPage(true)
 
     await user.click(screen.getByRole('tab', { name: SETTINGS_TABS[1] }))
     await user.click(screen.getAllByRole('button', { name: '재발급' })[0])
@@ -127,7 +127,7 @@ describe('SettingsPage', () => {
 
   it('switches to the completion evidence tab', async () => {
     const user = userEvent.setup()
-    render(<SettingsPage />)
+    renderPage()
 
     await user.click(screen.getByRole('tab', { name: SETTINGS_TABS[2] }))
 
@@ -136,7 +136,7 @@ describe('SettingsPage', () => {
 
   it('switches to the process steps tab', async () => {
     const user = userEvent.setup()
-    render(<SettingsPage />)
+    renderPage()
 
     await user.click(screen.getByRole('tab', { name: SETTINGS_TABS[3] }))
 
@@ -145,10 +145,29 @@ describe('SettingsPage', () => {
 
   it('switches to the data log tab', async () => {
     const user = userEvent.setup()
-    render(<SettingsPage />)
+    renderPage()
 
     await user.click(screen.getByRole('tab', { name: SETTINGS_TABS[4] }))
 
     expect(screen.getByText(DATA_LOG_SETTINGS[0].value)).toBeInTheDocument()
+  })
+
+  it('switches to the initial data import tab and relaunches the onboarding wizard', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByRole('tab', { name: SETTINGS_TABS[5] }))
+    await user.click(screen.getByRole('button', { name: '가져오기 마법사 다시 실행 →' }))
+
+    expect(await screen.findByText('온보딩 가져오기 페이지')).toBeInTheDocument()
+  })
+
+  it('shows a placeholder toast for change history', async () => {
+    const user = userEvent.setup()
+    renderPage(true)
+
+    await user.click(screen.getByRole('button', { name: '변경 이력 보기 →' }))
+
+    expect(screen.getByText('변경 이력 보기는 준비 중입니다.')).toBeInTheDocument()
   })
 })

@@ -219,10 +219,6 @@ export function ProfilePage() {
             }
           />
           <DetailRow label="문서 열람 범위" value={WORK_CONTEXT.documentScope} />
-
-          <button type="button" className={styles.cardLinkButton} onClick={() => navigate('/settings')}>
-            설정에서 권한 보기
-          </button>
         </div>
       </div>
 

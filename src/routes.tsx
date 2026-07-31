@@ -20,7 +20,6 @@ import { ProfilePage } from './pages/ProfilePage/ProfilePage'
 import { ResetCompletePage } from './pages/ResetCompletePage/ResetCompletePage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage/ResetPasswordPage'
 import { ReviewWorkPage } from './pages/ReviewWorkPage/ReviewWorkPage'
-import { SettingsPage } from './pages/SettingsPage/SettingsPage'
 import { SignupPage } from './pages/SignupPage/SignupPage'
 import { TicketDetailPage } from './pages/TicketDetailPage/TicketDetailPage'
 import { TicketListPage } from './pages/TicketListPage/TicketListPage'
@@ -57,7 +56,6 @@ export const router = createBrowserRouter([
           { path: '/agent', element: <AgentLogPage /> },
           { path: '/tickets', element: <TicketListPage /> },
           { path: '/tickets/:ticketId', element: <TicketDetailPage /> },
-          { path: '/settings', element: <SettingsPage /> },
           { path: '/profile', element: <ProfilePage /> },
         ],
       },

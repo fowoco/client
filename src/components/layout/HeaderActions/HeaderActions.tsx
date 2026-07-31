@@ -122,9 +122,6 @@ export function HeaderActions({ user, onLogout }: HeaderActionsProps) {
             <Link to="/profile" className={styles.menuItem} onClick={() => setProfileOpen(false)}>
               내 프로필
             </Link>
-            <Link to="/settings" className={styles.menuItem} onClick={() => setProfileOpen(false)}>
-              설정
-            </Link>
             <button
               type="button"
               className={styles.menuItem}

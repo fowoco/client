@@ -31,9 +31,9 @@ describe('HeaderActions', () => {
     expect(screen.getByText(HEADER_NOTIFICATIONS[0].title)).toBeInTheDocument()
   })
 
-  it('shows the workspace/name/role in the profile trigger', () => {
+  it('shows the name/role in the profile trigger', () => {
     renderActions()
-    expect(screen.getByText('한빛정밀 · 김민지 HR')).toBeInTheDocument()
+    expect(screen.getByText('김민지 HR')).toBeInTheDocument()
   })
 
   it('opens the profile menu with links to profile and settings, and a logout action', async () => {
@@ -41,7 +41,7 @@ describe('HeaderActions', () => {
     const onLogout = vi.fn()
     renderActions(onLogout)
 
-    await user.click(screen.getByText('한빛정밀 · 김민지 HR'))
+    await user.click(screen.getByText('김민지 HR'))
 
     expect(screen.getByRole('link', { name: '내 프로필' })).toHaveAttribute('href', '/profile')
     expect(screen.getByRole('link', { name: '설정' })).toHaveAttribute('href', '/settings')
@@ -57,7 +57,7 @@ describe('HeaderActions', () => {
     await user.click(screen.getByLabelText(/알림/))
     expect(screen.getByText(HEADER_NOTIFICATIONS[0].title)).toBeInTheDocument()
 
-    await user.click(screen.getByText('한빛정밀 · 김민지 HR'))
+    await user.click(screen.getByText('김민지 HR'))
     expect(screen.queryByText(HEADER_NOTIFICATIONS[0].title)).not.toBeInTheDocument()
   })
 })

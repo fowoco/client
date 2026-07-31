@@ -108,9 +108,7 @@ export function HeaderActions({ user, onLogout }: HeaderActionsProps) {
           <span className={styles.profileAvatar} aria-hidden="true">
             {user?.name?.slice(0, 1) ?? '?'}
           </span>
-          <span className={styles.profileLabel}>
-            {user ? `${user.workplace} · ${user.name} ${user.role}` : ''}
-          </span>
+          <span className={styles.profileLabel}>{user ? `${user.name} ${user.role}` : ''}</span>
           <span
             className={`${styles.arrow} ${profileOpen ? styles.arrowOpen : ''}`}
             aria-hidden="true"

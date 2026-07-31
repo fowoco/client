@@ -108,6 +108,47 @@ export function LockIcon(props: IconProps) {
   )
 }
 
+export function WorkerAddIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="10" cy="8" r="3.5" />
+      <path d="M3.5 20c.6-3.6 3.2-6.2 6.5-6.2 1 0 1.9.2 2.7.6" />
+      <path d="M18 9v6M15 12h6" />
+    </Svg>
+  )
+}
+
+export function PayrollIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="3.5" y="5" width="17" height="14" rx="2" />
+      <path d="M3.5 9.5h17" />
+      <path d="M7 14h4M7 16.5h2.5" />
+      <circle cx="16.5" cy="14.5" r="2.2" />
+    </Svg>
+  )
+}
+
+export function ExitDocIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M13 3.5H6.5a1 1 0 0 0-1 1v15a1 1 0 0 0 1 1H17a1 1 0 0 0 1-1V9L13 3.5Z" />
+      <path d="M13 3.5V9h5" />
+      <path d="M9.5 14.5h4M9.5 17.2h4" />
+    </Svg>
+  )
+}
+
+export function InstructionIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="5" y="4" width="14" height="17" rx="2" />
+      <path d="M9 3.5h6a1 1 0 0 1 1 1V6H8V4.5a1 1 0 0 1 1-1Z" />
+      <path d="M8.5 11.5h7M8.5 14.5h7M8.5 17.5h4.5" />
+    </Svg>
+  )
+}
+
 export function AuditListIcon(props: IconProps) {
   return (
     <Svg {...props}>

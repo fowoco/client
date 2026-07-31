@@ -49,6 +49,6 @@ describe('IntroPage', () => {
     renderPage()
 
     const nav = screen.getByRole('navigation', { name: '섹션 이동' })
-    expect(nav.querySelectorAll('button')).toHaveLength(5)
+    expect(nav.querySelectorAll('button')).toHaveLength(6)
   })
 })

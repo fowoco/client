@@ -5,6 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DocumentItemResponse, DocumentPageResponse } from '../../api/documents'
 import { DocumentListPage } from './DocumentListPage'
 
+function isoDateOffset(days: number): string {
+  const date = new Date()
+  date.setDate(date.getDate() + days)
+  return date.toISOString().slice(0, 10)
+}
+
 function document(overrides: Partial<DocumentItemResponse>): DocumentItemResponse {
   return {
     worker_document_id: 'D-1',
@@ -33,6 +39,13 @@ const DOCUMENTS: DocumentItemResponse[] = [
     document_type: 'PERMIT',
     submission_status: 'VERIFIED',
     expiry_date: '2027-07-10',
+  }),
+  document({
+    worker_document_id: 'D-4',
+    display_name: '응웬반A',
+    document_type: 'PASSPORT_COPY',
+    submission_status: 'VERIFIED',
+    expiry_date: isoDateOffset(12),
   }),
 ]
 
@@ -78,10 +91,23 @@ describe('DocumentListPage', () => {
     expect(await screen.findByText('수라즈C')).toBeInTheDocument()
     expect(screen.getByText('쩐티B')).toBeInTheDocument()
     expect(screen.getByText('박서준')).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: '전체 3' })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: '미제출 1' })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: '확인 대기 1' })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: '확인 완료 1' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '전체 4' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '검토 필요 1' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '만료 예정 1' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '누락 문서 1' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '요청 중 1' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '최근 업로드 1' })).toBeInTheDocument()
+  })
+
+  it('shows the metric strip computed from document status and expiry', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(pageResponse(DOCUMENTS)))
+    renderPage()
+
+    await screen.findByText('수라즈C')
+    expect(screen.getByText('전체 문서')).toBeInTheDocument()
+    expect(screen.getByText('검토 필요')).toBeInTheDocument()
+    expect(screen.getByText('30일 내 만료')).toBeInTheDocument()
+    expect(screen.getByText('누락 문서')).toBeInTheDocument()
   })
 
   it('filters documents by search query', async () => {
@@ -103,9 +129,20 @@ describe('DocumentListPage', () => {
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(pageResponse(DOCUMENTS)))
     renderPage()
 
-    await user.click(await screen.findByRole('tab', { name: '미제출 1' }))
+    await user.click(await screen.findByRole('tab', { name: '누락 문서 1' }))
 
     expect(screen.getByText('수라즈C')).toBeInTheDocument()
+    expect(screen.queryByText('박서준')).not.toBeInTheDocument()
+  })
+
+  it('shows only documents expiring within 30 days on the "만료 예정" tab', async () => {
+    const user = userEvent.setup()
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(pageResponse(DOCUMENTS)))
+    renderPage()
+
+    await user.click(await screen.findByRole('tab', { name: '만료 예정 1' }))
+
+    expect(screen.getByText('응웬반A')).toBeInTheDocument()
     expect(screen.queryByText('박서준')).not.toBeInTheDocument()
   })
 
@@ -156,7 +193,7 @@ describe('DocumentListPage', () => {
     )
     renderPage()
 
-    expect(await screen.findByText(/전체 150건 중 3건만 불러왔습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/전체 150건 중 4건만 불러왔습니다/)).toBeInTheDocument()
   })
 
   it('opens the HWP/HWPX upload modal', async () => {

@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchDocuments, type SubmissionStatus } from '../../api/documents'
+import { fetchDocuments, type DocumentItemResponse } from '../../api/documents'
 import { getErrorMessage } from '../../api/errors'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { ListRow } from '../../components/ui/ListRow/ListRow'
@@ -9,17 +9,38 @@ import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import { Tabs } from '../../components/ui/Tabs/Tabs'
 import { useApiQuery } from '../../hooks/useApiQuery'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
+import { daysUntil } from '../../utils/urgency'
 import { DOCUMENT_TYPE_LABEL, SUBMISSION_STATUS_LABEL, SUBMISSION_STATUS_TONE } from '../../utils/documentLabels'
 import styles from './DocumentListPage.module.css'
 import { FileUploadModal } from './FileUploadModal'
 
-type TabId = 'all' | SubmissionStatus
+type TabId = 'all' | 'needs-review' | 'expiring-soon' | 'missing' | 'requested' | 'recently-uploaded'
+
+const EXPIRING_SOON_WITHIN_DAYS = 30
+
+// fowoco/server의 SubmissionStatus는 MISSING/SUBMITTED/VERIFIED 3종뿐이라(#196 조사 결과)
+// Figma DOC-001의 6개 탭과 1:1로 대응하지 않는다. "만료 예정"은 expiry_date 기준으로
+// 클라이언트에서 계산하고, "요청 중"·"최근 업로드"는 재요청·업로드 시각 필드가 서버에 없어
+// 각각 MISSING·SUBMITTED로 근사한다.
+function matchesTab(document: DocumentItemResponse, tab: TabId): boolean {
+  if (tab === 'all') return true
+  if (tab === 'needs-review') return document.submission_status === 'SUBMITTED'
+  if (tab === 'expiring-soon') {
+    const days = daysUntil(document.expiry_date)
+    return days !== null && days >= 0 && days <= EXPIRING_SOON_WITHIN_DAYS
+  }
+  if (tab === 'missing') return document.submission_status === 'MISSING'
+  if (tab === 'requested') return document.submission_status === 'MISSING'
+  return document.submission_status === 'SUBMITTED'
+}
 
 const DOCUMENT_TABS: { id: TabId; label: string }[] = [
   { id: 'all', label: '전체' },
-  { id: 'MISSING', label: '미제출' },
-  { id: 'SUBMITTED', label: '확인 대기' },
-  { id: 'VERIFIED', label: '확인 완료' },
+  { id: 'needs-review', label: '검토 필요' },
+  { id: 'expiring-soon', label: '만료 예정' },
+  { id: 'missing', label: '누락 문서' },
+  { id: 'requested', label: '요청 중' },
+  { id: 'recently-uploaded', label: '최근 업로드' },
 ]
 
 export function DocumentListPage() {
@@ -39,20 +60,34 @@ export function DocumentListPage() {
     () =>
       DOCUMENT_TABS.map((tab) => ({
         ...tab,
-        count: tab.id === 'all' ? documents.length : documents.filter((doc) => doc.submission_status === tab.id).length,
+        count: documents.filter((doc) => matchesTab(doc, tab.id)).length,
       })),
+    [documents],
+  )
+
+  const metricStrip = useMemo(
+    () => [
+      { id: 'total', label: '전체 문서', value: documents.length },
+      { id: 'needs-review', label: '검토 필요', value: documents.filter((doc) => doc.submission_status === 'SUBMITTED').length },
+      {
+        id: 'expiring-soon',
+        label: '30일 내 만료',
+        value: documents.filter((doc) => matchesTab(doc, 'expiring-soon')).length,
+      },
+      { id: 'missing', label: '누락 문서', value: documents.filter((doc) => doc.submission_status === 'MISSING').length },
+    ],
     [documents],
   )
 
   const visibleDocuments = useMemo(() => {
     const normalized = debouncedQuery.trim().toLowerCase()
     return documents.filter((document) => {
-      const matchesTab = activeTab === 'all' || document.submission_status === activeTab
+      const matchesActiveTab = matchesTab(document, activeTab)
       const matchesQuery =
         !normalized ||
         (document.display_name ?? '').toLowerCase().includes(normalized) ||
         DOCUMENT_TYPE_LABEL[document.document_type].toLowerCase().includes(normalized)
-      return matchesTab && matchesQuery
+      return matchesActiveTab && matchesQuery
     })
   }, [documents, activeTab, debouncedQuery])
 
@@ -66,6 +101,15 @@ export function DocumentListPage() {
       <p className={styles.description}>
         미제출·확인 대기 서류를 우선 보여주며, 확인이 끝나면 상태가 자동으로 갱신됩니다.
       </p>
+
+      <div className={styles.metricStrip}>
+        {metricStrip.map((metric) => (
+          <div key={metric.id} className={styles.metricCard}>
+            <span className={styles.metricLabel}>{metric.label}</span>
+            <span className={styles.metricValue}>{metric.value}</span>
+          </div>
+        ))}
+      </div>
 
       <Tabs tabs={tabsWithCounts} activeId={activeTab} onChange={(id) => setActiveTab(id as TabId)} ariaLabel="서류 탭" />
 

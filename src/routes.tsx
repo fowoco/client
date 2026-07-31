@@ -16,6 +16,7 @@ import { LinkUploadPage } from './pages/LinkUploadPage/LinkUploadPage'
 import { LoginPage } from './pages/LoginPage/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage/NotFoundPage'
 import { OnboardingImportPage } from './pages/OnboardingImportPage/OnboardingImportPage'
+import { ProfilePage } from './pages/ProfilePage/ProfilePage'
 import { ResetCompletePage } from './pages/ResetCompletePage/ResetCompletePage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage/ResetPasswordPage'
 import { ReviewWorkPage } from './pages/ReviewWorkPage/ReviewWorkPage'
@@ -57,6 +58,7 @@ export const router = createBrowserRouter([
           { path: '/tickets', element: <TicketListPage /> },
           { path: '/tickets/:ticketId', element: <TicketDetailPage /> },
           { path: '/settings', element: <SettingsPage /> },
+          { path: '/profile', element: <ProfilePage /> },
         ],
       },
     ],

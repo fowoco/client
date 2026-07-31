@@ -1,0 +1,309 @@
+import { useNavigate, useBlocker } from 'react-router-dom'
+import { useState } from 'react'
+import { Button } from '../../components/ui/Button/Button'
+import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
+import { Modal } from '../../components/ui/Modal/Modal'
+import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
+import { useToastStore } from '../../store/toastStore'
+import {
+  INITIAL_NOTIFICATION_PREFS,
+  INITIAL_PROFILE_FIELDS,
+  PROFILE_SUMMARY,
+  SECURITY_INFO,
+  WORK_CONTEXT,
+  type EditableProfileFields,
+} from './profileData'
+import styles from './ProfilePage.module.css'
+
+const EDITABLE_FIELD_META: { key: keyof EditableProfileFields; label: string }[] = [
+  { key: 'name', label: '이름' },
+  { key: 'displayName', label: '표시 이름' },
+  { key: 'phone', label: '연락처' },
+  { key: 'preferredLanguage', label: '선호 언어' },
+  { key: 'timezone', label: '시간대' },
+]
+
+type FieldErrors = Partial<Record<keyof EditableProfileFields, string>>
+
+// Figma Screen Brief 04번 항목 기준 검증 규칙.
+function validateFields(input: EditableProfileFields): FieldErrors {
+  const errors: FieldErrors = {}
+  const trimmedName = input.name.trim()
+  if (!trimmedName) {
+    errors.name = '이름을 입력해 주세요.'
+  } else if (/^\d+$/.test(trimmedName)) {
+    errors.name = '이름에 숫자만 입력할 수 없습니다.'
+  } else if (trimmedName.length > 30) {
+    errors.name = '이름은 30자 이하로 입력해 주세요.'
+  }
+
+  const trimmedPhone = input.phone.trim()
+  if (trimmedPhone && !/^[\d\-+() ]+$/.test(trimmedPhone)) {
+    errors.phone = '연락처 형식을 확인해 주세요.'
+  }
+
+  return errors
+}
+
+export function ProfilePage() {
+  const navigate = useNavigate()
+  const showToast = useToastStore((state) => state.showToast)
+
+  const [fields, setFields] = useState<EditableProfileFields>(INITIAL_PROFILE_FIELDS)
+  const [draft, setDraft] = useState<EditableProfileFields>(INITIAL_PROFILE_FIELDS)
+  const [editing, setEditing] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const [notificationPrefs, setNotificationPrefs] = useState(INITIAL_NOTIFICATION_PREFS)
+
+  const changedFieldCount = EDITABLE_FIELD_META.filter(({ key }) => draft[key] !== fields[key]).length
+  const isDirty = editing && changedFieldCount > 0
+
+  // Figma "저장하지 않은 변경사항이 있습니다" 오버레이(node 1623:2530) — 편집 중 다른 화면으로
+  // 이동하려 하면 확인을 받는다.
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) => isDirty && currentLocation.pathname !== nextLocation.pathname,
+  )
+
+  function handleStartEdit() {
+    setDraft(fields)
+    setFieldErrors({})
+    setEditing(true)
+  }
+
+  function handleCancelEdit() {
+    setEditing(false)
+    setFieldErrors({})
+  }
+
+  function trySave(): boolean {
+    const errors = validateFields(draft)
+    setFieldErrors(errors)
+    if (Object.keys(errors).length > 0) return false
+
+    // TODO(backend): 개인 프로필 수정 API가 없어서(#191 조사 결과) 화면 상태로만 반영한다.
+    setFields(draft)
+    setEditing(false)
+    showToast('프로필을 저장했습니다.')
+    return true
+  }
+
+  function handleRequestEmailChange() {
+    showToast('이메일 변경 요청을 관리자에게 전달했습니다.')
+  }
+
+  function handleToggleNotification(id: string) {
+    setNotificationPrefs((prev) =>
+      prev.map((pref) => (pref.id === id ? { ...pref, enabled: !pref.enabled } : pref)),
+    )
+  }
+
+  function handleBlockerContinueEditing() {
+    blocker.reset?.()
+  }
+
+  function handleBlockerLeaveWithoutSaving() {
+    setEditing(false)
+    setFieldErrors({})
+    blocker.proceed?.()
+  }
+
+  function handleBlockerSaveAndLeave() {
+    if (trySave()) blocker.proceed?.()
+  }
+
+  return (
+    <div>
+      <div className={styles.headerRow}>
+        <div>
+          <h1 className={styles.headline}>내 프로필</h1>
+          <p className={styles.description}>계정 정보와 개인 알림 설정을 관리합니다.</p>
+        </div>
+        {editing ? (
+          <div className={styles.editActions}>
+            <Button variant="secondary" onClick={handleCancelEdit}>
+              취소
+            </Button>
+            <Button onClick={() => trySave()}>저장</Button>
+          </div>
+        ) : (
+          <Button onClick={handleStartEdit}>프로필 수정</Button>
+        )}
+      </div>
+
+      <div className={styles.summaryCard}>
+        <div className={styles.avatar} aria-hidden="true">
+          {PROFILE_SUMMARY.initial}
+        </div>
+        <div className={styles.summaryIdentity}>
+          <p className={styles.summaryName}>{fields.name}</p>
+          <p className={styles.summaryMeta}>
+            {PROFILE_SUMMARY.role} · {PROFILE_SUMMARY.email}
+          </p>
+          <div className={styles.summaryStatusRow}>
+            <StatusLabel tone="success">사용 중</StatusLabel>
+            <span className={styles.summaryCompany}>{PROFILE_SUMMARY.companyName}</span>
+          </div>
+        </div>
+        <div className={styles.summaryLastLogin}>
+          <p className={styles.summaryLastLoginLabel}>마지막 로그인</p>
+          <p className={styles.summaryLastLoginValue}>{PROFILE_SUMMARY.lastLoginAt}</p>
+          <p className={styles.summaryLastLoginDevice}>{PROFILE_SUMMARY.lastLoginDevice}</p>
+        </div>
+      </div>
+
+      <div className={styles.gridRow}>
+        <div className={styles.card}>
+          <h2 className={styles.cardTitle}>기본 정보</h2>
+          <p className={styles.cardDescription}>
+            개인 정보는 직접 수정할 수 있고, 계정 정보는 관리자 정책을 따릅니다.
+          </p>
+          <hr className={styles.divider} />
+
+          <div className={styles.fieldGrid}>
+            {EDITABLE_FIELD_META.map(({ key, label }) => (
+              <div key={key} className={styles.field}>
+                <div className={styles.fieldMeta}>
+                  <span className={styles.fieldLabel}>{label}</span>
+                  <span className={styles.fieldBadge}>수정 가능</span>
+                </div>
+                {editing ? (
+                  <>
+                    <input
+                      className={styles.fieldInput}
+                      value={draft[key]}
+                      aria-label={label}
+                      onChange={(event) => setDraft((prev) => ({ ...prev, [key]: event.target.value }))}
+                    />
+                    {fieldErrors[key] && <p className={styles.fieldError}>{fieldErrors[key]}</p>}
+                  </>
+                ) : (
+                  <p className={styles.fieldValue}>{fields[key]}</p>
+                )}
+                {key === 'phone' && <p className={styles.fieldNote}>합성 Demo Data</p>}
+              </div>
+            ))}
+
+            <div className={styles.field}>
+              <div className={styles.fieldMeta}>
+                <span className={styles.fieldLabel}>로그인 이메일</span>
+                <span className={styles.fieldBadgeMuted}>본인 확인 필요</span>
+              </div>
+              <p className={styles.fieldValue}>{PROFILE_SUMMARY.email}</p>
+              <button type="button" className={styles.fieldLinkButton} onClick={handleRequestEmailChange}>
+                이메일 변경 요청 →
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.cardNarrow}>
+          <h2 className={styles.cardTitle}>업무 Context와 권한</h2>
+          <p className={styles.cardDescription}>{WORK_CONTEXT.companySummary}</p>
+          <hr className={styles.divider} />
+
+          <DetailRow
+            label="승인 가능 여부"
+            value={
+              <StatusLabel tone={WORK_CONTEXT.canApprove ? 'success' : 'warning'}>
+                {WORK_CONTEXT.canApprove ? '업무 승인 가능' : '승인 불가'}
+              </StatusLabel>
+            }
+          />
+          <DetailRow label="담당 업무 영역" value={WORK_CONTEXT.assignedArea} />
+          <DetailRow
+            label="자료 등록 실행"
+            value={
+              <StatusLabel tone={WORK_CONTEXT.canRegisterData ? 'success' : 'warning'}>
+                {WORK_CONTEXT.canRegisterData ? '권한 있음' : '권한 없음'}
+              </StatusLabel>
+            }
+          />
+          <DetailRow label="문서 열람 범위" value={WORK_CONTEXT.documentScope} />
+
+          <button type="button" className={styles.cardLinkButton} onClick={() => navigate('/settings')}>
+            설정에서 권한 보기
+          </button>
+        </div>
+      </div>
+
+      <div className={styles.gridRow}>
+        <div className={styles.card}>
+          <h2 className={styles.cardTitle}>개인 알림 설정</h2>
+          <p className={styles.cardDescription}>
+            개인 알림을 선택합니다. 필수: 보안·권한 변경 알림은 항상 켜져 있습니다.
+          </p>
+          <hr className={styles.divider} />
+
+          <div className={styles.notificationGrid}>
+            {notificationPrefs.map((pref) => (
+              <div key={pref.id} className={styles.notificationRow}>
+                <div className={styles.notificationCopy}>
+                  <p className={styles.notificationLabel}>{pref.label}</p>
+                  <p className={styles.notificationDescription}>{pref.description}</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={pref.enabled}
+                  aria-label={pref.label}
+                  className={`${styles.switch} ${pref.enabled ? styles.switchOn : ''}`}
+                  onClick={() => handleToggleNotification(pref.id)}
+                >
+                  <span className={styles.switchThumb} />
+                  <span className={styles.switchLabel}>{pref.enabled ? '켜짐' : '꺼짐'}</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className={styles.cardNarrow}>
+          <h2 className={styles.cardTitle}>보안</h2>
+          <p className={styles.cardDescription}>계정 보호 상태와 최근 로그인 정보를 확인합니다.</p>
+          <hr className={styles.divider} />
+
+          <DetailRow label="계정 보호 상태" value={<StatusLabel tone="success">{SECURITY_INFO.accountStatus}</StatusLabel>} />
+          <DetailRow label="비밀번호 변경" value={SECURITY_INFO.passwordChangedAt} />
+          <DetailRow label="로그인 기기" value={SECURITY_INFO.loginDeviceSummary} />
+
+          <div className={styles.securityActions}>
+            <Button variant="secondary" onClick={() => navigate('/reset-password')}>
+              비밀번호 변경
+            </Button>
+            <button
+              type="button"
+              className={styles.cardLinkButton}
+              onClick={() => showToast('로그인 기록 보기는 준비 중입니다.')}
+            >
+              로그인 기록 보기
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <Modal
+        open={blocker.state === 'blocked'}
+        onClose={handleBlockerContinueEditing}
+        title="저장하지 않은 변경사항이 있습니다."
+      >
+        <p className={styles.blockerBody}>
+          지금 나가면 이름·연락처·알림 설정의 변경 내용이 저장되지 않습니다.
+        </p>
+        <p className={styles.blockerNote}>
+          변경사항 {changedFieldCount}개 · 입력값은 현재 편집 화면에 유지됩니다.
+        </p>
+        <div className={styles.blockerActions}>
+          <button type="button" className={styles.cardLinkButton} onClick={handleBlockerContinueEditing}>
+            계속 수정
+          </button>
+          <div className={styles.editActions}>
+            <Button variant="secondary" onClick={handleBlockerLeaveWithoutSaving}>
+              저장하지 않고 나가기
+            </Button>
+            <Button onClick={handleBlockerSaveAndLeave}>변경사항 저장</Button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  )
+}

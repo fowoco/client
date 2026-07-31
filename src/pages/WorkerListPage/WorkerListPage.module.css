@@ -189,6 +189,94 @@
   color: var(--text-secondary);
 }
 
+.aiRecommendHeadline {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--brand-primary);
+}
+
+.aiCardList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.aiCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  background: var(--surface-subtle);
+  border-radius: var(--fowoco-radius-8);
+}
+
+.aiCardTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.aiCardMeta {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.currentTaskList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.currentTaskRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  background: none;
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
+  text-align: left;
+  cursor: pointer;
+}
+
+.currentTaskTitle {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.currentTaskStatus {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.timelineRow {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.timelineDate {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.timelineLabel {
+  color: var(--text-primary);
+}
+
 .moreLink {
   display: block;
   margin-top: 20px;

@@ -1,0 +1,339 @@
+.headerRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.headline {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.description {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.editActions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.summaryCard {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-top: 20px;
+  padding: var(--fowoco-spacing-24);
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
+}
+
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--fowoco-teal-50);
+  color: var(--brand-primary);
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.summaryIdentity {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.summaryName {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.summaryMeta {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.summaryStatusRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.summaryCompany {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.summaryLastLogin {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.summaryLastLoginLabel {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.summaryLastLoginValue {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.summaryLastLoginDevice {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.gridRow {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+@media (max-width: 960px) {
+  .gridRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.card,
+.cardNarrow {
+  padding: var(--fowoco-spacing-20);
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.cardDescription {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.divider {
+  margin: 14px 0;
+  border: none;
+  border-top: 1px solid var(--border-default);
+}
+
+.fieldGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px 24px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fieldMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.fieldBadge {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--brand-primary);
+}
+
+.fieldBadgeMuted {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.fieldValue {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.fieldInput {
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text-primary);
+}
+
+.fieldNote {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.fieldError {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--status-critical);
+}
+
+.blockerBody {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.blockerNote {
+  margin: 0 0 20px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.blockerActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fieldLinkButton {
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  font-size: 11px;
+  color: var(--brand-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.cardLinkButton {
+  margin-top: 8px;
+  padding: 0;
+  background: none;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.notificationGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 24px;
+}
+
+.notificationRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.notificationCopy {
+  display: flex;
+  flex-direction: column;
+}
+
+.notificationLabel {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.notificationDescription {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.switchThumb {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: var(--fowoco-radius-999);
+  background: var(--border-default);
+  transition: background-color 0.15s ease;
+}
+
+.switchThumb::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--surface-default);
+  transition: transform 0.15s ease;
+}
+
+.switchOn .switchThumb {
+  background: var(--brand-primary);
+}
+
+.switchOn .switchThumb::after {
+  transform: translateX(16px);
+}
+
+.switchLabel {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.securityActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}

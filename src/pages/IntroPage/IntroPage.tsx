@@ -5,12 +5,16 @@ import {
   AuditListIcon,
   CalendarClockIcon,
   ContractIcon,
+  ExitDocIcon,
   FolderCheckIcon,
   GlobeChatIcon,
+  InstructionIcon,
   LockIcon,
+  PayrollIcon,
   PersonCheckIcon,
   RadarAlertIcon,
   ShieldIcon,
+  WorkerAddIcon,
 } from './IntroIcons'
 import {
   AGENT_PREVIEW_ITEMS,
@@ -20,9 +24,11 @@ import {
   PREVIEW_METRICS,
   STEPS,
   TRUST_ITEMS,
+  WORKFLOWS,
   type FeatureIconKey,
   type HeroHighlightIconKey,
   type TrustIconKey,
+  type WorkflowIconKey,
 } from './introData'
 import styles from './IntroPage.module.css'
 
@@ -46,6 +52,15 @@ const HERO_HIGHLIGHT_ICONS: Record<HeroHighlightIconKey, ComponentType<{ classNa
   globe: GlobeChatIcon,
   person: PersonCheckIcon,
   lock: LockIcon,
+}
+
+const WORKFLOW_ICONS: Record<WorkflowIconKey, ComponentType<{ className?: string }>> = {
+  contract: ContractIcon,
+  workerAdd: WorkerAddIcon,
+  exit: ExitDocIcon,
+  folder: FolderCheckIcon,
+  payroll: PayrollIcon,
+  instruction: InstructionIcon,
 }
 
 const AGENT_PREVIEW_TONE = {
@@ -161,13 +176,7 @@ export function IntroPage() {
 
             <div className={styles.previewFrame}>
               <div className={styles.previewChrome}>
-                <span className={styles.previewChromeDots} aria-hidden="true">
-                  <span />
-                  <span />
-                  <span />
-                </span>
                 <span className={styles.previewChromeTitle}>FOWOCO · Today</span>
-                <span className={styles.previewChromeBadge}>Live Demo</span>
               </div>
 
               <div className={styles.previewBody}>
@@ -233,6 +242,46 @@ export function IntroPage() {
                     </div>
                     <p className={styles.featureTitle}>{feature.title}</p>
                     <p className={styles.featureDescription}>{feature.description}</p>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="workflows"
+          ref={(el) => {
+            sectionRefs.current.workflows = el
+          }}
+          className={styles.section}
+        >
+          <div className={styles.sectionInner}>
+            <p className={styles.sectionKicker}>SIX WORKFLOWS</p>
+            <h2 className={styles.sectionTitle}>FOWOCO의 6대 Workflow</h2>
+            <p className={styles.sectionSubtext}>
+              한 사람의 한 사건을 끝까지 묶는 Master Workflow 3종과, 여러 Case에서 반복
+              사용하는 Reusable Workflow 3종으로 구성됩니다.
+            </p>
+            <div className={styles.workflowGrid}>
+              {WORKFLOWS.map((workflow) => {
+                const Icon = WORKFLOW_ICONS[workflow.icon]
+                return (
+                  <div key={workflow.title} className={styles.workflowCard}>
+                    <div className={styles.workflowCardHeader}>
+                      <div className={styles.workflowIconBadge}>
+                        <Icon className={styles.workflowIcon} />
+                      </div>
+                      <span
+                        className={`${styles.workflowKind} ${
+                          workflow.kind === 'Master' ? styles.workflowKindMaster : ''
+                        }`}
+                      >
+                        {workflow.kind === 'Master' ? 'Master' : 'Reusable'}
+                      </span>
+                    </div>
+                    <p className={styles.workflowTitle}>{workflow.title}</p>
+                    <p className={styles.workflowDescription}>{workflow.description}</p>
                   </div>
                 )
               })}

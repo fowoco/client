@@ -75,6 +75,7 @@
 /* 스크롤 인 애니메이션 */
 
 .featureCard,
+.workflowCard,
 .stepCard,
 .trustCard,
 .heroCopy,
@@ -87,6 +88,7 @@
 }
 
 .inView .featureCard,
+.inView .workflowCard,
 .inView .stepCard,
 .inView .trustCard,
 .inView .heroCopy,
@@ -96,28 +98,35 @@
 }
 
 .featureGrid .featureCard:nth-child(2),
+.workflowGrid .workflowCard:nth-child(2),
 .stepGrid .stepCard:nth-child(2),
 .trustGrid .trustCard:nth-child(2) {
   transition-delay: 60ms;
 }
 
 .featureGrid .featureCard:nth-child(3),
+.workflowGrid .workflowCard:nth-child(3),
 .stepGrid .stepCard:nth-child(3),
 .trustGrid .trustCard:nth-child(3) {
   transition-delay: 120ms;
 }
 
 .featureGrid .featureCard:nth-child(4),
+.workflowGrid .workflowCard:nth-child(4),
 .stepGrid .stepCard:nth-child(4),
 .trustGrid .trustCard:nth-child(4) {
   transition-delay: 180ms;
 }
 
-.featureGrid .featureCard:nth-child(5) {
+.featureGrid .featureCard:nth-child(5),
+.workflowGrid .workflowCard:nth-child(5),
+.stepGrid .stepCard:nth-child(5) {
   transition-delay: 240ms;
 }
 
-.featureGrid .featureCard:nth-child(6) {
+.featureGrid .featureCard:nth-child(6),
+.workflowGrid .workflowCard:nth-child(6),
+.stepGrid .stepCard:nth-child(6) {
   transition-delay: 300ms;
 }
 
@@ -127,6 +136,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .featureCard,
+  .workflowCard,
   .stepCard,
   .trustCard,
   .heroCopy,
@@ -365,39 +375,15 @@
 }
 
 .previewChrome {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 20px;
-  background: var(--brand-dark);
-}
-
-.previewChromeDots {
-  display: flex;
-  gap: 6px;
-}
-
-.previewChromeDots span {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
+  padding: 18px 22px;
+  background: var(--brand-primary);
 }
 
 .previewChromeTitle {
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
   color: var(--fowoco-white);
-}
-
-.previewChromeBadge {
-  margin-left: auto;
-  padding: 4px 12px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--brand-dark);
-  background: var(--fowoco-white);
-  border-radius: var(--fowoco-radius-999);
 }
 
 .previewBody {
@@ -641,6 +627,98 @@
   color: var(--text-secondary);
 }
 
+/* 6대 Workflow */
+
+.workflowGrid {
+  margin-top: 48px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 960px) {
+  .workflowGrid {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  }
+}
+
+.workflowCard {
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--surface-subtle);
+  border-radius: 24px;
+  transition:
+    transform var(--fowoco-motion-base) var(--fowoco-easing-standard),
+    box-shadow var(--fowoco-motion-base) var(--fowoco-easing-standard);
+}
+
+.workflowCard:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 32px rgba(23, 43, 45, 0.1);
+}
+
+.workflowCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.workflowIconBadge {
+  width: 46px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--fowoco-white);
+  border-radius: var(--fowoco-radius-999);
+}
+
+.workflowIcon {
+  width: 22px;
+  height: 22px;
+  color: var(--brand-primary);
+}
+
+.workflowGrid .workflowCard:nth-child(2) .workflowIcon,
+.workflowGrid .workflowCard:nth-child(5) .workflowIcon {
+  color: var(--fowoco-violet-600);
+}
+
+.workflowGrid .workflowCard:nth-child(3) .workflowIcon,
+.workflowGrid .workflowCard:nth-child(6) .workflowIcon {
+  color: var(--fowoco-amber-600);
+}
+
+.workflowKind {
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: var(--fowoco-white);
+  border-radius: var(--fowoco-radius-999);
+}
+
+.workflowKindMaster {
+  color: var(--brand-dark);
+  background: var(--fowoco-teal-100);
+}
+
+.workflowTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.workflowDescription {
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--text-secondary);
+}
+
 /* 진행 방식 */
 
 .stepsSection {
@@ -650,8 +728,14 @@
 .stepGrid {
   margin-top: 48px;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 24px;
+}
+
+@media (max-width: 960px) {
+  .stepGrid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
 }
 
 .stepCard {
@@ -689,6 +773,14 @@
   background: var(--fowoco-green-600);
 }
 
+.stepGrid .stepCard:nth-child(5) .stepBadge {
+  background: var(--fowoco-violet-600);
+}
+
+.stepGrid .stepCard:nth-child(6) .stepBadge {
+  background: var(--fowoco-amber-600);
+}
+
 .stepTitle {
   margin: 0;
   font-size: 16px;
@@ -710,6 +802,10 @@
   height: 3px;
   border-radius: var(--fowoco-radius-999);
   background: var(--fowoco-teal-100);
+}
+
+.stepGrid .stepCard:nth-child(3n) .stepConnector {
+  display: none;
 }
 
 @media (max-width: 1180px) {

@@ -15,11 +15,13 @@ import {
 import {
   AGENT_PREVIEW_ITEMS,
   FEATURES,
+  HERO_HIGHLIGHTS,
   INTRO_SECTIONS,
   PREVIEW_METRICS,
   STEPS,
   TRUST_ITEMS,
   type FeatureIconKey,
+  type HeroHighlightIconKey,
   type TrustIconKey,
 } from './introData'
 import styles from './IntroPage.module.css'
@@ -38,6 +40,12 @@ const TRUST_ICONS: Record<TrustIconKey, ComponentType<{ className?: string }>> =
   shield: ShieldIcon,
   lock: LockIcon,
   audit: AuditListIcon,
+}
+
+const HERO_HIGHLIGHT_ICONS: Record<HeroHighlightIconKey, ComponentType<{ className?: string }>> = {
+  globe: GlobeChatIcon,
+  person: PersonCheckIcon,
+  lock: LockIcon,
 }
 
 const AGENT_PREVIEW_TONE = {
@@ -138,10 +146,17 @@ export function IntroPage() {
                   로그인
                 </Link>
               </div>
-              <div className={styles.heroBadgeRow}>
-                <span className={styles.heroBadge}>Agent 분석 · 사람 승인</span>
-                <span className={styles.heroBadge}>실제 개인정보 없는 Demo</span>
-              </div>
+              <ul className={styles.heroHighlights}>
+                {HERO_HIGHLIGHTS.map((item) => {
+                  const Icon = HERO_HIGHLIGHT_ICONS[item.icon]
+                  return (
+                    <li key={item.label} className={styles.heroHighlightItem}>
+                      <Icon className={styles.heroHighlightIcon} />
+                      <span>{item.label}</span>
+                    </li>
+                  )
+                })}
+              </ul>
             </div>
 
             <div className={styles.previewFrame}>
@@ -168,7 +183,7 @@ export function IntroPage() {
                 <div className={styles.agentPreview}>
                   <div className={styles.agentPreviewHeader}>
                     <span className={styles.agentPreviewGlyph} aria-hidden="true">
-                      ✨
+                      <AgentSparkleIcon className={styles.agentPreviewGlyphIcon} />
                     </span>
                     <div>
                       <p className={styles.agentPreviewTitle}>Agent가 먼저 준비한 내용</p>

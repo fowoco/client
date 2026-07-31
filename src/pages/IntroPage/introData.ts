@@ -23,6 +23,19 @@ export const PREVIEW_METRICS: PreviewMetric[] = [
   { label: '오늘 완료', value: '8' },
 ]
 
+export type HeroHighlightIconKey = 'globe' | 'person' | 'lock'
+
+export interface HeroHighlight {
+  icon: HeroHighlightIconKey
+  label: string
+}
+
+export const HERO_HIGHLIGHTS: HeroHighlight[] = [
+  { icon: 'globe', label: 'E-9 체류·계약·문서를 한 곳에서' },
+  { icon: 'person', label: 'Agent는 초안까지, 결정은 사람이' },
+  { icon: 'lock', label: '전달·제출은 담당자가 직접 수행' },
+]
+
 export type FeatureIconKey =
   | 'agent'
   | 'calendar'

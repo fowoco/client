@@ -328,20 +328,30 @@
   transform: translateY(-2px);
 }
 
-.heroBadgeRow {
+.heroHighlights {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 24px;
+  align-items: center;
+  gap: 10px 20px;
+  margin: 28px 0 0;
+  padding: 0;
+  list-style: none;
 }
 
-.heroBadge {
-  padding: 7px 14px;
-  font-size: 12px;
+.heroHighlightItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--brand-dark);
-  background: var(--fowoco-white);
-  border-radius: var(--fowoco-radius-999);
+}
+
+.heroHighlightIcon {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  color: var(--brand-primary);
 }
 
 .previewFrame {
@@ -445,9 +455,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 17px;
   background: var(--fowoco-white);
   border-radius: var(--fowoco-radius-999);
+}
+
+.agentPreviewGlyphIcon {
+  width: 18px;
+  height: 18px;
+  color: var(--brand-primary);
 }
 
 .agentPreviewTitle {

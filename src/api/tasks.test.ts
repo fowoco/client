@@ -30,10 +30,17 @@ describe('fetchTasks', () => {
       jsonResponse({ items: [], page: 0, size: 20, total_elements: 0, total_pages: 0 }),
     )
 
-    await fetchTasks({ status: 'READY_FOR_REVIEW', keyword: '체류연장', page: 1, size: 20 })
+    await fetchTasks({
+      status: 'READY_FOR_REVIEW',
+      caseId: 'CASE-17',
+      keyword: '체류연장',
+      page: 1,
+      size: 20,
+    })
 
     const [url] = vi.mocked(fetch).mock.calls[0]
     expect(url).toContain('status=READY_FOR_REVIEW')
+    expect(url).toContain('caseId=CASE-17')
     expect(url).toContain('keyword=%EC%B2%B4%EB%A5%98%EC%97%B0%EC%9E%A5')
     expect(url).toContain('page=1&size=20')
   })

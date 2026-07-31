@@ -11,7 +11,7 @@ function renderPage(ticketId: string) {
       <Routes>
         <Route path="/tickets/:ticketId" element={<TicketDetailPage />} />
         <Route path="/tickets" element={<p>티켓 목록</p>} />
-        <Route path="/tasks/:caseId" element={<p>업무 상세</p>} />
+        <Route path="/tasks/:taskId" element={<p>업무 상세</p>} />
       </Routes>
     </MemoryRouter>,
   )

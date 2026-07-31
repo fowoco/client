@@ -1,8 +1,9 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { TaskPageResponse, TaskSummaryResponse } from '../../api/tasks'
+import type { WorkerPageResponse, WorkerResponse } from '../../api/workers'
 import { WorkListPage } from './WorkListPage'
 
 function isoDateOffset(days: number): string {
@@ -11,18 +12,44 @@ function isoDateOffset(days: number): string {
   return date.toISOString().slice(0, 10)
 }
 
-function task(overrides: Partial<TaskSummaryResponse>): TaskSummaryResponse {
+function worker(
+  workerId: string,
+  displayName: string,
+  overrides: Partial<WorkerResponse> = {},
+): WorkerResponse {
   return {
-    task_id: 'T-1',
-    worker_id: 'W-1',
+    worker_id: workerId,
+    company_id: 'C-1',
+    display_name: displayName,
+    nationality_code: 'VN',
+    preferred_language: 'vi',
+    work_status: 'ACTIVE',
+    stay_expiry_date: null,
+    contract_start_date: null,
+    contract_end_date: null,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+    version: 1,
+    ...overrides,
+  }
+}
+
+function task(
+  taskId: string,
+  workerId: string,
+  overrides: Partial<TaskSummaryResponse> = {},
+): TaskSummaryResponse {
+  return {
+    task_id: taskId,
+    worker_id: workerId,
     case_id: null,
     task_type: 'STAY_PERIOD_EXTENSION',
     workflow_id: 'wf-stay-extension',
     workflow_catalog_version: '1',
-    title: '체류연장 준비',
+    title: `업무 ${taskId}`,
     source: 'MANUAL',
-    status: 'READY_FOR_REVIEW',
-    due_date: isoDateOffset(12),
+    status: 'DRAFT',
+    due_date: null,
     content_revision: 1,
     version: 1,
     created_at: '2026-01-01T00:00:00Z',
@@ -31,40 +58,162 @@ function task(overrides: Partial<TaskSummaryResponse>): TaskSummaryResponse {
   }
 }
 
-const TASKS: TaskSummaryResponse[] = [
-  task({ task_id: 'T-1', title: '응웬반A 체류연장 준비', due_date: isoDateOffset(5), status: 'READY_FOR_REVIEW' }),
-  task({ task_id: 'T-2', title: '외국인등록증 사본 제출 요청', due_date: isoDateOffset(0), status: 'WAITING_WORKER' }),
-  task({ task_id: 'T-3', title: '7월 외부기관 제출자료 취합', due_date: isoDateOffset(2), status: 'WAITING_EXTERNAL' }),
-  task({ task_id: 'T-4', title: '신규 입사자 교육 일정 확정', due_date: isoDateOffset(4), status: 'DRAFT' }),
-  task({ task_id: 'T-5', title: '월간 기숙사 점검 결과 정리', due_date: isoDateOffset(7), status: 'DRAFT' }),
-  task({ task_id: 'T-6', title: '쩐티B 표준근로계약서 갱신', due_date: isoDateOffset(25), status: 'APPROVED' }),
+const WORKERS = [
+  worker('W-1', '응우옌 안'),
+  worker('W-2', '파티마 누르', { nationality_code: 'ID' }),
+]
+
+const TASKS = [
+  task('T-1', 'W-1', {
+    case_id: 'CASE-1',
+    title: '체류연장 업무 초안',
+    status: 'READY_FOR_REVIEW',
+    due_date: isoDateOffset(5),
+  }),
+  task('T-2', 'W-1', {
+    case_id: 'CASE-1',
+    title: '여권 만료일 확인',
+    status: 'COMPLETED',
+    due_date: isoDateOffset(12),
+  }),
+  task('T-3', 'W-2', {
+    case_id: 'CASE-2',
+    workflow_id: 'wf-contract',
+    task_type: 'RECONTRACT',
+    title: '표준근로계약서 갱신',
+    status: 'DRAFT',
+    due_date: isoDateOffset(1),
+  }),
 ]
 
 function jsonResponse(body: unknown, init: ResponseInit = {}) {
-  return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' }, ...init })
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+    ...init,
+  })
 }
 
-function errorResponse(status: number, code: string, message: string) {
+function errorResponse(path: string) {
   return jsonResponse(
-    { timestamp: '2026-07-27T01:23:45Z', status, code, message, path: '/api/v1/tasks', request_id: 'req-1', field_errors: [] },
-    { status },
+    {
+      timestamp: '2026-07-31T00:00:00Z',
+      status: 500,
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'raw',
+      path,
+      request_id: 'req-1',
+      field_errors: [],
+    },
+    { status: 500 },
   )
 }
 
-function taskPageResponse(items: TaskSummaryResponse[]): TaskPageResponse {
-  return { items, page: 0, size: 100, total_elements: items.length, total_pages: 1 }
+function workerPageResponse(
+  items: WorkerResponse[],
+  totalElements = items.length,
+): WorkerPageResponse {
+  return {
+    items,
+    page: 0,
+    size: 100,
+    total_elements: totalElements,
+  }
+}
+
+function taskPageResponse(
+  items: TaskSummaryResponse[],
+  totalElements = items.length,
+): TaskPageResponse {
+  return {
+    items,
+    page: 0,
+    size: 100,
+    total_elements: totalElements,
+    total_pages: totalElements > 100 ? 2 : 1,
+  }
 }
 
 function catalogResponse() {
-  return { bundle_id: 'b-1', bundle_version: '1', bundle_status: 'ACTIVE', source_repository: 'fowoco/knowledge', generated_at: '2026-07-01T00:00:00Z', workflows: [] }
+  return {
+    bundle_id: 'b-1',
+    bundle_version: '1',
+    bundle_status: 'ACTIVE',
+    source_repository: 'fowoco/knowledge',
+    generated_at: '2026-07-01T00:00:00Z',
+    workflows: [
+      {
+        workflow_id: 'wf-stay-extension',
+        name: '체류기간 연장',
+        intent: '',
+        sensitivity: 'normal',
+        supported_task_types: ['STAY_PERIOD_EXTENSION'],
+        required_slots: [],
+        checklist_items: [],
+        completion_evidence: [],
+        source_ids: [],
+      },
+      {
+        workflow_id: 'wf-contract',
+        name: 'Contract Review',
+        intent: '',
+        sensitivity: 'normal',
+        supported_task_types: ['RECONTRACT'],
+        required_slots: [],
+        checklist_items: [],
+        completion_evidence: [],
+        source_ids: [],
+      },
+    ],
+  }
 }
 
-function renderPage() {
+interface MockApiOptions {
+  workers?: WorkerPageResponse | Response
+  tasks?: TaskPageResponse | Response
+  catalog?: ReturnType<typeof catalogResponse> | Response
+}
+
+function mockApi(options: MockApiOptions = {}) {
+  vi.mocked(fetch).mockImplementation((input) => {
+    const url = String(input)
+    if (url.includes('/workers')) {
+      const value = options.workers ?? workerPageResponse(WORKERS)
+      return Promise.resolve(value instanceof Response ? value : jsonResponse(value))
+    }
+    if (url.includes('/workflow-catalogs')) {
+      const value = options.catalog ?? catalogResponse()
+      return Promise.resolve(value instanceof Response ? value : jsonResponse(value))
+    }
+    const value = options.tasks ?? taskPageResponse(TASKS)
+    return Promise.resolve(value instanceof Response ? value : jsonResponse(value))
+  })
+}
+
+function LocationProbe() {
+  const location = useLocation()
+  return <output data-testid="location">{`${location.pathname}${location.search}`}</output>
+}
+
+function TaskDetailProbe() {
+  const { taskId } = useParams()
+  return <p>업무 상세 {taskId}</p>
+}
+
+function renderPage(initialEntry = '/tasks') {
   render(
-    <MemoryRouter initialEntries={['/tasks']}>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
-        <Route path="/tasks" element={<WorkListPage />} />
-        <Route path="/tasks/:caseId" element={<p>업무 상세</p>} />
+        <Route
+          path="/tasks"
+          element={
+            <>
+              <WorkListPage />
+              <LocationProbe />
+            </>
+          }
+        />
+        <Route path="/tasks/:taskId" element={<TaskDetailProbe />} />
         <Route path="/tasks/new" element={<p>업무 생성</p>} />
       </Routes>
     </MemoryRouter>,
@@ -79,129 +228,133 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-function mockTasksAndCatalog() {
-  vi.mocked(fetch).mockImplementation((input) => {
-    const url = String(input)
-    if (url.includes('/workflow-catalogs')) return Promise.resolve(jsonResponse(catalogResponse()))
-    return Promise.resolve(jsonResponse(taskPageResponse(TASKS)))
-  })
-}
-
 describe('WorkListPage', () => {
-  it('renders the top 5 priority tasks sorted by due date', async () => {
-    mockTasksAndCatalog()
+  it('joins workers and tasks into a selected master-detail view without N+1 requests', async () => {
+    mockApi()
     renderPage()
 
-    expect(await screen.findByText('응웬반A 체류연장 준비')).toBeInTheDocument()
-    expect(screen.queryByText('쩐티B 표준근로계약서 갱신')).not.toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '응우옌 안', level: 2 })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: '체류연장 업무 초안', level: 3 }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('진행 1/2')).toBeInTheDocument()
+    expect(
+      screen.getByRole('progressbar', { name: /체류연장 업무 초안 Case 진행률/ }),
+    ).toHaveAttribute('value', '1')
+
+    const calledUrls = vi.mocked(fetch).mock.calls.map(([url]) => String(url))
+    expect(calledUrls).toHaveLength(3)
+    expect(calledUrls.some((url) => url.includes('/workers?'))).toBe(true)
+    expect(calledUrls.some((url) => url.includes('/tasks?'))).toBe(true)
+    expect(calledUrls.some((url) => url.includes('/workflow-catalogs'))).toBe(true)
+    expect(calledUrls.some((url) => /\/tasks\/T-/.test(url))).toBe(false)
   })
 
-  it('shows every task after clicking "전체 업무 보기"', async () => {
-    mockTasksAndCatalog()
+  it('updates the detail and URL when another worker is selected', async () => {
+    mockApi()
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '전체 업무 보기 →' }))
+    const option = await screen.findByRole('option', { name: /파티마 누르/ })
+    await user.click(option)
 
-    expect(screen.getByText('쩐티B 표준근로계약서 갱신')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '파티마 누르', level: 2 })).toBeInTheDocument()
+    expect(screen.getByTestId('location')).toHaveTextContent('/tasks?workerId=W-2')
+    expect(option).toHaveAttribute('aria-selected', 'true')
   })
 
-  it('sends the search query to the server as a keyword param', async () => {
-    mockTasksAndCatalog()
+  it('restores a selected worker from the query string', async () => {
+    mockApi()
+    renderPage('/tasks?workerId=W-2')
+
+    expect(
+      await screen.findByRole('heading', { name: '파티마 누르', level: 2 }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: /파티마 누르/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+  })
+
+  it('searches worker, task, workflow, and case fields in the loaded data', async () => {
+    mockApi()
     const user = userEvent.setup()
     renderPage()
 
-    await screen.findByLabelText('업무 검색')
-    await user.type(screen.getByLabelText('업무 검색'), '외국인등록증')
+    const search = await screen.findByLabelText('근로자·Case·업무 검색')
+    await user.type(search, 'Contract Review')
 
     await waitFor(() => {
-      const calledUrls = vi.mocked(fetch).mock.calls.map(([url]) => String(url))
-      expect(calledUrls.some((url) => url.includes('keyword='))).toBe(true)
+      expect(screen.getByRole('option', { name: /파티마 누르/ })).toBeInTheDocument()
+      expect(screen.queryByRole('option', { name: /응우옌 안/ })).not.toBeInTheDocument()
+    })
+
+    const taskUrls = vi
+      .mocked(fetch)
+      .mock.calls.map(([url]) => String(url))
+      .filter((url) => url.includes('/tasks?'))
+    expect(taskUrls).toHaveLength(1)
+    expect(taskUrls[0]).not.toContain('keyword=')
+
+    await user.clear(search)
+    await user.type(search, 'CASE-1')
+    expect(await screen.findByRole('option', { name: /응우옌 안/ })).toBeInTheDocument()
+  })
+
+  it('sorts workers by due date when requested', async () => {
+    mockApi()
+    const user = userEvent.setup()
+    renderPage()
+
+    await screen.findByRole('option', { name: /응우옌 안/ })
+    await user.click(screen.getByRole('button', { name: '업무함 정렬' }))
+    await user.click(screen.getByRole('option', { name: '정렬 · 마감 임박순' }))
+
+    const targetList = screen.getByRole('listbox', { name: '업무 대상 근로자' })
+    expect(within(targetList).getAllByRole('option')[0]).toHaveAccessibleName(/파티마 누르/)
+  })
+
+  it('opens the existing Task detail route with task_id, not case_id', async () => {
+    mockApi()
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: 'Case 열기 →' }))
+
+    expect(await screen.findByText('업무 상세 T-1')).toBeInTheDocument()
+    expect(screen.queryByText('업무 상세 CASE-1')).not.toBeInTheDocument()
+  })
+
+  it('keeps the worker list visible when the Task API fails and retries only tasks', async () => {
+    mockApi({ tasks: errorResponse('/api/v1/tasks') })
+    const user = userEvent.setup()
+    renderPage()
+
+    expect(await screen.findByRole('option', { name: /응우옌 안/ })).toBeInTheDocument()
+    expect(screen.getByText('연결된 업무를 불러오지 못했습니다')).toBeInTheDocument()
+
+    const beforeRetry = vi
+      .mocked(fetch)
+      .mock.calls.filter(([url]) => String(url).includes('/tasks?')).length
+    await user.click(screen.getByRole('button', { name: '다시 시도' }))
+    await waitFor(() => {
+      const afterRetry = vi
+        .mocked(fetch)
+        .mock.calls.filter(([url]) => String(url).includes('/tasks?')).length
+      expect(afterRetry).toBeGreaterThan(beforeRetry)
     })
   })
 
-  it('shows an empty state when a search has no matches', async () => {
-    const user = userEvent.setup()
-    vi.mocked(fetch).mockImplementation((input) => {
-      const url = String(input)
-      if (url.includes('/workflow-catalogs')) return Promise.resolve(jsonResponse(catalogResponse()))
-      return Promise.resolve(jsonResponse(taskPageResponse([])))
-    })
+  it('shows a blocking error when the Worker API fails', async () => {
+    mockApi({ workers: errorResponse('/api/v1/workers') })
     renderPage()
 
-    await user.type(screen.getByLabelText('업무 검색'), '존재하지않는검색어')
-
-    expect(await screen.findByText('등록된 업무가 없습니다')).toBeInTheDocument()
+    expect(await screen.findByText('근로자 정보를 불러오지 못했습니다')).toBeInTheDocument()
+    expect(screen.queryByRole('listbox', { name: '업무 대상 근로자' })).not.toBeInTheDocument()
   })
 
-  it('shows only READY_FOR_REVIEW tasks on the "검토 필요" tab', async () => {
-    mockTasksAndCatalog()
-    const user = userEvent.setup()
-    renderPage()
-
-    await screen.findByText('응웬반A 체류연장 준비')
-    await user.click(screen.getByRole('tab', { name: /검토 필요/ }))
-
-    expect(screen.getByText('응웬반A 체류연장 준비')).toBeInTheDocument()
-    expect(screen.queryByText('쩐티B 표준근로계약서 갱신')).not.toBeInTheDocument()
-  })
-
-  it('shows WAITING_WORKER/WAITING_EXTERNAL tasks on the "후속조치" tab', async () => {
-    mockTasksAndCatalog()
-    const user = userEvent.setup()
-    renderPage()
-
-    await screen.findByText('응웬반A 체류연장 준비')
-    await user.click(screen.getByRole('tab', { name: /후속조치/ }))
-
-    expect(screen.getByText('외국인등록증 사본 제출 요청')).toBeInTheDocument()
-    expect(screen.getByText('7월 외부기관 제출자료 취합')).toBeInTheDocument()
-    expect(screen.queryByText('응웬반A 체류연장 준비')).not.toBeInTheDocument()
-  })
-
-  it('filters by the status dropdown', async () => {
-    mockTasksAndCatalog()
-    const user = userEvent.setup()
-    renderPage()
-
-    await screen.findByText('응웬반A 체류연장 준비')
-    const trigger = screen.getByRole('button', { name: '상태 필터' })
-    await user.click(trigger)
-    await user.click(screen.getByRole('option', { name: '상태 · 검토 필요' }))
-
-    expect(screen.getByText('응웬반A 체류연장 준비')).toBeInTheDocument()
-    expect(screen.queryByText('외국인등록증 사본 제출 요청')).not.toBeInTheDocument()
-  })
-
-  it('navigates to the task detail page when a row is clicked', async () => {
-    mockTasksAndCatalog()
-    const user = userEvent.setup()
-    renderPage()
-
-    await user.click(await screen.findByText('응웬반A 체류연장 준비'))
-
-    expect(await screen.findByText('업무 상세')).toBeInTheDocument()
-  })
-
-  it('shows a loading state', () => {
-    vi.mocked(fetch).mockReturnValue(new Promise(() => {}))
-    renderPage()
-    expect(screen.getByText('업무 목록을 불러오는 중입니다')).toBeInTheDocument()
-  })
-
-  it('shows an error state with a retry action', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(errorResponse(500, 'INTERNAL_SERVER_ERROR', 'raw'))
-    renderPage()
-
-    expect(await screen.findByRole('button', { name: '다시 시도' })).toBeInTheDocument()
-  })
-
-  it('shows an empty state with a create action when there are no tasks', async () => {
-    vi.mocked(fetch).mockImplementation((input) => {
-      const url = String(input)
-      if (url.includes('/workflow-catalogs')) return Promise.resolve(jsonResponse(catalogResponse()))
-      return Promise.resolve(jsonResponse(taskPageResponse([])))
-    })
+  it('shows the empty work state and create action when there are no tasks', async () => {
+    mockApi({ tasks: taskPageResponse([]) })
     const user = userEvent.setup()
     renderPage()
 
@@ -210,36 +363,44 @@ describe('WorkListPage', () => {
     expect(await screen.findByText('업무 생성')).toBeInTheDocument()
   })
 
-  it('shows a cap notice when the server has more tasks than the fetched page', async () => {
-    vi.mocked(fetch).mockImplementation((input) => {
-      const url = String(input)
-      if (url.includes('/workflow-catalogs')) return Promise.resolve(jsonResponse(catalogResponse()))
-      return Promise.resolve(jsonResponse({ items: TASKS, page: 0, size: 100, total_elements: 150, total_pages: 2 }))
+  it('falls back to task type labels if the workflow catalog fails', async () => {
+    mockApi({ catalog: errorResponse('/api/v1/workflow-catalogs') })
+    renderPage()
+
+    expect(
+      await screen.findByText('업무 분류 이름을 불러오지 못해 업무 유형으로 표시합니다.'),
+    ).toBeInTheDocument()
+    expect(screen.getAllByText(/체류기간 연장/).length).toBeGreaterThan(0)
+  })
+
+  it('discloses pagination caps and hides unresolved worker references', async () => {
+    mockApi({
+      workers: workerPageResponse(WORKERS, 120),
+      tasks: taskPageResponse(
+        [...TASKS, task('T-orphan', 'W-missing', { title: '연결 오류 업무' })],
+        140,
+      ),
     })
     renderPage()
 
-    expect(await screen.findByText(/전체 150개 중 6개만 불러왔습니다/)).toBeInTheDocument()
+    expect(
+      await screen.findByText(
+        '일부 데이터만 불러왔습니다. 검색·정렬·진행률은 현재 불러온 범위 기준입니다.',
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('근로자 정보를 확인할 수 없는 업무 1건은 목록에서 제외했습니다.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('연결 오류 업무')).not.toBeInTheDocument()
   })
 
-  it('shows the metric strip counts computed from task status and due date', async () => {
-    mockTasksAndCatalog()
-    renderPage()
-
-    expect(await screen.findByText('1건 ›')).toBeInTheDocument() // 승인 대기
-    expect(screen.getByText('2건 ›')).toBeInTheDocument() // AI 준비 완료
-    expect(screen.getByText('5건 ›')).toBeInTheDocument() // 긴급 업무
-    expect(screen.getByText('0건 ›')).toBeInTheDocument() // 오늘 완료
-  })
-
-  it('filters to DRAFT tasks when the "AI 준비 완료" metric card is clicked', async () => {
-    mockTasksAndCatalog()
+  it('shows a dedicated empty state when unified search has no matches', async () => {
+    mockApi()
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: 'AI 준비 완료 2건 ›' }))
+    await user.type(await screen.findByLabelText('근로자·Case·업무 검색'), '존재하지 않는 검색어')
 
-    expect(screen.getByText('신규 입사자 교육 일정 확정')).toBeInTheDocument()
-    expect(screen.getByText('월간 기숙사 점검 결과 정리')).toBeInTheDocument()
-    expect(screen.queryByText('응웬반A 체류연장 준비')).not.toBeInTheDocument()
+    expect(await screen.findByText('검색 결과가 없습니다')).toBeInTheDocument()
   })
 })

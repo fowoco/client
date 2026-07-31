@@ -67,7 +67,7 @@ function renderPage() {
             </>
           }
         />
-        <Route path="/tasks/:caseId" element={<p>업무 상세</p>} />
+        <Route path="/tasks/:taskId" element={<p>업무 상세</p>} />
       </Routes>
     </MemoryRouter>,
   )

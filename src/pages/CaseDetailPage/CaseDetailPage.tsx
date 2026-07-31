@@ -79,7 +79,7 @@ const STEP_STATUS_CLASS: Record<StepStatus, string> = {
 }
 
 export function CaseDetailPage() {
-  const { caseId } = useParams()
+  const { taskId } = useParams()
   const [activeTab, setActiveTab] = useState(CASE_TABS[0])
   const [moreMenuOpen, setMoreMenuOpen] = useState(false)
   const [contextDrawerOpen, setContextDrawerOpen] = useState(false)
@@ -91,10 +91,10 @@ export function CaseDetailPage() {
   const moreMenuRef = useRef<HTMLDivElement>(null)
   const showToast = useToastStore((state) => state.showToast)
 
-  const taskFetcher = useCallback(() => fetchTaskById(caseId ?? ''), [caseId])
+  const taskFetcher = useCallback(() => fetchTaskById(taskId ?? ''), [taskId])
   const { status: taskStatus, data: task, error: taskError, refetch: refetchTask } = useApiQuery(taskFetcher)
 
-  const activitiesFetcher = useCallback(() => fetchTaskActivities(caseId ?? ''), [caseId])
+  const activitiesFetcher = useCallback(() => fetchTaskActivities(taskId ?? ''), [taskId])
   const { data: activities } = useApiQuery(activitiesFetcher)
   const activityRows = activities ?? []
 

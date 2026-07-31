@@ -6,7 +6,10 @@ import { useAsyncDemoData } from '../../hooks/useAsyncDemoData'
 import styles from './DashboardPage.module.css'
 import {
   AGENT_SUMMARY,
+  AI_PREPARED_CHECKLIST,
+  AI_REQUEST_PROMPT_CHIPS,
   APPROVAL_QUEUE,
+  METRIC_STRIP,
   TODAY_WORK_ITEMS,
   UPCOMING_TIMELINE,
 } from './dashboardData'
@@ -27,6 +30,33 @@ export function DashboardPage() {
         </span>
         <span className={styles.commandShortcut}>⌘ 업무 생성</span>
       </button>
+
+      <div className={styles.promptChips}>
+        {AI_REQUEST_PROMPT_CHIPS.map((chip) => (
+          <button
+            key={chip}
+            type="button"
+            className={styles.promptChip}
+            onClick={() => navigate('/tasks/new', { state: { prefill: chip } })}
+          >
+            {chip}
+          </button>
+        ))}
+      </div>
+
+      <div className={styles.metricStrip}>
+        {METRIC_STRIP.map((metric) => (
+          <button
+            key={metric.id}
+            type="button"
+            className={styles.metricCard}
+            onClick={() => navigate('/tasks')}
+          >
+            <span className={styles.metricLabel}>{metric.label}</span>
+            <span className={styles.metricValue}>{metric.value}건 ›</span>
+          </button>
+        ))}
+      </div>
 
       {status === 'loading' && (
         <div className={styles.stateWrap}>
@@ -99,6 +129,29 @@ export function DashboardPage() {
               >
                 검토하기 →
               </button>
+            </div>
+
+            <div className={styles.aiPreparedPanel}>
+              <p className={styles.aiPreparedTitle}>✦ AI 업무 진행 상황</p>
+              <p className={styles.aiPreparedBody}>
+                Agent가 필요한 서류와 요청문 초안을 준비했습니다. 확인이 필요한 항목을 보완한 뒤
+                승인하면 근로자 요청 단계로 이어집니다.
+              </p>
+              <ul className={styles.aiPreparedList}>
+                {AI_PREPARED_CHECKLIST.map((item) => (
+                  <li key={item.id} className={styles.aiPreparedItem}>
+                    <span
+                      className={`${styles.aiPreparedIcon} ${
+                        item.status === 'next' ? styles.aiPreparedIconNext : ''
+                      }`}
+                      aria-hidden="true"
+                    >
+                      {item.status === 'next' ? '!' : '✓'}
+                    </span>
+                    {item.label}
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
 

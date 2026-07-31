@@ -43,15 +43,69 @@
   white-space: nowrap;
 }
 
+.promptChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.promptChip {
+  padding: 7px 14px;
+  background: var(--surface-subtle);
+  border: none;
+  border-radius: var(--fowoco-radius-999);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--brand-primary);
+  cursor: pointer;
+}
+
+.metricStrip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+@media (max-width: 720px) {
+  .metricStrip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.metricCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 19px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
+  text-align: left;
+  cursor: pointer;
+}
+
+.metricLabel {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.metricValue {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
 .summaryRow {
   display: grid;
-  grid-template-columns: 1fr 162px;
+  grid-template-columns: 1fr 162px 300px;
   gap: 16px;
   margin-top: 16px;
   align-items: stretch;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 960px) {
   .summaryRow {
     grid-template-columns: 1fr;
   }
@@ -103,6 +157,55 @@
   border: none;
   padding: 0;
   cursor: pointer;
+}
+
+.aiPreparedPanel {
+  padding: 19px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
+}
+
+.aiPreparedTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--brand-primary);
+}
+
+.aiPreparedBody {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--text-secondary);
+}
+
+.aiPreparedList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.aiPreparedItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.aiPreparedIcon {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--fowoco-green-600);
+}
+
+.aiPreparedIconNext {
+  color: var(--status-warning);
 }
 
 .sectionHeader {

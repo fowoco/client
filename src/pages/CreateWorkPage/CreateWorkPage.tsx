@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ApiError, getErrorMessage } from '../../api/errors'
 import { createTask, type TaskType } from '../../api/tasks'
 import { fetchWorkers } from '../../api/workers'
@@ -29,8 +29,11 @@ const TASK_TYPE_OPTIONS = [
 
 export function CreateWorkPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  // HOME-001 대시보드의 AI 요청 프롬프트 칩에서 넘어온 경우 선택한 문구를 미리 채워둔다.
+  const prefill = (location.state as { prefill?: string } | null)?.prefill
   const [mode, setMode] = useState<InputModeId>('nl')
-  const [request, setRequest] = useState('')
+  const [request, setRequest] = useState(prefill ?? '')
   const [importWizardOpen, setImportWizardOpen] = useState(false)
   const showToast = useToastStore((state) => state.showToast)
 

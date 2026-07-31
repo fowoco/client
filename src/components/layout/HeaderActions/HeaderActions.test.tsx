@@ -36,7 +36,7 @@ describe('HeaderActions', () => {
     expect(screen.getByText('김민지 HR')).toBeInTheDocument()
   })
 
-  it('opens the profile menu with links to profile and settings, and a logout action', async () => {
+  it('opens the profile menu with a link to profile and a logout action', async () => {
     const user = userEvent.setup()
     const onLogout = vi.fn()
     renderActions(onLogout)
@@ -44,7 +44,6 @@ describe('HeaderActions', () => {
     await user.click(screen.getByText('김민지 HR'))
 
     expect(screen.getByRole('link', { name: '내 프로필' })).toHaveAttribute('href', '/profile')
-    expect(screen.getByRole('link', { name: '설정' })).toHaveAttribute('href', '/settings')
 
     await user.click(screen.getByRole('button', { name: '로그아웃' }))
     expect(onLogout).toHaveBeenCalledTimes(1)

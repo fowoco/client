@@ -19,7 +19,6 @@ function renderPage() {
         ),
       },
       { path: '/dashboard', element: <p>대시보드 페이지</p> },
-      { path: '/settings', element: <p>설정 페이지</p> },
       { path: '/reset-password', element: <p>비밀번호 재설정 페이지</p> },
     ],
     { initialEntries: ['/profile'] },
@@ -118,15 +117,6 @@ describe('ProfilePage', () => {
     expect(toggle).toHaveAttribute('aria-checked', 'true')
   })
 
-  it('navigates to settings when "설정에서 권한 보기" is clicked', async () => {
-    const user = userEvent.setup()
-    renderPage()
-
-    await user.click(screen.getByRole('button', { name: '설정에서 권한 보기' }))
-
-    expect(await screen.findByText('설정 페이지')).toBeInTheDocument()
-  })
-
   it('navigates to reset-password when "비밀번호 변경" is clicked', async () => {
     const user = userEvent.setup()
     renderPage()
@@ -151,7 +141,7 @@ describe('ProfilePage', () => {
 
     await user.click(screen.getByRole('button', { name: '프로필 수정' }))
     await user.type(screen.getByLabelText('연락처'), '9')
-    await user.click(screen.getByRole('button', { name: '설정에서 권한 보기' }))
+    await user.click(screen.getByRole('button', { name: '비밀번호 변경' }))
 
     expect(screen.getByRole('dialog', { name: '저장하지 않은 변경사항이 있습니다.' })).toBeInTheDocument()
     expect(screen.getByText(/변경사항 1개/)).toBeInTheDocument()
@@ -168,10 +158,10 @@ describe('ProfilePage', () => {
 
     await user.click(screen.getByRole('button', { name: '프로필 수정' }))
     await user.type(screen.getByLabelText('연락처'), '9')
-    await user.click(screen.getByRole('button', { name: '설정에서 권한 보기' }))
+    await user.click(screen.getByRole('button', { name: '비밀번호 변경' }))
     await user.click(screen.getByRole('button', { name: '저장하지 않고 나가기' }))
 
-    expect(await screen.findByText('설정 페이지')).toBeInTheDocument()
+    expect(await screen.findByText('비밀번호 재설정 페이지')).toBeInTheDocument()
   })
 
   it('saves changes and leaves when "변경사항 저장" is clicked', async () => {
@@ -180,9 +170,9 @@ describe('ProfilePage', () => {
 
     await user.click(screen.getByRole('button', { name: '프로필 수정' }))
     await user.type(screen.getByLabelText('연락처'), '9')
-    await user.click(screen.getByRole('button', { name: '설정에서 권한 보기' }))
+    await user.click(screen.getByRole('button', { name: '비밀번호 변경' }))
     await user.click(screen.getByRole('button', { name: '변경사항 저장' }))
 
-    expect(await screen.findByText('설정 페이지')).toBeInTheDocument()
+    expect(await screen.findByText('비밀번호 재설정 페이지')).toBeInTheDocument()
   })
 })

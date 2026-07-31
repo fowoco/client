@@ -3,7 +3,6 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { OnboardingTour } from '../onboarding/OnboardingTour'
 import { hasCompletedOnboarding, markOnboardingCompleted } from '../onboarding/onboardingStorage'
 import { useAuthStore } from '../../store/authStore'
-import { Button } from '../ui/Button/Button'
 import { ToastViewport } from '../ui/ToastViewport/ToastViewport'
 import styles from './AppLayout.module.css'
 import { HeaderActions } from './HeaderActions/HeaderActions'
@@ -70,7 +69,6 @@ export function AppLayout() {
       <div className={styles.main}>
         <header className={styles.topBar}>
           <div className={styles.topBarActions}>
-            <Button onClick={() => navigate('/tasks/new')}>＋ 업무 만들기</Button>
             <HeaderActions user={user} onLogout={handleLogout} />
           </div>
         </header>

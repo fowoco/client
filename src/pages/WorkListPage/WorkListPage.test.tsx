@@ -220,4 +220,26 @@ describe('WorkListPage', () => {
 
     expect(await screen.findByText(/전체 150개 중 6개만 불러왔습니다/)).toBeInTheDocument()
   })
+
+  it('shows the metric strip counts computed from task status and due date', async () => {
+    mockTasksAndCatalog()
+    renderPage()
+
+    expect(await screen.findByText('1건 ›')).toBeInTheDocument() // 승인 대기
+    expect(screen.getByText('2건 ›')).toBeInTheDocument() // AI 준비 완료
+    expect(screen.getByText('5건 ›')).toBeInTheDocument() // 긴급 업무
+    expect(screen.getByText('0건 ›')).toBeInTheDocument() // 오늘 완료
+  })
+
+  it('filters to DRAFT tasks when the "AI 준비 완료" metric card is clicked', async () => {
+    mockTasksAndCatalog()
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: 'AI 준비 완료 2건 ›' }))
+
+    expect(screen.getByText('신규 입사자 교육 일정 확정')).toBeInTheDocument()
+    expect(screen.getByText('월간 기숙사 점검 결과 정리')).toBeInTheDocument()
+    expect(screen.queryByText('응웬반A 체류연장 준비')).not.toBeInTheDocument()
+  })
 })

@@ -33,8 +33,10 @@ const WORK_TABS: { id: TabId; label: string }[] = [
 
 const STATUS_OPTIONS: { value: TaskStatus | 'all'; label: string }[] = [
   { value: 'all', label: '상태 · 전체' },
+  { value: 'DRAFT', label: '상태 · AI 준비 완료' },
   { value: 'READY_FOR_REVIEW', label: '상태 · 검토 필요' },
   { value: 'WAITING_WORKER', label: '상태 · 근로자 응답 대기' },
+  { value: 'COMPLETED', label: '상태 · 완료' },
 ]
 
 const DUE_OPTIONS = [
@@ -103,6 +105,53 @@ export function WorkListPage() {
     [data],
   )
 
+  // 서버 Task API에는 담당자·승인자 개념이 없어(#153 조사 결과) 지표는 TaskStatus·기한 기준으로
+  // 클라이언트에서 집계한다.
+  const metricStrip = useMemo(() => {
+    const items = data?.items ?? []
+    const todayIso = new Date().toISOString().slice(0, 10)
+    return [
+      {
+        id: 'pending-approval',
+        label: '승인 대기',
+        count: items.filter((item) => item.status === 'READY_FOR_REVIEW').length,
+        onClick: () => {
+          setActiveTab('needs-review')
+          setStatusFilter('all')
+        },
+      },
+      {
+        id: 'ai-ready',
+        label: 'AI 준비 완료',
+        count: items.filter((item) => item.status === 'DRAFT').length,
+        onClick: () => {
+          setActiveTab('all')
+          setStatusFilter('DRAFT')
+        },
+      },
+      {
+        id: 'urgent',
+        label: '긴급 업무',
+        count: items.filter((item) => getUrgencyTier(daysUntil(item.due_date)) === 'urgent').length,
+        onClick: () => {
+          setActiveTab('all')
+          setStatusFilter('all')
+          setDueFilter('7')
+        },
+      },
+      {
+        id: 'done-today',
+        label: '오늘 완료',
+        count: items.filter((item) => item.status === 'COMPLETED' && item.updated_at.slice(0, 10) === todayIso)
+          .length,
+        onClick: () => {
+          setActiveTab('all')
+          setStatusFilter('COMPLETED')
+        },
+      },
+    ]
+  }, [data])
+
   function handleViewAll() {
     setShowAll(true)
   }
@@ -113,6 +162,15 @@ export function WorkListPage() {
       <p className={styles.description}>
         근로자와 연결되지 않은 내부 사무업무도 같은 업무 구조로 표시됩니다.
       </p>
+
+      <div className={styles.metricStrip}>
+        {metricStrip.map((metric) => (
+          <button key={metric.id} type="button" className={styles.metricCard} onClick={metric.onClick}>
+            <span className={styles.metricLabel}>{metric.label}</span>
+            <span className={styles.metricValue}>{metric.count}건 ›</span>
+          </button>
+        ))}
+      </div>
 
       <Tabs tabs={tabsWithCounts} activeId={activeTab} onChange={(id) => setActiveTab(id as TabId)} ariaLabel="업무함 탭" />
 

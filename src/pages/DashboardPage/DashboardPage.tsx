@@ -64,6 +64,7 @@ export function DashboardPage() {
             kind="loading"
             title="업무 현황을 불러오는 중입니다"
             body="기한·필수정보·응답 상태를 확인하고 있습니다."
+            note="처리 중 · 중복 실행 차단"
           />
         </div>
       )}

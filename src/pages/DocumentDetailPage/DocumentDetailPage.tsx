@@ -25,7 +25,12 @@ export function DocumentDetailPage() {
   if (fetchStatus === 'loading') {
     return (
       <div className={styles.stateWrap}>
-        <EmptyState kind="loading" title="서류 정보를 불러오는 중입니다" body="잠시만 기다려 주세요." />
+        <EmptyState
+          kind="loading"
+          title="서류 정보를 불러오는 중입니다"
+          body="잠시만 기다려 주세요."
+          note="처리 중 · 중복 실행 차단"
+        />
       </div>
     )
   }

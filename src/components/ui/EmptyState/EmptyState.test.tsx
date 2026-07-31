@@ -29,4 +29,13 @@ describe('EmptyState', () => {
     await user.click(screen.getByRole('button', { name: '업무 만들기' }))
     expect(onAction).toHaveBeenCalledOnce()
   })
+
+  it('renders the note caption without making it a clickable action', () => {
+    render(
+      <EmptyState kind="loading" title="불러오는 중" body="잠시만 기다려 주세요." note="처리 중 · 중복 실행 차단" />,
+    )
+
+    expect(screen.getByText('처리 중 · 중복 실행 차단')).toBeInTheDocument()
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+  })
 })

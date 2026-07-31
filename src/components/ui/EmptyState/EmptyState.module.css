@@ -28,6 +28,14 @@
   color: var(--text-secondary);
 }
 
+.note {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 21px;
+  color: var(--brand-primary);
+}
+
 .action {
   font-size: 13px;
   font-weight: 500;

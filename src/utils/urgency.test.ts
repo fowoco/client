@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { daysUntil, getUrgencyTier, URGENCY_LABEL, URGENCY_TONE } from './urgency'
 
+function localDateString(offsetDays: number): string {
+  const date = new Date()
+  date.setDate(date.getDate() + offsetDays)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 describe('getUrgencyTier', () => {
   it('returns urgent within 7 days', () => {
     expect(getUrgencyTier(0)).toBe('urgent')
@@ -28,15 +37,11 @@ describe('daysUntil', () => {
   })
 
   it('computes the day count from today to the given date', () => {
-    const date = new Date()
-    date.setDate(date.getDate() + 10)
-    expect(daysUntil(date.toISOString().slice(0, 10))).toBe(10)
+    expect(daysUntil(localDateString(10))).toBe(10)
   })
 
   it('returns a negative count for a date in the past', () => {
-    const date = new Date()
-    date.setDate(date.getDate() - 3)
-    expect(daysUntil(date.toISOString().slice(0, 10))).toBe(-3)
+    expect(daysUntil(localDateString(-3))).toBe(-3)
   })
 })
 

@@ -9,7 +9,10 @@ import styles from './WorkerListPage.module.css'
 function isoDateOffset(days: number): string {
   const date = new Date()
   date.setDate(date.getDate() + days)
-  return date.toISOString().slice(0, 10)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 function worker(overrides: Partial<WorkerResponse>): WorkerResponse {

@@ -39,7 +39,7 @@ function renderPage() {
     <MemoryRouter initialEntries={['/agent']}>
       <Routes>
         <Route path="/agent" element={<AgentLogPage />} />
-        <Route path="/tasks/:caseId" element={<p>업무 상세</p>} />
+        <Route path="/tasks/:taskId" element={<p>업무 상세</p>} />
       </Routes>
     </MemoryRouter>,
   )

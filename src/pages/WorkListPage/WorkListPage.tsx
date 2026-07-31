@@ -1,214 +1,276 @@
-import { useCallback, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getErrorMessage } from '../../api/errors'
-import { fetchTasks, type TaskStatus, type TaskSummaryResponse } from '../../api/tasks'
+import { fetchTasks, type TaskPageResponse } from '../../api/tasks'
+import { fetchWorkers, type WorkerPageResponse, type WorkerResponse } from '../../api/workers'
 import { fetchWorkflowCatalog } from '../../api/workflows'
 import { Dropdown } from '../../components/ui/Dropdown/Dropdown'
-import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
+import { EmptyState, type EmptyStateKind } from '../../components/ui/EmptyState/EmptyState'
 import { SearchInput } from '../../components/ui/SearchInput/SearchInput'
-import { Tabs } from '../../components/ui/Tabs/Tabs'
-import { WorkItemRow, type WorkItemUrgency } from '../../components/ui/WorkItemRow/WorkItemRow'
+import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import { useApiQuery } from '../../hooks/useApiQuery'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
-import { TASK_STATUS_LABEL, TASK_STATUS_NEXT_ACTION } from '../../utils/taskStatus'
-import { daysUntil, getUrgencyTier } from '../../utils/urgency'
+import { WorkInboxDetail } from './WorkInboxDetail'
+import { WorkInboxTargetList } from './WorkInboxTargetList'
+import { buildWorkInboxModel, type WorkInboxSort } from './workInboxModel'
 import styles from './WorkListPage.module.css'
 
-const URGENCY_TIER_ROW_CLASS: Record<ReturnType<typeof getUrgencyTier>, WorkItemUrgency> = {
-  urgent: 'critical',
-  medium: 'warning',
-  comfortable: 'neutral',
+const SORT_OPTIONS: { value: WorkInboxSort; label: string }[] = [
+  { value: 'priority', label: '정렬 · 우선순위' },
+  { value: 'due-date', label: '정렬 · 마감 임박순' },
+  { value: 'worker-name', label: '정렬 · 근로자명' },
+]
+
+function isWorkerPageEmpty(page: WorkerPageResponse): boolean {
+  return page.items.length === 0
 }
 
-type TabId = 'all' | 'needs-review' | 'follow-up'
+function isTaskPageEmpty(page: TaskPageResponse): boolean {
+  return page.items.length === 0
+}
 
-// 서버 Task API에는 담당자·승인자 개념이 없고(#153 조사 결과), 목록 조회(TaskSummaryResponse)에는
-// created_by조차 내려오지 않아 '내 업무' 탭은 근사할 데이터가 아예 없다. '내가 승인할 업무'는
-// 상태 기반 '검토 필요' 탭으로 대체했다.
-const WORK_TABS: { id: TabId; label: string }[] = [
-  { id: 'all', label: '전체' },
-  { id: 'needs-review', label: '검토 필요' },
-  { id: 'follow-up', label: '후속조치' },
-]
+interface TaskStateWorkspaceProps {
+  workers: readonly WorkerResponse[]
+  selectedWorkerId: string | null
+  query: string
+  kind: Extract<EmptyStateKind, 'loading' | 'error'>
+  title: string
+  body: string
+  onSelect: (workerId: string) => void
+  onRetry?: () => void
+}
 
-const STATUS_OPTIONS: { value: TaskStatus | 'all'; label: string }[] = [
-  { value: 'all', label: '상태 · 전체' },
-  { value: 'DRAFT', label: '상태 · AI 준비 완료' },
-  { value: 'READY_FOR_REVIEW', label: '상태 · 검토 필요' },
-  { value: 'WAITING_WORKER', label: '상태 · 근로자 응답 대기' },
-  { value: 'COMPLETED', label: '상태 · 완료' },
-]
+function TaskStateWorkspace({
+  workers,
+  selectedWorkerId,
+  query,
+  kind,
+  title,
+  body,
+  onSelect,
+  onRetry,
+}: TaskStateWorkspaceProps) {
+  const normalizedQuery = query.trim().toLocaleLowerCase('ko-KR')
+  const visibleWorkers = workers.filter(
+    (worker) =>
+      !normalizedQuery || worker.display_name.toLocaleLowerCase('ko-KR').includes(normalizedQuery),
+  )
+  const resolvedWorkerId =
+    visibleWorkers.find((worker) => worker.worker_id === selectedWorkerId)?.worker_id ??
+    visibleWorkers[0]?.worker_id ??
+    null
 
-const DUE_OPTIONS = [
-  { value: '7', label: '마감 · 7일' },
-  { value: '30', label: '마감 · 30일' },
-  { value: '90', label: '마감 · 90일' },
-]
-
-const PRIORITY_COUNT = 5
-
-function matchesTab(item: TaskSummaryResponse, tabId: TabId): boolean {
-  if (tabId === 'all') return true
-  if (tabId === 'needs-review') return item.status === 'READY_FOR_REVIEW'
-  return item.status === 'WAITING_WORKER' || item.status === 'WAITING_EXTERNAL'
+  return (
+    <div className={styles.workspace} aria-busy={kind === 'loading'}>
+      <section className={styles.listPanel} aria-labelledby="work-inbox-list-title">
+        <div className={styles.listHeader}>
+          <h2 id="work-inbox-list-title" className={styles.listTitle}>
+            근로자 {workers.length}명
+          </h2>
+          <span className={styles.listCountNote}>업무 상태 미확인</span>
+        </div>
+        <div className={styles.targetList} role="listbox" aria-label="업무 대상 근로자">
+          {visibleWorkers.map((worker) => {
+            const selected = worker.worker_id === resolvedWorkerId
+            return (
+              <button
+                key={worker.worker_id}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                className={`${styles.targetOption} ${selected ? styles.targetOptionSelected : ''}`}
+                onClick={() => onSelect(worker.worker_id)}
+              >
+                <span className={styles.targetOptionTop}>
+                  <span className={styles.targetName}>{worker.display_name}</span>
+                  <StatusLabel tone={kind === 'error' ? 'critical' : 'neutral'}>
+                    {kind === 'error' ? '조회 실패' : '확인 중'}
+                  </StatusLabel>
+                </span>
+                <span className={styles.targetMeta}>
+                  국적 코드 {worker.nationality_code} · 업무 상태 미확인
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </section>
+      <section className={styles.detailState} aria-label="업무 조회 상태">
+        <EmptyState
+          kind={kind}
+          title={title}
+          body={body}
+          note={kind === 'loading' ? '처리 중 · 중복 실행 차단' : undefined}
+          actionLabel={kind === 'error' ? '다시 시도' : undefined}
+          onAction={kind === 'error' ? onRetry : undefined}
+        />
+      </section>
+    </div>
+  )
 }
 
 export function WorkListPage() {
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState<TabId>('all')
+  const [searchParams, setSearchParams] = useSearchParams()
   const [query, setQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all')
-  const [dueFilter, setDueFilter] = useState('30')
-  const [showAll, setShowAll] = useState(false)
+  const [sort, setSort] = useState<WorkInboxSort>('priority')
   const debouncedQuery = useDebouncedValue(query)
+  const selectedWorkerId = searchParams.get('workerId')
 
-  // keyword는 서버가 지원하는 검색 파라미터라 그대로 넘긴다. 나머지(탭·상태·마감)는 받아온
-  // 한 페이지(최대 100건) 안에서 클라이언트가 필터링한다.
-  const tasksFetcher = useCallback(
-    () => fetchTasks({ keyword: debouncedQuery.trim() || undefined, size: 100 }),
-    [debouncedQuery],
-  )
-  const { status, data, error, refetch } = useApiQuery(
-    tasksFetcher,
-    useCallback((page: { items: TaskSummaryResponse[] }) => page.items.length === 0, []),
-  )
+  const workersFetcher = useCallback(() => fetchWorkers({ size: 100 }), [])
+  const tasksFetcher = useCallback(() => fetchTasks({ size: 100 }), [])
+  const catalogFetcher = useCallback(() => fetchWorkflowCatalog(), [])
 
-  // 카테고리 라벨(workflow 이름)을 붙이기 위한 조회 — 실패해도 목록 자체는 그대로 보여준다.
-  const { data: catalog } = useApiQuery(useCallback(() => fetchWorkflowCatalog(), []))
+  const workersQuery = useApiQuery(workersFetcher, isWorkerPageEmpty)
+  const tasksQuery = useApiQuery(tasksFetcher, isTaskPageEmpty)
+  const catalogQuery = useApiQuery(catalogFetcher)
+
   const workflowNameById = useMemo(() => {
     const map = new Map<string, string>()
-    for (const workflow of catalog?.workflows ?? []) map.set(workflow.workflow_id, workflow.name)
+    for (const workflow of catalogQuery.data?.workflows ?? []) {
+      map.set(workflow.workflow_id, workflow.name)
+    }
     return map
-  }, [catalog])
+  }, [catalogQuery.data])
 
-  const isDefaultView = activeTab === 'all' && debouncedQuery.trim() === '' && statusFilter === 'all' && dueFilter === '30'
-
-  const filteredItems = useMemo(() => {
-    const items = data?.items ?? []
-    return items.filter((item) => {
-      const dueDays = daysUntil(item.due_date)
-      const matchesTabFilter = matchesTab(item, activeTab)
-      const matchesStatus = statusFilter === 'all' || item.status === statusFilter
-      const matchesDue = dueDays === null || dueDays <= Number(dueFilter)
-      return matchesTabFilter && matchesStatus && matchesDue
-    })
-  }, [data, activeTab, statusFilter, dueFilter])
-
-  const visibleItems = isDefaultView && !showAll ? filteredItems.slice(0, PRIORITY_COUNT) : filteredItems
-
-  const tabsWithCounts = useMemo(
+  const inbox = useMemo(
     () =>
-      WORK_TABS.map((tab) => ({
-        ...tab,
-        count: (data?.items ?? []).filter((item) => matchesTab(item, tab.id)).length,
-      })),
-    [data],
+      buildWorkInboxModel({
+        workers: workersQuery.data?.items ?? [],
+        tasks: tasksQuery.data?.items ?? [],
+        workflowNameById,
+        query: debouncedQuery,
+        selectedWorkerId,
+        sort,
+      }),
+    [workersQuery.data, tasksQuery.data, workflowNameById, debouncedQuery, selectedWorkerId, sort],
   )
 
-  // 서버 Task API에는 담당자·승인자 개념이 없어(#153 조사 결과) 지표는 TaskStatus·기한 기준으로
-  // 클라이언트에서 집계한다.
-  const metricStrip = useMemo(() => {
-    const items = data?.items ?? []
-    const todayIso = new Date().toISOString().slice(0, 10)
-    return [
-      {
-        id: 'pending-approval',
-        label: '승인 대기',
-        count: items.filter((item) => item.status === 'READY_FOR_REVIEW').length,
-        onClick: () => {
-          setActiveTab('needs-review')
-          setStatusFilter('all')
-        },
-      },
-      {
-        id: 'ai-ready',
-        label: 'AI 준비 완료',
-        count: items.filter((item) => item.status === 'DRAFT').length,
-        onClick: () => {
-          setActiveTab('all')
-          setStatusFilter('DRAFT')
-        },
-      },
-      {
-        id: 'urgent',
-        label: '긴급 업무',
-        count: items.filter((item) => getUrgencyTier(daysUntil(item.due_date)) === 'urgent').length,
-        onClick: () => {
-          setActiveTab('all')
-          setStatusFilter('all')
-          setDueFilter('7')
-        },
-      },
-      {
-        id: 'done-today',
-        label: '오늘 완료',
-        count: items.filter((item) => item.status === 'COMPLETED' && item.updated_at.slice(0, 10) === todayIso)
-          .length,
-        onClick: () => {
-          setActiveTab('all')
-          setStatusFilter('COMPLETED')
-        },
-      },
-    ]
-  }, [data])
+  const selectedGroup = inbox.selectedGroup
+  const selectedGroupId = selectedGroup?.worker.worker_id ?? null
 
-  function handleViewAll() {
-    setShowAll(true)
+  useEffect(() => {
+    if (
+      tasksQuery.status !== 'success' ||
+      !selectedGroupId ||
+      selectedWorkerId === selectedGroupId
+    ) {
+      return
+    }
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.set('workerId', selectedGroupId)
+    setSearchParams(nextParams, { replace: true })
+  }, [searchParams, selectedGroupId, selectedWorkerId, setSearchParams, tasksQuery.status])
+
+  function handleSelectWorker(workerId: string) {
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.set('workerId', workerId)
+    setSearchParams(nextParams)
   }
 
+  function handleRetryAll() {
+    workersQuery.refetch()
+    tasksQuery.refetch()
+    catalogQuery.refetch()
+  }
+
+  const hasPaginationCap =
+    (workersQuery.data?.total_elements ?? 0) > (workersQuery.data?.items.length ?? 0) ||
+    (tasksQuery.data?.total_elements ?? 0) > (tasksQuery.data?.items.length ?? 0)
+  const capNotice = hasPaginationCap
+    ? '일부 데이터만 불러왔습니다. 검색·정렬·진행률은 현재 불러온 범위 기준입니다.'
+    : null
+
   return (
-    <div>
-      <h1 className={styles.headline}>먼저 처리할 5건을 다음 행동 순서로 정리했습니다.</h1>
-      <p className={styles.description}>
-        근로자와 연결되지 않은 내부 사무업무도 같은 업무 구조로 표시됩니다.
-      </p>
-
-      <div className={styles.metricStrip}>
-        {metricStrip.map((metric) => (
-          <button key={metric.id} type="button" className={styles.metricCard} onClick={metric.onClick}>
-            <span className={styles.metricLabel}>{metric.label}</span>
-            <span className={styles.metricValue}>{metric.count}건 ›</span>
-          </button>
-        ))}
-      </div>
-
-      <Tabs tabs={tabsWithCounts} activeId={activeTab} onChange={(id) => setActiveTab(id as TabId)} ariaLabel="업무함 탭" />
+    <div className={styles.page}>
+      <header>
+        <h1 className={styles.headline}>업무함</h1>
+        <p className={styles.description}>근로자별 진행 Case와 지금 처리할 업무를 확인합니다.</p>
+      </header>
 
       <div className={styles.toolbar}>
-        <SearchInput value={query} onChange={setQuery} placeholder="업무명 검색" ariaLabel="업무 검색" />
-        <Dropdown
-          options={STATUS_OPTIONS}
-          value={statusFilter}
-          onChange={(value) => setStatusFilter(value as TaskStatus | 'all')}
-          ariaLabel="상태 필터"
+        <SearchInput
+          value={query}
+          onChange={setQuery}
+          placeholder="근로자·Case·업무 검색"
+          ariaLabel="근로자·Case·업무 검색"
         />
-        <Dropdown options={DUE_OPTIONS} value={dueFilter} onChange={setDueFilter} ariaLabel="마감 필터" />
+        <Dropdown
+          options={SORT_OPTIONS}
+          value={sort}
+          onChange={(value) => setSort(value as WorkInboxSort)}
+          ariaLabel="업무함 정렬"
+          width="176px"
+        />
       </div>
 
-      {status === 'loading' && (
+      {workersQuery.status === 'loading' && (
         <div className={styles.stateWrap}>
           <EmptyState
             kind="loading"
-            title="업무 목록을 불러오는 중입니다"
-            body="잠시만 기다려 주세요."
+            title="근로자와 업무를 불러오는 중입니다"
+            body="업무 우선순위를 정리하고 있습니다."
             note="처리 중 · 중복 실행 차단"
           />
         </div>
       )}
 
-      {status === 'error' && (
+      {workersQuery.status === 'error' && (
         <div className={styles.stateWrap}>
           <EmptyState
             kind="error"
-            title="업무 목록을 불러오지 못했습니다"
-            body={error ? getErrorMessage(error) : '네트워크 상태를 확인한 뒤 다시 시도해 주세요.'}
+            title="근로자 정보를 불러오지 못했습니다"
+            body={
+              workersQuery.error
+                ? getErrorMessage(workersQuery.error)
+                : '네트워크 상태를 확인한 뒤 다시 시도해 주세요.'
+            }
             actionLabel="다시 시도"
-            onAction={refetch}
+            onAction={handleRetryAll}
           />
         </div>
       )}
 
-      {status === 'empty' && (
+      {workersQuery.status === 'empty' && (
+        <div className={styles.stateWrap}>
+          <EmptyState
+            kind="empty"
+            title="등록된 근로자가 없습니다"
+            body="근로자를 등록하고 업무를 연결하면 이곳에서 확인할 수 있습니다."
+          />
+        </div>
+      )}
+
+      {workersQuery.status === 'success' && tasksQuery.status === 'loading' && (
+        <TaskStateWorkspace
+          workers={workersQuery.data?.items ?? []}
+          selectedWorkerId={selectedWorkerId}
+          query={debouncedQuery}
+          kind="loading"
+          title="연결된 업무를 불러오는 중입니다"
+          body="근로자 정보는 불러왔으며 업무 상태를 확인하고 있습니다."
+          onSelect={handleSelectWorker}
+        />
+      )}
+
+      {workersQuery.status === 'success' && tasksQuery.status === 'error' && (
+        <TaskStateWorkspace
+          workers={workersQuery.data?.items ?? []}
+          selectedWorkerId={selectedWorkerId}
+          query={debouncedQuery}
+          kind="error"
+          title="연결된 업무를 불러오지 못했습니다"
+          body={
+            tasksQuery.error
+              ? getErrorMessage(tasksQuery.error)
+              : '근로자 정보는 유지했습니다. 업무 조회를 다시 시도해 주세요.'
+          }
+          onSelect={handleSelectWorker}
+          onRetry={tasksQuery.refetch}
+        />
+      )}
+
+      {workersQuery.status === 'success' && tasksQuery.status === 'empty' && (
         <div className={styles.stateWrap}>
           <EmptyState
             kind="empty"
@@ -220,56 +282,64 @@ export function WorkListPage() {
         </div>
       )}
 
-      {status === 'success' && (
-        <>
-          <div className={styles.columnHeader}>
-            <span>업무</span>
-            <span>다음 행동</span>
+      {workersQuery.status === 'success' &&
+        tasksQuery.status === 'success' &&
+        inbox.allGroups.length === 0 && (
+          <div className={styles.stateWrap}>
+            <EmptyState
+              kind="error"
+              title="업무와 근로자 정보를 연결하지 못했습니다"
+              body="업무에 연결된 근로자 정보를 확인한 뒤 다시 시도해 주세요."
+              actionLabel="다시 시도"
+              onAction={handleRetryAll}
+            />
           </div>
+        )}
 
-          {data && data.total_elements > data.items.length && (
-            <p className={styles.capNotice}>
-              전체 {data.total_elements}개 중 {data.items.length}개만 불러왔습니다. 찾는 업무가 안 보이면 검색어를
-              바꿔보세요.
-            </p>
-          )}
+      {workersQuery.status === 'success' &&
+        tasksQuery.status === 'success' &&
+        inbox.allGroups.length > 0 &&
+        inbox.groups.length === 0 && (
+          <div className={styles.stateWrap}>
+            <EmptyState
+              kind="empty"
+              title="검색 결과가 없습니다"
+              body="다른 근로자명, Case 또는 업무명으로 다시 검색해 보세요."
+            />
+          </div>
+        )}
 
-          {visibleItems.length === 0 ? (
-            <div className={styles.stateWrap}>
-              <EmptyState kind="empty" title="표시할 업무가 없습니다" body="다른 탭이나 필터로 다시 시도해 보세요." />
-            </div>
-          ) : (
-            <div className={styles.list}>
-              {visibleItems.map((item) => {
-                const dueDays = daysUntil(item.due_date)
-                const dueLabel = dueDays === null ? '마감일 없음' : dueDays <= 0 ? '오늘' : `D-${dueDays}`
-                const workflowName = workflowNameById.get(item.workflow_id) ?? item.workflow_id
-                return (
-                  <WorkItemRow
-                    key={item.task_id}
-                    title={item.title}
-                    meta={`${dueLabel} · ${TASK_STATUS_LABEL[item.status]} · ${workflowName}`}
-                    nextAction={TASK_STATUS_NEXT_ACTION[item.status]}
-                    urgency={URGENCY_TIER_ROW_CLASS[getUrgencyTier(dueDays)]}
-                    onClick={() => navigate(`/tasks/${item.task_id}`)}
-                  />
-                )
-              })}
-            </div>
-          )}
-
-          <div className={styles.footer}>
-            <span className={styles.footerText}>
-              {isDefaultView && !showAll
-                ? `${data?.total_elements ?? filteredItems.length}개 중 우선 업무 ${visibleItems.length}개 표시`
-                : `${data?.total_elements ?? filteredItems.length}개 중 ${visibleItems.length}개 표시`}
-            </span>
-            {isDefaultView && !showAll && filteredItems.length > PRIORITY_COUNT && (
-              <button type="button" className={styles.footerLink} onClick={handleViewAll}>
-                전체 업무 보기 →
-              </button>
+      {workersQuery.status === 'success' && tasksQuery.status === 'success' && selectedGroup && (
+        <>
+          <div className={styles.noticeStack} aria-live="polite">
+            {catalogQuery.status === 'error' && (
+              <p className={styles.notice}>
+                업무 분류 이름을 불러오지 못해 업무 유형으로 표시합니다.
+              </p>
+            )}
+            {inbox.orphanTasks.length > 0 && (
+              <p className={styles.noticeWarning}>
+                근로자 정보를 확인할 수 없는 업무 {inbox.orphanTasks.length}건은 목록에서
+                제외했습니다.
+              </p>
             )}
           </div>
+          <div className={styles.workspace}>
+            <WorkInboxTargetList
+              groups={inbox.groups}
+              selectedWorkerId={selectedGroup.worker.worker_id}
+              totalCount={inbox.allGroups.length}
+              capNotice={capNotice}
+              onSelect={handleSelectWorker}
+            />
+            <WorkInboxDetail
+              group={selectedGroup}
+              onOpenTask={(taskId) => navigate(`/tasks/${taskId}`)}
+            />
+          </div>
+          <p className={styles.srOnly} aria-live="polite">
+            {selectedGroup.worker.display_name}의 업무 상세를 표시했습니다.
+          </p>
         </>
       )}
     </div>

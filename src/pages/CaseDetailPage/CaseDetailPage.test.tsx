@@ -97,7 +97,7 @@ function renderPage() {
     <MemoryRouter initialEntries={['/tasks/T-1']}>
       <Routes>
         <Route
-          path="/tasks/:caseId"
+          path="/tasks/:taskId"
           element={
             <>
               <CaseDetailPage />

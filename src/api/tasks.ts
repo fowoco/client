@@ -77,6 +77,7 @@ export interface FetchTasksParams {
   status?: TaskStatus
   taskType?: TaskType
   workerId?: string
+  caseId?: string
   dueFrom?: string
   dueTo?: string
   keyword?: string
@@ -89,6 +90,7 @@ export function fetchTasks(params: FetchTasksParams = {}): Promise<TaskPageRespo
   if (params.status) query.set('status', params.status)
   if (params.taskType) query.set('taskType', params.taskType)
   if (params.workerId) query.set('workerId', params.workerId)
+  if (params.caseId) query.set('caseId', params.caseId)
   if (params.dueFrom) query.set('dueFrom', params.dueFrom)
   if (params.dueTo) query.set('dueTo', params.dueTo)
   if (params.keyword) query.set('keyword', params.keyword)

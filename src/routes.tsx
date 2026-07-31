@@ -52,7 +52,7 @@ export const router = createBrowserRouter([
           { path: '/tasks', element: <WorkListPage /> },
           { path: '/tasks/new', element: <CreateWorkPage /> },
           { path: '/tasks/new/review', element: <ReviewWorkPage /> },
-          { path: '/tasks/:caseId', element: <CaseDetailPage /> },
+          { path: '/tasks/:taskId', element: <CaseDetailPage /> },
           { path: '/agent', element: <AgentLogPage /> },
           { path: '/tickets', element: <TicketListPage /> },
           { path: '/tickets/:ticketId', element: <TicketDetailPage /> },

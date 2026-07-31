@@ -58,6 +58,15 @@ function pageResponse(items: WorkerResponse[]): WorkerPageResponse {
   return { items, page: 0, size: 100, total_elements: items.length }
 }
 
+function mockWorkersAndEmptyTasks(workers: WorkerResponse[], totalElements = workers.length) {
+  vi.mocked(fetch).mockImplementation((input) => {
+    const url = String(input)
+    if (url.includes('/activities')) return Promise.resolve(jsonResponse([]))
+    if (url.includes('/tasks')) return Promise.resolve(jsonResponse({ items: [], page: 0, size: 100, total_elements: 0, total_pages: 0 }))
+    return Promise.resolve(jsonResponse({ items: workers, page: 0, size: 100, total_elements: totalElements }))
+  })
+}
+
 function renderPage(initialPath = '/workers') {
   render(
     <MemoryRouter initialEntries={[initialPath]}>
@@ -80,7 +89,7 @@ afterEach(() => {
 
 describe('WorkerListPage', () => {
   it('renders the top 5 priority workers sorted by deadline urgency', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(pageResponse(WORKERS)))
+    mockWorkersAndEmptyTasks(WORKERS)
     renderPage()
 
     expect(await screen.findByRole('heading', { name: '판반F' })).toBeInTheDocument()
@@ -90,7 +99,7 @@ describe('WorkerListPage', () => {
 
   it('shows every worker after clicking "전체 근로자 보기"', async () => {
     const user = userEvent.setup()
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(pageResponse(WORKERS)))
+    mockWorkersAndEmptyTasks(WORKERS)
     renderPage()
 
     await screen.findByRole('button', { name: '전체 근로자 보기 →' })
@@ -103,7 +112,7 @@ describe('WorkerListPage', () => {
 
   it('filters workers by search query within the loaded page', async () => {
     const user = userEvent.setup()
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(pageResponse(WORKERS)))
+    mockWorkersAndEmptyTasks(WORKERS)
     renderPage()
 
     await screen.findByLabelText('근로자 검색')
@@ -117,7 +126,7 @@ describe('WorkerListPage', () => {
 
   it('shows an empty state when a search has no matches', async () => {
     const user = userEvent.setup()
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(pageResponse(WORKERS)))
+    mockWorkersAndEmptyTasks(WORKERS)
     renderPage()
 
     await screen.findByLabelText('근로자 검색')
@@ -128,7 +137,7 @@ describe('WorkerListPage', () => {
 
   it('switches the detail panel when a different worker is selected', async () => {
     const user = userEvent.setup()
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(pageResponse(WORKERS)))
+    mockWorkersAndEmptyTasks(WORKERS)
     renderPage()
 
     await user.click(await screen.findByRole('button', { name: /쩐티B/ }))
@@ -138,7 +147,7 @@ describe('WorkerListPage', () => {
 
   it('navigates to the worker detail page when "더 보기" is clicked', async () => {
     const user = userEvent.setup()
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(pageResponse(WORKERS)))
+    mockWorkersAndEmptyTasks(WORKERS)
     renderPage()
 
     await user.click(await screen.findByRole('button', { name: '기본정보·서류·안내이력 더 보기 ▾' }))
@@ -160,23 +169,21 @@ describe('WorkerListPage', () => {
   })
 
   it('shows an empty state when there are no workers', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(pageResponse([])))
+    mockWorkersAndEmptyTasks([])
     renderPage()
 
     expect(await screen.findByText('등록된 근로자가 없습니다')).toBeInTheDocument()
   })
 
   it('shows a cap notice when the server has more workers than the fetched page', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(
-      jsonResponse({ items: WORKERS, page: 0, size: 100, total_elements: 150 }),
-    )
+    mockWorkersAndEmptyTasks(WORKERS, 150)
     renderPage()
 
     expect(await screen.findByText(/전체 150명 중 6명만 불러왔습니다/)).toBeInTheDocument()
   })
 
   it('renders the deep-linked worker as selected when visiting /workers/:workerId', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(pageResponse(WORKERS)))
+    mockWorkersAndEmptyTasks(WORKERS)
     renderPage(`/workers/${WORKERS[1].worker_id}`)
 
     expect(await screen.findByRole('heading', { name: '쩐티B' })).toBeInTheDocument()
@@ -184,7 +191,7 @@ describe('WorkerListPage', () => {
 
   it('filters workers when the deadline filter changes', async () => {
     const user = userEvent.setup()
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(pageResponse(WORKERS)))
+    mockWorkersAndEmptyTasks(WORKERS)
     renderPage()
 
     const trigger = await screen.findByRole('button', { name: '기한 필터' })
@@ -200,7 +207,7 @@ describe('WorkerListPage', () => {
 
   it('colors the deadline text by urgency tier', async () => {
     const user = userEvent.setup()
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(pageResponse(WORKERS)))
+    mockWorkersAndEmptyTasks(WORKERS)
     renderPage()
 
     await user.click(await screen.findByRole('button', { name: '전체 근로자 보기 →' }))
@@ -213,5 +220,59 @@ describe('WorkerListPage', () => {
       .getAllByText('정상')
       .find((el) => el.className.includes(styles.workerDeadline))
     expect(comfortableRow).toHaveClass(styles.workerDeadlineComfortable)
+  })
+
+  it('shows AI recommendation cards and decision summary for the selected worker', async () => {
+    vi.mocked(fetch).mockImplementation((input) => {
+      const url = String(input)
+      if (url.includes('/activities')) return Promise.resolve(jsonResponse([]))
+      if (url.includes('/tasks')) {
+        return Promise.resolve(
+          jsonResponse({
+            items: [
+              {
+                task_id: 'T-1',
+                worker_id: 'W-021',
+                case_id: null,
+                task_type: 'STAY_PERIOD_EXTENSION',
+                workflow_id: 'wf-1',
+                workflow_catalog_version: '1',
+                title: '체류연장 업무 초안',
+                source: 'AI_CANDIDATE',
+                status: 'DRAFT',
+                due_date: isoDateOffset(12),
+                content_revision: 1,
+                version: 1,
+                created_at: '2026-01-01T00:00:00Z',
+                updated_at: '2026-01-01T00:00:00Z',
+              },
+            ],
+            page: 0,
+            size: 100,
+            total_elements: 1,
+            total_pages: 1,
+          }),
+        )
+      }
+      return Promise.resolve(jsonResponse(pageResponse(WORKERS)))
+    })
+    renderPage('/workers/W-021')
+
+    expect(await screen.findAllByText('체류연장 업무 초안')).not.toHaveLength(0)
+    expect(screen.getByText('AI 준비 완료 · HR 검토 필요')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '초안 검토' })).toBeInTheDocument()
+    expect(screen.getByText('다음 · 작성 계속')).toBeInTheDocument()
+  })
+
+  it('filters workers by status', async () => {
+    const user = userEvent.setup()
+    mockWorkersAndEmptyTasks(WORKERS)
+    renderPage()
+
+    const trigger = await screen.findByRole('button', { name: '상태 필터' })
+    await user.click(trigger)
+    await user.click(screen.getByRole('option', { name: '상태 · 확인 필요' }))
+
+    expect(screen.getByText('표시할 근로자가 없습니다')).toBeInTheDocument()
   })
 })

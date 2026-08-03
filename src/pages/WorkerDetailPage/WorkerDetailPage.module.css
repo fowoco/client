@@ -66,6 +66,29 @@
   color: var(--text-primary);
 }
 
+.cardHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.cardHeaderRow .cardTitle {
+  margin-bottom: 0;
+}
+
+.registerDocumentButton {
+  height: 32px;
+  padding: 0 14px;
+  background: none;
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--brand-primary);
+  cursor: pointer;
+}
+
 .documentList {
   display: flex;
   flex-direction: column;

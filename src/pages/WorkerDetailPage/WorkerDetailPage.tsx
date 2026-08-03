@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { fetchDocuments } from '../../api/documents'
 import { fetchWorkerById } from '../../api/workers'
@@ -9,6 +9,7 @@ import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import { useApiQuery } from '../../hooks/useApiQuery'
 import { DOCUMENT_TYPE_LABEL, SUBMISSION_STATUS_LABEL, SUBMISSION_STATUS_TONE } from '../../utils/documentLabels'
 import { daysUntil, getUrgencyTier, URGENCY_TONE } from '../../utils/urgency'
+import { RegisterDocumentModal } from './overlays/RegisterDocumentModal'
 import styles from './WorkerDetailPage.module.css'
 
 // 제품이 E-9(비전문취업) 근로자를 대상으로 하는 만큼 비자 유형은 항상 E-9다.
@@ -20,10 +21,13 @@ export function WorkerDetailPage() {
   const fetcher = useCallback(() => fetchWorkerById(workerId ?? ''), [workerId])
   const { status, data: worker, error, refetch } = useApiQuery(fetcher)
 
-  const { data: documentPage } = useApiQuery(
-    useCallback(() => fetchDocuments({ workerId: workerId ?? '', size: 100 }), [workerId]),
-  )
+  const {
+    data: documentPage,
+    refetch: refetchDocuments,
+  } = useApiQuery(useCallback(() => fetchDocuments({ workerId: workerId ?? '', size: 100 }), [workerId]))
   const workerDocuments = documentPage?.items ?? []
+
+  const [registerModalOpen, setRegisterModalOpen] = useState(false)
 
   if (status === 'loading') {
     return (
@@ -89,7 +93,16 @@ export function WorkerDetailPage() {
       </div>
 
       <div className={styles.sectionCard}>
-        <h2 className={styles.cardTitle}>서류</h2>
+        <div className={styles.cardHeaderRow}>
+          <h2 className={styles.cardTitle}>서류</h2>
+          <button
+            type="button"
+            className={styles.registerDocumentButton}
+            onClick={() => setRegisterModalOpen(true)}
+          >
+            ＋ 서류 등록
+          </button>
+        </div>
         {workerDocuments.length === 0 ? (
           <EmptyState kind="empty" title="제출된 서류가 없습니다" body="근로자가 서류를 제출하면 여기에 표시됩니다." />
         ) : (
@@ -118,6 +131,13 @@ export function WorkerDetailPage() {
         {/* TODO(#153): Task API 연동 후 실제 진행 업무로 대체 */}
         <EmptyState kind="empty" title="업무 연동 준비 중입니다" body="Task API 연동 후 표시됩니다." />
       </div>
+
+      <RegisterDocumentModal
+        open={registerModalOpen}
+        workerId={worker.worker_id}
+        onClose={() => setRegisterModalOpen(false)}
+        onRegistered={refetchDocuments}
+      />
     </div>
   )
 }

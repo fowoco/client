@@ -71,7 +71,7 @@ async function parseErrorBody(response: Response, path: string): Promise<ApiErro
 async function rawFetch(path: string, init: RequestInit): Promise<Response> {
   const headers = new Headers(init.headers)
   headers.set('Accept', 'application/json')
-  if (init.body && !headers.has('Content-Type')) {
+  if (init.body && !headers.has('Content-Type') && !(init.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json')
   }
   if (accessToken) {

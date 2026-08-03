@@ -80,3 +80,58 @@ export function upsertDocumentRequestDraft(
     { method: 'PUT', body: JSON.stringify(body) },
   )
 }
+
+export interface WorkerDocumentResponse {
+  worker_document_id: string
+  worker_id: string
+  document_type: DocumentType
+  submission_status: SubmissionStatus
+  expiry_date: string | null
+  destination: string | null
+  note: string | null
+  file_id: string | null
+  created_at: string
+  updated_at: string
+  version: number
+}
+
+export interface WorkerDocumentCreateBody {
+  document_type: DocumentType
+  submission_status: SubmissionStatus
+  expiry_date?: string
+  destination?: string
+  note?: string
+}
+
+// MVP는 메타데이터 중심이라 등록 시점에는 file_id를 받지 않는다 — 파일을 붙이려면
+// 등록 응답의 worker_document_id·version으로 이어서 patchWorkerDocument를 호출한다.
+export function registerWorkerDocument(
+  workerId: string,
+  body: WorkerDocumentCreateBody,
+): Promise<WorkerDocumentResponse> {
+  return apiFetch<WorkerDocumentResponse>(`/workers/${encodeURIComponent(workerId)}/documents`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export interface WorkerDocumentPatchBody {
+  document_type?: DocumentType
+  submission_status?: SubmissionStatus
+  expiry_date?: string
+  destination?: string
+  note?: string
+  file_id?: string
+  expected_version: number
+}
+
+export function patchWorkerDocument(
+  workerId: string,
+  documentId: string,
+  body: WorkerDocumentPatchBody,
+): Promise<WorkerDocumentResponse> {
+  return apiFetch<WorkerDocumentResponse>(
+    `/workers/${encodeURIComponent(workerId)}/documents/${encodeURIComponent(documentId)}`,
+    { method: 'PATCH', body: JSON.stringify(body) },
+  )
+}

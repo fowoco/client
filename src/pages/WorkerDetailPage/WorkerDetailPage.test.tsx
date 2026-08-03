@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { DocumentItemResponse } from '../../api/documents'
+import type { DocumentItemResponse, WorkerDocumentResponse } from '../../api/documents'
 import type { WorkerResponse } from '../../api/workers'
 import { WorkerDetailPage } from './WorkerDetailPage'
 
@@ -59,6 +60,23 @@ function mockWorkerAndDocuments(workerOverrides: Partial<WorkerResponse> = {}, d
     }
     return Promise.resolve(jsonResponse(worker(workerOverrides)))
   })
+}
+
+function registeredDocument(overrides: Partial<WorkerDocumentResponse> = {}): WorkerDocumentResponse {
+  return {
+    worker_document_id: 'D-2',
+    worker_id: 'W-018',
+    document_type: 'PASSPORT_COPY',
+    submission_status: 'SUBMITTED',
+    expiry_date: null,
+    destination: null,
+    note: null,
+    file_id: null,
+    created_at: '2026-08-03T00:00:00Z',
+    updated_at: '2026-08-03T00:00:00Z',
+    version: 0,
+    ...overrides,
+  }
 }
 
 function mockWorkerError(status: number, code: string, message: string) {
@@ -127,5 +145,74 @@ describe('WorkerDetailPage', () => {
     renderPage('does-not-exist')
 
     expect(await screen.findByRole('button', { name: '다시 시도' })).toBeInTheDocument()
+  })
+
+  it('registers a new document without a file and refreshes the list', async () => {
+    const user = userEvent.setup()
+    let documentsGetCount = 0
+    vi.mocked(fetch).mockImplementation((input, init) => {
+      const url = String(input)
+      const method = init?.method ?? 'GET'
+      if (url.includes('/documents') && method === 'GET') {
+        documentsGetCount += 1
+        const items = documentsGetCount === 1 ? [] : [document({ worker_document_id: 'D-2', document_type: 'PASSPORT_COPY', expiry_date: null })]
+        return Promise.resolve(jsonResponse({ items, page: 0, size: 100, total_elements: items.length }))
+      }
+      if (url.includes('/documents') && method === 'POST') {
+        return Promise.resolve(jsonResponse(registeredDocument(), { status: 201 }))
+      }
+      return Promise.resolve(jsonResponse(worker()))
+    })
+    renderPage('W-018')
+    await screen.findByRole('heading', { name: '쩐티B' })
+
+    await user.click(screen.getByRole('button', { name: '＋ 서류 등록' }))
+    expect(screen.getByRole('dialog', { name: '서류 등록' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '등록' }))
+
+    expect(await screen.findByText('여권 사본')).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: '서류 등록' })).not.toBeInTheDocument()
+  })
+
+  it('uploads a file, registers the document, and attaches the file via patch', async () => {
+    const user = userEvent.setup()
+    const calls: { url: string; method: string }[] = []
+    vi.mocked(fetch).mockImplementation((input, init) => {
+      const url = String(input)
+      const method = init?.method ?? 'GET'
+      calls.push({ url, method })
+      if (url.includes('/documents') && method === 'GET') {
+        return Promise.resolve(jsonResponse({ items: [], page: 0, size: 100, total_elements: 0 }))
+      }
+      if (url.includes('/files') && method === 'POST') {
+        return Promise.resolve(
+          jsonResponse(
+            { file_id: 'file-1', name: 'passport.png', mime_type: 'image/png', size: 1024, scan_status: 'NOT_SCANNED' },
+            { status: 201 },
+          ),
+        )
+      }
+      if (url.includes('/documents') && method === 'POST') {
+        return Promise.resolve(jsonResponse(registeredDocument(), { status: 201 }))
+      }
+      if (url.includes('/documents/') && method === 'PATCH') {
+        return Promise.resolve(jsonResponse(registeredDocument({ file_id: 'file-1', version: 1 })))
+      }
+      return Promise.resolve(jsonResponse(worker()))
+    })
+    renderPage('W-018')
+    await screen.findByRole('heading', { name: '쩐티B' })
+
+    await user.click(screen.getByRole('button', { name: '＋ 서류 등록' }))
+    const file = new File(['x'], 'passport.png', { type: 'image/png' })
+    await user.upload(screen.getByLabelText('서류 파일 선택'), file)
+    await user.click(screen.getByRole('button', { name: '등록' }))
+
+    await screen.findByText('제출된 서류가 없습니다')
+
+    expect(calls.some((c) => c.url.includes('/files') && c.method === 'POST')).toBe(true)
+    expect(calls.some((c) => c.url.includes('/workers/W-018/documents') && c.method === 'POST')).toBe(true)
+    expect(calls.some((c) => c.url.includes('/documents/D-2') && c.method === 'PATCH')).toBe(true)
   })
 })

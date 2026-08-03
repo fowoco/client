@@ -117,6 +117,19 @@ describe('ProfilePage', () => {
     expect(toggle).toHaveAttribute('aria-checked', 'true')
   })
 
+  it('shows the mandatory security notification as a disabled, always-on toggle', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    const toggle = screen.getByRole('switch', { name: '보안·권한 변경 알림' })
+    expect(toggle).toHaveAttribute('aria-checked', 'true')
+    expect(toggle).toBeDisabled()
+
+    await user.click(toggle)
+
+    expect(toggle).toHaveAttribute('aria-checked', 'true')
+  })
+
   it('navigates to reset-password when "비밀번호 변경" is clicked', async () => {
     const user = userEvent.setup()
     renderPage()

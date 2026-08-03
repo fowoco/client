@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -429,5 +429,21 @@ describe('CaseDetailPage', () => {
     await user.click(screen.getByRole('button', { name: '파일 없이 완료' }))
 
     expect(screen.getByText('(데모) 내부업무를 완료 처리했습니다.')).toBeInTheDocument()
+  })
+
+  it('reissues the security link and shows the new-link overlay', async () => {
+    const user = userEvent.setup()
+    mockTaskAndActivities()
+    renderPage()
+    await screen.findByText('응웬반A 체류연장 준비')
+
+    await user.click(screen.getByRole('button', { name: '보안 링크 재발급 →' }))
+    const reissueDialog = screen.getByRole('dialog', { name: '보안 링크 재발급' })
+    expect(within(reissueDialog).getByText('응웬반A 체류연장 준비')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '새 링크 생성' }))
+
+    expect(screen.getByRole('dialog', { name: '새 링크가 준비되었습니다' })).toBeInTheDocument()
+    expect(screen.getByText('fowoco.kr/s/7K9P-****-Q2M4')).toBeInTheDocument()
   })
 })

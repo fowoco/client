@@ -36,6 +36,8 @@ import { ApprovalRequestModal } from './overlays/ApprovalRequestModal'
 import { ApprovalSnapshotDiffModal } from './overlays/ApprovalSnapshotDiffModal'
 import { ExternalCompletionModal } from './overlays/ExternalCompletionModal'
 import { InternalCompletionModal } from './overlays/InternalCompletionModal'
+import { LinkReissueModal, type ReissueSubmission } from './overlays/LinkReissueModal'
+import { LinkReissuedModal } from './overlays/LinkReissuedModal'
 import { OtherApproverHandledModal } from './overlays/OtherApproverHandledModal'
 import { RejectionReasonModal } from './overlays/RejectionReasonModal'
 
@@ -43,6 +45,7 @@ type ApprovalOverlay = 'none' | 'request' | 'decision' | 'rejection' | 'other-ha
 type ApprovalState = 'pending' | 'approved' | 'rejected'
 type CompletionOverlay = 'none' | 'external' | 'internal-demo'
 type CompletionState = 'blocked' | 'completed'
+type LinkOverlay = 'none' | 'reissue' | 'reissued'
 
 const APPROVAL_BADGE: Record<ApprovalState, { label: string; tone: StatusTone }> = {
   pending: { label: '승인 대기', tone: 'warning' },
@@ -88,6 +91,8 @@ export function CaseDetailPage() {
   const [completionOverlay, setCompletionOverlay] = useState<CompletionOverlay>('none')
   const [completionState, setCompletionState] = useState<CompletionState>('blocked')
   const [togglingItemId, setTogglingItemId] = useState<string | null>(null)
+  const [linkOverlay, setLinkOverlay] = useState<LinkOverlay>('none')
+  const [lastReissue, setLastReissue] = useState<ReissueSubmission | null>(null)
   const moreMenuRef = useRef<HTMLDivElement>(null)
   const showToast = useToastStore((state) => state.showToast)
 
@@ -231,6 +236,16 @@ export function CaseDetailPage() {
     showToast('초안을 저장했습니다.')
   }
 
+  function handleOpenLinkReissue() {
+    setLinkOverlay('reissue')
+  }
+
+  function handleSubmitLinkReissue(submission: ReissueSubmission) {
+    // TODO(backend): POST /api/v1/tasks/:taskId/worker-link { rotateExisting: true } (feat/7-worker-link, 미병합)
+    setLastReissue(submission)
+    setLinkOverlay('reissued')
+  }
+
   if (taskStatus === 'loading') {
     return (
       <div className={styles.stateWrap}>
@@ -370,6 +385,15 @@ export function CaseDetailPage() {
                       <div>
                         <p className={styles.stepTitle}>{step.title}</p>
                         <p className={styles.stepActor}>{step.actor}</p>
+                        {step.title === '보안 링크 전달' && (
+                          <button
+                            type="button"
+                            className={styles.contextLink}
+                            onClick={handleOpenLinkReissue}
+                          >
+                            보안 링크 재발급 →
+                          </button>
+                        )}
                       </div>
                       <span className={`${styles.stepStatus} ${STEP_STATUS_CLASS[step.status]}`}>
                         {step.statusLabel}
@@ -571,6 +595,17 @@ export function CaseDetailPage() {
         open={completionOverlay === 'internal-demo'}
         onClose={() => setCompletionOverlay('none')}
         onComplete={handleCompleteInternalDemo}
+      />
+      <LinkReissueModal
+        open={linkOverlay === 'reissue'}
+        taskTitle={task.title}
+        onClose={() => setLinkOverlay('none')}
+        onSubmit={handleSubmitLinkReissue}
+      />
+      <LinkReissuedModal
+        open={linkOverlay === 'reissued'}
+        submission={lastReissue}
+        onClose={() => setLinkOverlay('none')}
       />
 
       <Drawer open={contextDrawerOpen} onClose={() => setContextDrawerOpen(false)} title="관련 Context">

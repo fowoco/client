@@ -4,6 +4,8 @@ import { MemoryRouter, Route, Routes, useLocation, useParams } from 'react-route
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { TaskPageResponse, TaskSummaryResponse } from '../../api/tasks'
 import type { WorkerPageResponse, WorkerResponse } from '../../api/workers'
+import { ToastViewport } from '../../components/ui/ToastViewport/ToastViewport'
+import { useToastStore } from '../../store/toastStore'
 import { WorkListPage } from './WorkListPage'
 
 function isoDateOffset(days: number): string {
@@ -203,7 +205,7 @@ function TaskDetailProbe() {
   return <p>업무 상세 {taskId}</p>
 }
 
-function renderPage(initialEntry = '/tasks') {
+function renderPage(initialEntry = '/tasks', { withToasts = false } = {}) {
   render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
@@ -213,6 +215,7 @@ function renderPage(initialEntry = '/tasks') {
             <>
               <WorkListPage />
               <LocationProbe />
+              {withToasts && <ToastViewport />}
             </>
           }
         />
@@ -225,6 +228,7 @@ function renderPage(initialEntry = '/tasks') {
 
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn())
+  useToastStore.setState({ toasts: [] })
 })
 
 afterEach(() => {
@@ -405,5 +409,41 @@ describe('WorkListPage', () => {
     await user.type(await screen.findByLabelText('근로자·Case·업무 검색'), '존재하지 않는 검색어')
 
     expect(await screen.findByText('검색 결과가 없습니다')).toBeInTheDocument()
+  })
+
+  it('switches between a worker\'s cases via "다른 Case 열기"', async () => {
+    mockApi({
+      tasks: taskPageResponse([
+        ...TASKS,
+        task('T-4', 'W-1', {
+          case_id: 'CASE-3',
+          title: '근로자 안내문 초안',
+          status: 'DRAFT',
+          due_date: isoDateOffset(20),
+        }),
+      ]),
+    })
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(await screen.findByRole('option', { name: /응우옌 안/ }))
+
+    expect(screen.getByText('우선 Case 1/2')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 3, name: '체류연장 업무 초안' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '다른 Case 열기 →' }))
+
+    expect(screen.getByText('우선 Case 2/2')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 3, name: '근로자 안내문 초안' })).toBeInTheDocument()
+  })
+
+  it('shows a placeholder toast for "근거 보기"', async () => {
+    mockApi()
+    const user = userEvent.setup()
+    renderPage('/tasks', { withToasts: true })
+
+    await user.click(await screen.findByRole('button', { name: '근거 보기 →' }))
+
+    expect(screen.getByText('판단 근거 보기는 준비 중입니다.')).toBeInTheDocument()
   })
 })

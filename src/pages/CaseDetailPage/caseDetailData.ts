@@ -79,21 +79,6 @@ export const ACTION_DOCK = {
   footnote: '승인 전에는 근로자 전달과 완료 처리가 차단됩니다. Agent는 승인자가 될 수 없습니다.',
 }
 
-export type CaseDocumentStatus = 'missing' | 'pending' | 'done'
-
-export interface CaseDocument {
-  id: string
-  name: string
-  status: CaseDocumentStatus
-  updatedAt: string
-}
-
-export const CASE_DOCUMENTS: CaseDocument[] = [
-  { id: 'doc-1', name: '여권 사본', status: 'done', updatedAt: '07.18' },
-  { id: 'doc-2', name: '체류연장 신청서', status: 'pending', updatedAt: '07.19' },
-  { id: 'doc-3', name: '출입국 접수증', status: 'missing', updatedAt: '미제출' },
-]
-
 export interface CaseCommunicationEntry {
   id: string
   time: string

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { fetchTaskActivities } from '../../api/audit'
+import { fetchDocumentReadiness, fetchDocuments, upsertDocumentRequestDraft } from '../../api/documents'
 import { ApiError, getErrorMessage } from '../../api/errors'
 import { cancelTask, fetchTaskById, updateChecklistItem } from '../../api/tasks'
 import { AgentSourceLabel } from '../../components/ui/AgentSourceLabel/AgentSourceLabel'
@@ -15,6 +16,7 @@ import { useApiQuery } from '../../hooks/useApiQuery'
 import { useToastStore } from '../../store/toastStore'
 import { ACTOR_TYPE_TO_AGENT_SOURCE, AUDIT_ACTION_LABEL } from '../../utils/auditLabels'
 import { formatEventTime } from '../../utils/datetime'
+import { DOCUMENT_TYPE_LABEL, SUBMISSION_STATUS_LABEL, SUBMISSION_STATUS_TONE } from '../../utils/documentLabels'
 import { TASK_SOURCE_LABEL, TASK_STATUS_LABEL, TASK_STATUS_TONE } from '../../utils/taskStatus'
 import { daysUntil } from '../../utils/urgency'
 import styles from './CaseDetailPage.module.css'
@@ -22,13 +24,11 @@ import {
   ACTION_DOCK,
   AGENT_SUMMARY,
   CASE_COMMUNICATION,
-  CASE_DOCUMENTS,
   CASE_STEPS,
   CASE_TABS,
   COMPLETION_GATES,
   CONTEXT_ACCESS,
   CONTEXT_DRAWER,
-  type CaseDocumentStatus,
   type StepStatus,
 } from './caseDetailData'
 import { ApprovalDecisionModal } from './overlays/ApprovalDecisionModal'
@@ -54,18 +54,6 @@ const APPROVAL_BADGE: Record<ApprovalState, { label: string; tone: StatusTone }>
 }
 
 const CASE_TAB_ITEMS = CASE_TABS.map((label) => ({ id: label, label }))
-
-const DOCUMENT_STATUS_TONE: Record<CaseDocumentStatus, StatusTone> = {
-  missing: 'critical',
-  pending: 'warning',
-  done: 'success',
-}
-
-const DOCUMENT_STATUS_LABEL: Record<CaseDocumentStatus, string> = {
-  missing: '미제출',
-  pending: '확인 대기',
-  done: '확인 완료',
-}
 
 const STEP_CIRCLE_CLASS: Record<StepStatus, string> = {
   done: styles.stepCircleDone,
@@ -102,6 +90,25 @@ export function CaseDetailPage() {
   const activitiesFetcher = useCallback(() => fetchTaskActivities(taskId ?? ''), [taskId])
   const { data: activities } = useApiQuery(activitiesFetcher)
   const activityRows = activities ?? []
+
+  const readinessFetcher = useCallback(() => fetchDocumentReadiness(taskId ?? ''), [taskId])
+  const { data: readiness } = useApiQuery(readinessFetcher)
+
+  const workerId = task?.worker_id
+  const documentsFetcher = useCallback(() => {
+    if (!workerId) return Promise.resolve({ items: [], page: 0, size: 0, total_elements: 0 })
+    return fetchDocuments({ workerId, size: 100 })
+  }, [workerId])
+  const {
+    status: documentsStatus,
+    data: documentsPage,
+    error: documentsError,
+    refetch: refetchDocuments,
+  } = useApiQuery(
+    documentsFetcher,
+    useCallback((page: { items: unknown[] }) => page.items.length === 0, []),
+  )
+  const documents = documentsPage?.items ?? []
 
   useEffect(() => {
     if (!moreMenuOpen) return
@@ -234,6 +241,20 @@ export function CaseDetailPage() {
   function handleSaveDraft() {
     // TODO(backend): PATCH /api/work-items/:id/draft -> 현재 입력 상태 저장
     showToast('초안을 저장했습니다.')
+  }
+
+  async function handleSaveDocumentRequestDraft() {
+    if (!task || !readiness) return
+    try {
+      await upsertDocumentRequestDraft(task.task_id, {
+        language: 'ko',
+        document_types: [...readiness.missing, ...readiness.expired],
+        expected_version: 0,
+      })
+      showToast('서류 요청 초안을 저장했습니다.')
+    } catch {
+      showToast('서류 요청 초안을 저장하지 못했습니다.')
+    }
   }
 
   function handleOpenLinkReissue() {
@@ -423,6 +444,17 @@ export function CaseDetailPage() {
                 tone={COMPLETION_GATES.rows[1].tone}
               />
               <DetailRow
+                label="서류 준비"
+                value={
+                  !readiness
+                    ? '확인 중'
+                    : readiness.completion_blocked
+                      ? `누락 ${readiness.missing.length}건 · 만료 ${readiness.expired.length}건`
+                      : '모두 확인됨'
+                }
+                tone={!readiness ? 'default' : readiness.completion_blocked ? 'critical' : 'success'}
+              />
+              <DetailRow
                 label="완료 증빙"
                 value={completionState === 'completed' ? '접수번호 등록됨' : '접수번호 필요'}
                 tone={completionState === 'completed' ? 'success' : 'critical'}
@@ -492,18 +524,39 @@ export function CaseDetailPage() {
 
       {activeTab === '문서' && (
         <div id="case-panel-2" role="tabpanel" aria-labelledby="case-tab-2" className={styles.tabPanel}>
-          {/* TODO(backend): GET /api/work-items/:id/documents -> CASE_DOCUMENTS 대체 */}
-          <div className={styles.documentList}>
-            {CASE_DOCUMENTS.map((document) => (
-              <div key={document.id} className={styles.documentRow}>
-                <span className={styles.documentName}>{document.name}</span>
-                <StatusLabel tone={DOCUMENT_STATUS_TONE[document.status]}>
-                  {DOCUMENT_STATUS_LABEL[document.status]}
-                </StatusLabel>
-                <span className={styles.documentUpdatedAt}>{document.updatedAt}</span>
-              </div>
-            ))}
-          </div>
+          {documentsStatus === 'loading' && (
+            <EmptyState kind="loading" title="서류 목록을 불러오는 중입니다" body="잠시만 기다려 주세요." />
+          )}
+          {documentsStatus === 'error' && (
+            <EmptyState
+              kind="error"
+              title="서류 목록을 불러오지 못했습니다"
+              body={documentsError ? getErrorMessage(documentsError) : '네트워크 상태를 확인한 뒤 다시 시도해 주세요.'}
+              actionLabel="다시 시도"
+              onAction={refetchDocuments}
+            />
+          )}
+          {documentsStatus === 'empty' && (
+            <EmptyState kind="empty" title="등록된 서류가 없습니다" body="근로자가 서류를 제출하면 여기에 표시됩니다." />
+          )}
+          {documentsStatus === 'success' && (
+            <div className={styles.documentList}>
+              {documents.map((document) => (
+                <div key={document.worker_document_id} className={styles.documentRow}>
+                  <span className={styles.documentName}>{DOCUMENT_TYPE_LABEL[document.document_type]}</span>
+                  <StatusLabel tone={SUBMISSION_STATUS_TONE[document.submission_status]}>
+                    {SUBMISSION_STATUS_LABEL[document.submission_status]}
+                  </StatusLabel>
+                  <span className={styles.documentUpdatedAt}>{document.expiry_date ?? '없음'}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {readiness && (readiness.missing.length > 0 || readiness.expired.length > 0) && (
+            <button type="button" className={styles.contextLink} onClick={handleSaveDocumentRequestDraft}>
+              요청 초안 저장 →
+            </button>
+          )}
         </div>
       )}
 

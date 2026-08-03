@@ -3,11 +3,12 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AuditEventResponse } from '../../api/audit'
+import type { DocumentItemResponse, DocumentPageResponse, DocumentReadinessResponse } from '../../api/documents'
 import type { TaskDetailResponse } from '../../api/tasks'
 import { ToastViewport } from '../../components/ui/ToastViewport/ToastViewport'
 import { useToastStore } from '../../store/toastStore'
 import { CaseDetailPage } from './CaseDetailPage'
-import { CASE_COMMUNICATION, CASE_DOCUMENTS, CASE_STEPS, CASE_TABS, CONTEXT_DRAWER } from './caseDetailData'
+import { CASE_COMMUNICATION, CASE_STEPS, CASE_TABS, CONTEXT_DRAWER } from './caseDetailData'
 
 function jsonResponse(body: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' }, ...init })
@@ -67,10 +68,28 @@ function activity(overrides: Partial<AuditEventResponse> = {}): AuditEventRespon
   }
 }
 
-function mockTaskAndActivities(taskOverrides: Partial<TaskDetailResponse> = {}, activities: AuditEventResponse[] = []) {
+function readinessResponse(overrides: Partial<DocumentReadinessResponse> = {}): DocumentReadinessResponse {
+  return { required: [], available: [], missing: [], expired: [], completion_blocked: false, ...overrides }
+}
+
+function documentsResponse(items: DocumentItemResponse[] = []): DocumentPageResponse {
+  return { items, page: 0, size: 100, total_elements: items.length }
+}
+
+function mockTaskAndActivities(
+  taskOverrides: Partial<TaskDetailResponse> = {},
+  activities: AuditEventResponse[] = [],
+  readinessOverrides: Partial<DocumentReadinessResponse> = {},
+  documents: DocumentItemResponse[] = [],
+) {
   vi.mocked(fetch).mockImplementation((input) => {
     const url = String(input)
     if (url.includes('/activities')) return Promise.resolve(jsonResponse(activities))
+    if (url.includes('/document-readiness')) return Promise.resolve(jsonResponse(readinessResponse(readinessOverrides)))
+    if (url.includes('/document-request-draft')) {
+      return Promise.resolve(jsonResponse({ draft_id: 'draft-1', version: 1, review_status: 'PENDING' }))
+    }
+    if (url.includes('/documents?')) return Promise.resolve(jsonResponse(documentsResponse(documents)))
     return Promise.resolve(jsonResponse(task(taskOverrides)))
   })
 }
@@ -79,6 +98,8 @@ function mockTaskError(status: number, code: string, message: string) {
   vi.mocked(fetch).mockImplementation((input) => {
     const url = String(input)
     if (url.includes('/activities')) return Promise.resolve(jsonResponse([]))
+    if (url.includes('/document-readiness')) return Promise.resolve(jsonResponse(readinessResponse()))
+    if (url.includes('/documents?')) return Promise.resolve(jsonResponse(documentsResponse()))
     return Promise.resolve(errorResponse(status, code, message))
   })
 }
@@ -174,15 +195,45 @@ describe('CaseDetailPage', () => {
     })
   })
 
-  it('switches to the document tab and shows document content', async () => {
+  it('switches to the document tab and shows real document content', async () => {
     const user = userEvent.setup()
-    mockTaskAndActivities()
+    mockTaskAndActivities({}, [], {}, [
+      {
+        worker_document_id: 'doc-1',
+        worker_id: 'W-1',
+        display_name: null,
+        document_type: 'PASSPORT_COPY',
+        submission_status: 'VERIFIED',
+        expiry_date: '2027-01-01',
+        file_id: 'file-1',
+      },
+    ])
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
     await user.click(screen.getByRole('tab', { name: CASE_TABS[2] }))
 
-    expect(screen.getByText(CASE_DOCUMENTS[0].name)).toBeInTheDocument()
+    expect(await screen.findByText('여권 사본')).toBeInTheDocument()
+    expect(screen.getByText('확인 완료')).toBeInTheDocument()
+  })
+
+  it('shows the document-readiness gate and saves a document request draft when documents are missing', async () => {
+    const user = userEvent.setup()
+    mockTaskAndActivities(
+      {},
+      [],
+      { missing: ['ARC'], expired: [], completion_blocked: true },
+      [],
+    )
+    renderPage()
+    await screen.findByText('응웬반A 체류연장 준비')
+
+    expect(await screen.findByText('누락 1건 · 만료 0건')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: CASE_TABS[2] }))
+    await user.click(await screen.findByRole('button', { name: '요청 초안 저장 →' }))
+
+    expect(await screen.findByText('서류 요청 초안을 저장했습니다.')).toBeInTheDocument()
   })
 
   it('switches to the communication tab and shows message content', async () => {

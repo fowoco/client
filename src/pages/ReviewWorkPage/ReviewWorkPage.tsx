@@ -6,7 +6,15 @@ import { Dropdown } from '../../components/ui/Dropdown/Dropdown'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import { useToastStore } from '../../store/toastStore'
 import styles from './ReviewWorkPage.module.css'
-import { MISSING_INFO, PREPARED_DRAFT, UNDERSTOOD_REQUEST } from './reviewWorkData'
+import {
+  CURRENT_STEP_INDEX,
+  DRAFT_REASONS,
+  MISSING_INFO,
+  PREPARED_CHECKLIST,
+  PREPARED_DRAFT,
+  REVIEW_STEPS,
+  UNDERSTOOD_REQUEST,
+} from './reviewWorkData'
 
 const INSTITUTION_OPTIONS = [
   { value: '', label: MISSING_INFO.placeholder },
@@ -35,6 +43,7 @@ export function ReviewWorkPage() {
 
   function handleViewEvidence() {
     // TODO(backend): GET /api/work-items/draft/evidence -> 분석 근거 표시
+    showToast('분석 근거 보기는 준비 중입니다.')
   }
 
   function handleEditDraft() {
@@ -65,6 +74,21 @@ export function ReviewWorkPage() {
         </div>
         <StatusLabel tone="warning">확인 필요 · 1</StatusLabel>
       </div>
+
+      <ol className={styles.stepIndicator}>
+        {REVIEW_STEPS.map((step, index) => (
+          <li
+            key={step.no}
+            className={`${styles.stepItem} ${index <= CURRENT_STEP_INDEX ? styles.stepItemDone : ''} ${
+              index === CURRENT_STEP_INDEX ? styles.stepItemCurrent : ''
+            }`}
+          >
+            <span aria-hidden="true">{index < CURRENT_STEP_INDEX ? '✓' : step.no}</span>
+            {step.label}
+            {index < REVIEW_STEPS.length - 1 && <span className={styles.stepArrow} aria-hidden="true">→</span>}
+          </li>
+        ))}
+      </ol>
 
       <div className={styles.workspace}>
         <div className={styles.left}>
@@ -133,9 +157,27 @@ export function ReviewWorkPage() {
             ))}
           </p>
 
+          <div className={styles.checklist}>
+            <p className={styles.checklistTitle}>Agent가 확인하고 준비한 내용</p>
+            {PREPARED_CHECKLIST.map((item) => (
+              <p key={item} className={styles.checklistItem}>
+                <span aria-hidden="true">✓</span> {item}
+              </p>
+            ))}
+          </div>
+
           {PREPARED_DRAFT.rows.map((row) => (
             <DetailRow key={row.label} label={row.label} value={row.value} />
           ))}
+
+          <div className={styles.reasonBox}>
+            <p className={styles.reasonTitle}>이 초안을 준비한 이유</p>
+            {DRAFT_REASONS.map((reason) => (
+              <p key={reason} className={styles.reasonItem}>
+                · {reason}
+              </p>
+            ))}
+          </div>
 
           <button type="button" className={styles.draftLink} onClick={handleEditDraft}>
             초안 내용 수정

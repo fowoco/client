@@ -1,5 +1,35 @@
 // TODO(backend): GET /api/work-items/draft?requestId= -> UNDERSTOOD_REQUEST, PREPARED_DRAFT, MISSING_INFO 대체
 
+export interface ReviewStep {
+  no: string
+  label: string
+}
+
+// Figma REVIEW-001(node 1291:492) 5단계 진행 인디케이터. "초안 검토" 단계에 고정.
+export const REVIEW_STEPS: ReviewStep[] = [
+  { no: '1', label: '요청 입력' },
+  { no: '2', label: 'AI 분석' },
+  { no: '3', label: '초안 검토' },
+  { no: '4', label: '업무 생성' },
+  { no: '5', label: '승인' },
+]
+
+export const CURRENT_STEP_INDEX = 2
+
+export const PREPARED_CHECKLIST = [
+  '근로자 3명 정보 확인 완료',
+  '필요서류 5개 대조',
+  '신규 근로자 입사 준비 절차 확인',
+  '업무 초안 작성 완료',
+]
+
+export const DRAFT_REASONS = [
+  '입사일 기준 이번 주 마감',
+  '입사·보험 절차 v2.1 적용',
+  '베트남 국적 대상 확인',
+  '이전 제출 기록 확인',
+]
+
 export const UNDERSTOOD_REQUEST = {
   purpose: '입사 준비',
   domain: '입사·보험',

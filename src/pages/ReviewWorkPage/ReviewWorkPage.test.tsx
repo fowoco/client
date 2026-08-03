@@ -5,7 +5,14 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { ToastViewport } from '../../components/ui/ToastViewport/ToastViewport'
 import { useToastStore } from '../../store/toastStore'
 import { ReviewWorkPage } from './ReviewWorkPage'
-import { MISSING_INFO, PREPARED_DRAFT, UNDERSTOOD_REQUEST } from './reviewWorkData'
+import {
+  DRAFT_REASONS,
+  MISSING_INFO,
+  PREPARED_CHECKLIST,
+  PREPARED_DRAFT,
+  REVIEW_STEPS,
+  UNDERSTOOD_REQUEST,
+} from './reviewWorkData'
 
 beforeEach(() => {
   useToastStore.setState({ toasts: [] })
@@ -47,5 +54,32 @@ describe('ReviewWorkPage', () => {
     await user.click(screen.getByRole('button', { name: '초안 저장' }))
 
     expect(screen.getByText('초안을 저장했습니다.')).toBeInTheDocument()
+  })
+
+  it('renders every step of the progress indicator', () => {
+    renderPage()
+    expect(screen.getAllByRole('listitem')).toHaveLength(REVIEW_STEPS.length)
+    for (const step of REVIEW_STEPS) {
+      expect(screen.getAllByText(step.label).length).toBeGreaterThan(0)
+    }
+  })
+
+  it('renders the AI checklist and draft reasoning', () => {
+    renderPage()
+    for (const item of PREPARED_CHECKLIST) {
+      expect(screen.getByText(item)).toBeInTheDocument()
+    }
+    for (const reason of DRAFT_REASONS) {
+      expect(screen.getByText(`· ${reason}`)).toBeInTheDocument()
+    }
+  })
+
+  it('shows a toast when viewing evidence', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByRole('button', { name: '근거 보기 ▾' }))
+
+    expect(screen.getByText('분석 근거 보기는 준비 중입니다.')).toBeInTheDocument()
   })
 })

@@ -149,14 +149,42 @@ describe('DocumentListPage', () => {
     expect(screen.queryByText('박서준')).not.toBeInTheDocument()
   })
 
-  it('navigates to the document detail when "확인하기 →" is clicked', async () => {
+  it('navigates to the document detail when the row action is clicked', async () => {
     const user = userEvent.setup()
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(pageResponse(DOCUMENTS)))
     renderPage()
 
-    await user.click((await screen.findAllByRole('button', { name: '확인하기 →' }))[0])
+    await user.click(await screen.findByRole('button', { name: '확인하기 →' }))
 
     expect(await screen.findByText('서류 상세')).toBeInTheDocument()
+  })
+
+  it('shows a status-specific action label per row', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(pageResponse(DOCUMENTS)))
+    renderPage()
+
+    await screen.findByText('수라즈C')
+    expect(screen.getByRole('button', { name: '요청 초안' })).toBeInTheDocument() // MISSING
+    expect(screen.getByRole('button', { name: '확인하기 →' })).toBeInTheDocument() // SUBMITTED
+    expect(screen.getAllByRole('button', { name: '보기' })).toHaveLength(2) // VERIFIED
+  })
+
+  it('shows "교체 요청" for an expired document even if verified', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      jsonResponse(
+        pageResponse([
+          document({
+            worker_document_id: 'D-5',
+            display_name: '만료테스트',
+            submission_status: 'VERIFIED',
+            expiry_date: isoDateOffset(-5),
+          }),
+        ]),
+      ),
+    )
+    renderPage()
+
+    expect(await screen.findByRole('button', { name: '교체 요청' })).toBeInTheDocument()
   })
 
   it('shows an empty state when a search has no matches', async () => {

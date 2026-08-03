@@ -10,7 +10,12 @@ import { Tabs } from '../../components/ui/Tabs/Tabs'
 import { useApiQuery } from '../../hooks/useApiQuery'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { daysUntil } from '../../utils/urgency'
-import { DOCUMENT_TYPE_LABEL, SUBMISSION_STATUS_LABEL, SUBMISSION_STATUS_TONE } from '../../utils/documentLabels'
+import {
+  DOCUMENT_TYPE_LABEL,
+  getDocumentReviewAction,
+  SUBMISSION_STATUS_LABEL,
+  SUBMISSION_STATUS_TONE,
+} from '../../utils/documentLabels'
 import styles from './DocumentListPage.module.css'
 import { FileUploadModal } from './FileUploadModal'
 
@@ -193,7 +198,7 @@ export function DocumentListPage() {
                     className={styles.reviewButton}
                     onClick={() => handleReviewDocument(document.worker_document_id)}
                   >
-                    확인하기 →
+                    {getDocumentReviewAction(document)}
                   </button>
                 </ListRow>
               ))}

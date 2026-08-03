@@ -8,6 +8,26 @@
   margin-bottom: var(--fowoco-spacing-20);
 }
 
+.textInput {
+  width: 100%;
+  box-sizing: border-box;
+  height: 48px;
+  margin-bottom: var(--fowoco-spacing-20);
+  padding: 0 15px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--text-primary);
+}
+
+.textInput:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
 .fieldLabel {
   margin: 0 0 8px;
   font-size: 12px;

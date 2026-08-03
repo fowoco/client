@@ -42,3 +42,41 @@ export function fetchDocuments(params: FetchDocumentsParams = {}): Promise<Docum
   query.set('size', String(params.size ?? 100))
   return apiFetch<DocumentPageResponse>(`/documents?${query.toString()}`)
 }
+
+export interface DocumentReadinessResponse {
+  required: DocumentType[]
+  available: DocumentType[]
+  missing: DocumentType[]
+  expired: DocumentType[]
+  completion_blocked: boolean
+}
+
+// Task 생성 시점 체크리스트 snapshot 기준이라 Workflow Catalog를 실시간으로 다시 읽지 않는다 (#176).
+export function fetchDocumentReadiness(taskId: string): Promise<DocumentReadinessResponse> {
+  return apiFetch<DocumentReadinessResponse>(`/tasks/${encodeURIComponent(taskId)}/document-readiness`)
+}
+
+export interface DocumentRequestUpsertBody {
+  language: string
+  document_types: DocumentType[]
+  message?: string
+  expected_version: number
+}
+
+export interface DocumentRequestDraftResponse {
+  draft_id: string
+  version: number
+  review_status: string
+}
+
+// 초안 저장만 하고 실제 발송·Worker Link 생성은 하지 않는다 (#176 스코프 아님).
+// 최초 생성 시 expected_version은 관례상 0을 보낸다.
+export function upsertDocumentRequestDraft(
+  taskId: string,
+  body: DocumentRequestUpsertBody,
+): Promise<DocumentRequestDraftResponse> {
+  return apiFetch<DocumentRequestDraftResponse>(
+    `/tasks/${encodeURIComponent(taskId)}/document-request-draft`,
+    { method: 'PUT', body: JSON.stringify(body) },
+  )
+}

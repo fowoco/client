@@ -93,7 +93,7 @@ export function ProfilePage() {
 
   function handleToggleNotification(id: string) {
     setNotificationPrefs((prev) =>
-      prev.map((pref) => (pref.id === id ? { ...pref, enabled: !pref.enabled } : pref)),
+      prev.map((pref) => (pref.id === id && !pref.required ? { ...pref, enabled: !pref.enabled } : pref)),
     )
   }
 
@@ -234,7 +234,10 @@ export function ProfilePage() {
             {notificationPrefs.map((pref) => (
               <div key={pref.id} className={styles.notificationRow}>
                 <div className={styles.notificationCopy}>
-                  <p className={styles.notificationLabel}>{pref.label}</p>
+                  <p className={styles.notificationLabel}>
+                    {pref.label}
+                    {pref.required && <span className={styles.fieldBadgeMuted}>필수</span>}
+                  </p>
                   <p className={styles.notificationDescription}>{pref.description}</p>
                 </div>
                 <button
@@ -242,6 +245,7 @@ export function ProfilePage() {
                   role="switch"
                   aria-checked={pref.enabled}
                   aria-label={pref.label}
+                  disabled={pref.required}
                   className={`${styles.switch} ${pref.enabled ? styles.switchOn : ''}`}
                   onClick={() => handleToggleNotification(pref.id)}
                 >

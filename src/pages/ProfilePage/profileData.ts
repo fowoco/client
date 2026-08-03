@@ -46,9 +46,18 @@ export interface ProfileNotificationPref {
   label: string
   description: string
   enabled: boolean
+  /** 강제 필수 알림 — 토글 비활성화, 항상 켜짐. Figma Profile Security Boundary(#212) 기준. */
+  required?: boolean
 }
 
 export const INITIAL_NOTIFICATION_PREFS: ProfileNotificationPref[] = [
+  {
+    id: 'security-permission',
+    label: '보안·권한 변경 알림',
+    description: '비밀번호·세션·권한 변경 시 필수 안내',
+    enabled: true,
+    required: true,
+  },
   { id: 'approval-request', label: '승인 요청 도착', description: '내 승인이 필요한 업무', enabled: true },
   { id: 'document-submitted', label: '문서 제출 완료', description: '담당 근로자의 제출 완료', enabled: true },
   { id: 'document-needs-fix', label: '문서 보완 필요', description: '검토 후 보완이 필요한 문서', enabled: true },

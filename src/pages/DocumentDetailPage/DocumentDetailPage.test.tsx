@@ -84,17 +84,14 @@ describe('DocumentDetailPage', () => {
     expect(await screen.findByText('서류를 찾을 수 없습니다')).toBeInTheDocument()
   })
 
-  it('approves and rejects the document locally, toggling status', async () => {
-    const user = userEvent.setup()
+  it('does not fabricate approval or rejection without a versioned API', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(pageResponse(DOCUMENTS)))
     renderPage('D-1')
     await screen.findByRole('heading', { name: '외국인등록증' })
 
-    await user.click(screen.getByRole('button', { name: '확인 완료 처리' }))
-    expect(screen.getByText('확인 완료')).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: '반려' }))
-    expect(screen.getByText('미제출')).toBeInTheDocument()
+    expect(screen.getByText('서류 없음')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '반려' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '상세 확인' })).toBeDisabled()
   })
 
   it('shows a loading state', () => {

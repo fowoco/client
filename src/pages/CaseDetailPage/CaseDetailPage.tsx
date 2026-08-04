@@ -25,9 +25,9 @@ import { useApiQuery } from '../../hooks/useApiQuery'
 import { useToastStore } from '../../store/toastStore'
 import { ACTOR_TYPE_TO_AGENT_SOURCE, AUDIT_ACTION_LABEL } from '../../utils/auditLabels'
 import { formatEventTime } from '../../utils/datetime'
-import { DOCUMENT_TYPE_LABEL, SUBMISSION_STATUS_LABEL, SUBMISSION_STATUS_TONE } from '../../utils/documentLabels'
 import { TASK_SOURCE_LABEL, TASK_STATUS_LABEL, TASK_STATUS_TONE } from '../../utils/taskStatus'
-import { daysUntil } from '../../utils/urgency'
+import { getDocumentViewModel } from '../../view-models/documentViewModel'
+import { getOperationalDateViewModel } from '../../view-models/dateViewModel'
 import styles from './CaseDetailPage.module.css'
 import {
   AGENT_SUMMARY,
@@ -298,8 +298,7 @@ export function CaseDetailPage() {
     )
   }
 
-  const dueDays = daysUntil(task.due_date)
-  const dueLabel = dueDays === null ? '마감일 없음' : dueDays <= 0 ? '오늘 마감' : `D-${dueDays}`
+  const taskDue = getOperationalDateViewModel('TASK_DUE', task.due_date)
   const approvalBadge = getApprovalBadge(task.status)
   const requiredChecklist = task.checklist_items.filter((item) => item.required)
   const completedRequiredChecklist = requiredChecklist.filter((item) => item.completed).length
@@ -365,7 +364,7 @@ export function CaseDetailPage() {
         <StatusLabel tone="info">{TASK_SOURCE_LABEL[task.source]}</StatusLabel>
       </div>
       <p className={styles.meta}>
-        {dueLabel} · {task.workflow_id}
+        {taskDue.display} · {task.workflow_id}
       </p>
 
       <Tabs
@@ -414,7 +413,7 @@ export function CaseDetailPage() {
               </p>
               <div className={styles.currentStateRows}>
                 <DetailRow label="업무 출처" value={TASK_SOURCE_LABEL[task.source]} />
-                <DetailRow label="업무 마감일" value={task.due_date ? `${task.due_date} · ${dueLabel}` : '미지정'} />
+                <DetailRow label={taskDue.label} value={taskDue.display} />
                 <DetailRow
                   label="필수 체크리스트"
                   value={`${completedRequiredChecklist} / ${requiredChecklist.length}`}
@@ -533,15 +532,16 @@ export function CaseDetailPage() {
           )}
           {documentsStatus === 'success' && (
             <div className={styles.documentList}>
-              {documents.map((document) => (
-                <div key={document.worker_document_id} className={styles.documentRow}>
-                  <span className={styles.documentName}>{DOCUMENT_TYPE_LABEL[document.document_type]}</span>
-                  <StatusLabel tone={SUBMISSION_STATUS_TONE[document.submission_status]}>
-                    {SUBMISSION_STATUS_LABEL[document.submission_status]}
-                  </StatusLabel>
-                  <span className={styles.documentUpdatedAt}>{document.expiry_date ?? '없음'}</span>
-                </div>
-              ))}
+              {documents.map((document) => {
+                const view = getDocumentViewModel(document)
+                return (
+                  <div key={view.id} className={styles.documentRow}>
+                    <span className={styles.documentName}>{view.typeLabel}</span>
+                    <StatusLabel tone={view.statusTone}>{view.statusLabel}</StatusLabel>
+                    <span className={styles.documentUpdatedAt}>{view.expiry.display}</span>
+                  </div>
+                )
+              })}
             </div>
           )}
           {readiness && (readiness.missing.length > 0 || readiness.expired.length > 0) && (

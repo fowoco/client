@@ -10,23 +10,17 @@ import { Tabs } from '../../components/ui/Tabs/Tabs'
 import { useApiQuery } from '../../hooks/useApiQuery'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { daysUntil } from '../../utils/urgency'
-import {
-  DOCUMENT_TYPE_LABEL,
-  getDocumentReviewAction,
-  SUBMISSION_STATUS_LABEL,
-  SUBMISSION_STATUS_TONE,
-} from '../../utils/documentLabels'
+import { DOCUMENT_TYPE_LABEL } from '../../utils/documentLabels'
+import { getDocumentViewModel } from '../../view-models/documentViewModel'
 import styles from './DocumentListPage.module.css'
 import { FileUploadModal } from './FileUploadModal'
 
-type TabId = 'all' | 'needs-review' | 'expiring-soon' | 'missing' | 'requested' | 'recently-uploaded'
+type TabId = 'all' | 'needs-review' | 'expiring-soon' | 'missing' | 'completed'
 
 const EXPIRING_SOON_WITHIN_DAYS = 30
 
-// fowoco/server의 SubmissionStatus는 MISSING/SUBMITTED/VERIFIED 3종뿐이라(#196 조사 결과)
-// Figma DOC-001의 6개 탭과 1:1로 대응하지 않는다. "만료 예정"은 expiry_date 기준으로
-// 클라이언트에서 계산하고, "요청 중"·"최근 업로드"는 재요청·업로드 시각 필드가 서버에 없어
-// 각각 MISSING·SUBMITTED로 근사한다.
+// 요청 전송 여부와 최근 업로드 시각은 현재 Document API에 없다. MISSING을 "요청 중"으로
+// 추측하지 않고 서버가 보장하는 제출 상태와 expiry_date만 사용한다.
 function matchesTab(document: DocumentItemResponse, tab: TabId): boolean {
   if (tab === 'all') return true
   if (tab === 'needs-review') return document.submission_status === 'SUBMITTED'
@@ -35,8 +29,7 @@ function matchesTab(document: DocumentItemResponse, tab: TabId): boolean {
     return days !== null && days >= 0 && days <= EXPIRING_SOON_WITHIN_DAYS
   }
   if (tab === 'missing') return document.submission_status === 'MISSING'
-  if (tab === 'requested') return document.submission_status === 'MISSING'
-  return document.submission_status === 'SUBMITTED'
+  return document.submission_status === 'VERIFIED'
 }
 
 const DOCUMENT_TABS: { id: TabId; label: string }[] = [
@@ -44,8 +37,7 @@ const DOCUMENT_TABS: { id: TabId; label: string }[] = [
   { id: 'needs-review', label: '검토 필요' },
   { id: 'expiring-soon', label: '만료 예정' },
   { id: 'missing', label: '누락 문서' },
-  { id: 'requested', label: '요청 중' },
-  { id: 'recently-uploaded', label: '최근 업로드' },
+  { id: 'completed', label: '완료' },
 ]
 
 export function DocumentListPage() {
@@ -104,7 +96,7 @@ export function DocumentListPage() {
     <div>
       <h1 className={styles.headline}>근로자별 서류 제출 현황</h1>
       <p className={styles.description}>
-        미제출·확인 대기 서류를 우선 보여주며, 확인이 끝나면 상태가 자동으로 갱신됩니다.
+        서류 없음·승인 대기·완료 상태와 문서 만료일을 서버 응답 기준으로 확인합니다.
       </p>
 
       <div className={styles.metricStrip}>
@@ -183,25 +175,26 @@ export function DocumentListPage() {
             </div>
           ) : (
             <div className={styles.list}>
-              {visibleDocuments.map((document) => (
-                <ListRow key={document.worker_document_id} columns="1fr 120px 120px 88px">
-                  <div className={styles.rowMain}>
-                    <p className={styles.workerName}>{document.display_name ?? '알 수 없음'}</p>
-                    <p className={styles.docType}>{DOCUMENT_TYPE_LABEL[document.document_type]}</p>
-                  </div>
-                  <StatusLabel tone={SUBMISSION_STATUS_TONE[document.submission_status]}>
-                    {SUBMISSION_STATUS_LABEL[document.submission_status]}
-                  </StatusLabel>
-                  <span className={styles.submittedAt}>{document.expiry_date ?? '없음'}</span>
-                  <button
-                    type="button"
-                    className={styles.reviewButton}
-                    onClick={() => handleReviewDocument(document.worker_document_id)}
-                  >
-                    {getDocumentReviewAction(document)}
-                  </button>
-                </ListRow>
-              ))}
+              {visibleDocuments.map((document) => {
+                const view = getDocumentViewModel(document)
+                return (
+                  <ListRow key={view.id} columns="1fr 120px 170px 100px">
+                    <div className={styles.rowMain}>
+                      <p className={styles.workerName}>{view.workerName}</p>
+                      <p className={styles.docType}>{view.typeLabel}</p>
+                    </div>
+                    <StatusLabel tone={view.statusTone}>{view.statusLabel}</StatusLabel>
+                    <span className={styles.submittedAt}>{view.expiry.display}</span>
+                    <button
+                      type="button"
+                      className={styles.reviewButton}
+                      onClick={() => handleReviewDocument(view.id)}
+                    >
+                      {view.actionLabel}
+                    </button>
+                  </ListRow>
+                )
+              })}
             </div>
           )}
 

@@ -220,7 +220,7 @@ describe('WorkerListPage', () => {
       .find((el) => el.className.includes(styles.workerDeadline))
     expect(urgentRow).toHaveClass(styles.workerDeadlineUrgent)
     const comfortableRow = screen
-      .getAllByText('정상')
+      .getAllByText('체류 만료일 미등록')
       .find((el) => el.className.includes(styles.workerDeadline))
     expect(comfortableRow).toHaveClass(styles.workerDeadlineComfortable)
   })

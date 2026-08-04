@@ -7,8 +7,8 @@ import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import { useApiQuery } from '../../hooks/useApiQuery'
-import { DOCUMENT_TYPE_LABEL, SUBMISSION_STATUS_LABEL, SUBMISSION_STATUS_TONE } from '../../utils/documentLabels'
-import { daysUntil, getUrgencyTier, URGENCY_TONE } from '../../utils/urgency'
+import { getDocumentViewModel } from '../../view-models/documentViewModel'
+import { getOperationalDateViewModel } from '../../view-models/dateViewModel'
 import { RegisterDocumentModal } from './overlays/RegisterDocumentModal'
 import styles from './WorkerDetailPage.module.css'
 
@@ -56,9 +56,9 @@ export function WorkerDetailPage() {
     )
   }
 
-  const deadlineDays = daysUntil(worker.stay_expiry_date)
-  const deadlineLabel = deadlineDays === null ? '정상' : `D-${deadlineDays} 체류만료`
-  const deadlineTier = getUrgencyTier(deadlineDays)
+  const stayExpiry = getOperationalDateViewModel('STAY_EXPIRY', worker.stay_expiry_date)
+  const contractStart = getOperationalDateViewModel('CONTRACT_START', worker.contract_start_date)
+  const contractEnd = getOperationalDateViewModel('CONTRACT_END', worker.contract_end_date)
 
   return (
     <div>
@@ -70,8 +70,8 @@ export function WorkerDetailPage() {
 
       <div className={styles.headerRow}>
         <h1 className={styles.title}>{worker.display_name}</h1>
-        {deadlineTier !== 'comfortable' && (
-          <StatusLabel tone={URGENCY_TONE[deadlineTier]}>{deadlineLabel}</StatusLabel>
+        {!stayExpiry.missing && stayExpiry.tone !== 'neutral' && (
+          <StatusLabel tone={stayExpiry.tone}>{stayExpiry.relative} 체류만료</StatusLabel>
         )}
       </div>
       <p className={styles.meta}>
@@ -86,10 +86,12 @@ export function WorkerDetailPage() {
         <DetailRow label="사번" value="준비 중" />
         <DetailRow label="연락처" value="준비 중" />
         <DetailRow
-          label="체류 상태"
-          value={deadlineLabel}
-          tone={deadlineTier === 'urgent' ? 'critical' : deadlineTier === 'medium' ? 'warning' : 'default'}
+          label={stayExpiry.label}
+          value={stayExpiry.display}
+          tone={stayExpiry.tone === 'critical' ? 'critical' : stayExpiry.tone === 'warning' ? 'warning' : 'default'}
         />
+        <DetailRow label={contractStart.label} value={contractStart.display} />
+        <DetailRow label={contractEnd.label} value={contractEnd.display} />
       </div>
 
       <div className={styles.sectionCard}>
@@ -107,15 +109,16 @@ export function WorkerDetailPage() {
           <EmptyState kind="empty" title="제출된 서류가 없습니다" body="근로자가 서류를 제출하면 여기에 표시됩니다." />
         ) : (
           <div className={styles.documentList}>
-            {workerDocuments.map((document) => (
-              <div key={document.worker_document_id} className={styles.documentRow}>
-                <span className={styles.documentName}>{DOCUMENT_TYPE_LABEL[document.document_type]}</span>
-                <StatusLabel tone={SUBMISSION_STATUS_TONE[document.submission_status]}>
-                  {SUBMISSION_STATUS_LABEL[document.submission_status]}
-                </StatusLabel>
-                <span className={styles.documentUpdatedAt}>{document.expiry_date ?? '없음'}</span>
-              </div>
-            ))}
+            {workerDocuments.map((document) => {
+              const view = getDocumentViewModel(document)
+              return (
+                <div key={view.id} className={styles.documentRow}>
+                  <span className={styles.documentName}>{view.typeLabel}</span>
+                  <StatusLabel tone={view.statusTone}>{view.statusLabel}</StatusLabel>
+                  <span className={styles.documentUpdatedAt}>{view.expiry.display}</span>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>

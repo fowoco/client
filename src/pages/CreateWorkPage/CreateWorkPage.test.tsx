@@ -38,6 +38,21 @@ const CATALOG = {
     },
   ],
 }
+const AI_RUN = {
+  ai_run_id: 'A-1',
+  request_id: 'R-1',
+  instruction: '체류연장 준비, EXPIRY_RENEWAL',
+  status: 'SUCCEEDED',
+  analysis_outcome: 'NEEDS_INFO',
+  detected_intent: 'EXPIRY_RENEWAL',
+  error_code: null,
+  attempt_count: 2,
+  version: 2,
+  questions: [{ slot_key: 'due_at', label: '신청 목표일을 입력해 주세요.', input_type: 'DATE', required: true, answer: null }],
+  candidates: [],
+  created_at: '2026-08-04T00:00:00Z',
+  updated_at: '2026-08-04T00:00:01Z',
+}
 
 beforeEach(() => {
   useToastStore.setState({ toasts: [] })
@@ -46,6 +61,7 @@ beforeEach(() => {
     const url = String(input)
     if (url.includes('/workflow-catalogs')) return Promise.resolve(jsonResponse(CATALOG))
     if (url.includes('/workers')) return Promise.resolve(jsonResponse(WORKER_PAGE))
+    if (url.includes('/ai-runs')) return Promise.resolve(jsonResponse(AI_RUN, { status: 202 }))
     return Promise.resolve(jsonResponse({ task_id: 'T-new' }, { status: 201 }))
   })
 })
@@ -68,6 +84,7 @@ function renderPage() {
           }
         />
         <Route path="/tasks/:taskId" element={<p>업무 상세</p>} />
+        <Route path="/tasks/new/review" element={<p>Agent 추가 질문</p>} />
       </Routes>
     </MemoryRouter>,
   )
@@ -92,6 +109,22 @@ describe('CreateWorkPage', () => {
     await user.click(screen.getByRole('button', { name: '체류연장 준비' }))
 
     expect(screen.getByLabelText('업무 요청 내용')).toHaveValue('체류연장 준비')
+  })
+
+  it('sends the natural-language request with an intent hint and opens the review page', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByRole('button', { name: '체류연장 준비' }))
+    await user.click(screen.getByRole('button', { name: '요청 분석하기 →' }))
+
+    expect(await screen.findByText('Agent 추가 질문')).toBeInTheDocument()
+    const analyzeCall = vi.mocked(fetch).mock.calls.find(([url]) => String(url).endsWith('/ai-runs'))
+    expect(analyzeCall).toBeDefined()
+    expect(JSON.parse((analyzeCall![1] as RequestInit).body as string)).toEqual({
+      instruction: '체류연장 준비, EXPIRY_RENEWAL',
+    })
+    expect(new Headers((analyzeCall![1] as RequestInit).headers).get('Idempotency-Key')).toBeTruthy()
   })
 
   it('switches the active input mode', async () => {

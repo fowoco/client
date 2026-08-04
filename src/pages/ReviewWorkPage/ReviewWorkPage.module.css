@@ -26,15 +26,6 @@
   padding: 0;
 }
 
-.draftSave {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  font-size: 13px;
-  cursor: pointer;
-  padding: 0;
-}
-
 .headerRow {
   display: flex;
   align-items: flex-start;
@@ -56,37 +47,46 @@
   color: var(--text-secondary);
 }
 
-.stepIndicator {
+.analysisList {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin: 20px 0 0;
+  flex-direction: column;
+  gap: 12px;
+  margin: 32px 0 0;
   padding: 0;
   list-style: none;
+  max-width: 480px;
 }
 
-.stepItem {
+.analysisRow {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 12px;
+  padding: var(--fowoco-spacing-16);
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
   font-size: 13px;
   font-weight: 500;
   color: var(--text-secondary);
 }
 
-.stepItemDone {
-  color: var(--text-primary);
-}
-
-.stepItemCurrent {
+.analysisIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface-subtle);
+  font-size: 12px;
   font-weight: 700;
-  color: var(--brand-primary);
+  color: var(--text-secondary);
 }
 
-.stepArrow {
-  margin-left: 6px;
-  color: var(--border-default);
+.analysisIconDone {
+  background: var(--fowoco-green-50);
+  color: var(--fowoco-green-600);
 }
 
 .checklist {
@@ -175,16 +175,9 @@
   gap: 16px;
 }
 
-.fieldGridTwo {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-  margin-top: 16px;
-}
-
 @media (max-width: 560px) {
   .fieldGrid,
-  .fieldGridTwo {
+  .verificationGrid {
     grid-template-columns: 1fr;
   }
 }
@@ -246,11 +239,53 @@
   color: var(--status-warning);
 }
 
+.verificationGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.verificationInput {
+  width: 100%;
+  box-sizing: border-box;
+  height: 40px;
+  padding: 0 12px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text-primary);
+}
+
+.verificationInput:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
 .draftPanel {
   padding: var(--fowoco-spacing-20) var(--fowoco-spacing-24);
   background: var(--surface-default);
   border: 1px solid var(--border-default);
   border-radius: var(--fowoco-radius-8);
+}
+
+.draftPanelHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.requiredStepBadge {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  background: var(--fowoco-teal-50);
+  border-radius: var(--fowoco-radius-999);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--brand-primary);
+  white-space: nowrap;
 }
 
 .draftTitle {
@@ -273,6 +308,29 @@
   font-weight: 700;
   line-height: 30px;
   color: var(--text-primary);
+}
+
+.targetDropdownRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fowoco-spacing-16);
+  margin-bottom: var(--fowoco-spacing-16);
+}
+
+.dueBadgeRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.dueBadge {
+  padding: 6px 12px;
+  background: var(--surface-subtle);
+  border-radius: var(--fowoco-radius-999);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
 }
 
 .draftLink {

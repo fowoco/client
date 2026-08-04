@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import {
   approveTask,
   buildTaskApprovalSnapshot,
@@ -10,7 +10,11 @@ import {
   type EvidenceType,
 } from '../../api/approvals'
 import { fetchTaskActivities } from '../../api/audit'
-import { fetchDocumentReadiness, fetchDocuments, upsertDocumentRequestDraft } from '../../api/documents'
+import {
+  fetchDocumentReadiness,
+  fetchDocuments,
+  upsertDocumentRequestDraft,
+} from '../../api/documents'
 import { ApiError, getErrorMessage } from '../../api/errors'
 import { cancelTask, fetchTaskById, updateChecklistItem } from '../../api/tasks'
 import { issueWorkerLink, resolveWorkerPortalUrl } from '../../api/workerLinks'
@@ -30,13 +34,7 @@ import { TASK_SOURCE_LABEL, TASK_STATUS_LABEL, TASK_STATUS_TONE } from '../../ut
 import { getDocumentViewModel } from '../../view-models/documentViewModel'
 import { getOperationalDateViewModel } from '../../view-models/dateViewModel'
 import styles from './CaseDetailPage.module.css'
-import {
-  AGENT_SUMMARY,
-  CASE_COMMUNICATION,
-  CASE_TABS,
-  CONTEXT_ACCESS,
-  CONTEXT_DRAWER,
-} from './caseDetailData'
+import { CASE_COMMUNICATION, CASE_TABS, CONTEXT_DRAWER } from './caseDetailData'
 import { ApprovalDecisionModal } from './overlays/ApprovalDecisionModal'
 import { ApprovalRequestModal } from './overlays/ApprovalRequestModal'
 import { ExternalCompletionModal } from './overlays/ExternalCompletionModal'
@@ -84,7 +82,12 @@ export function CaseDetailPage() {
   const showToast = useToastStore((state) => state.showToast)
 
   const taskFetcher = useCallback(() => fetchTaskById(taskId ?? ''), [taskId])
-  const { status: taskStatus, data: task, error: taskError, refetch: refetchTask } = useApiQuery(taskFetcher)
+  const {
+    status: taskStatus,
+    data: task,
+    error: taskError,
+    refetch: refetchTask,
+  } = useApiQuery(taskFetcher)
 
   const activitiesFetcher = useCallback(() => fetchTaskActivities(taskId ?? ''), [taskId])
   const { data: activities } = useApiQuery(activitiesFetcher)
@@ -210,7 +213,11 @@ export function CaseDetailPage() {
     setMoreMenuOpen((open) => !open)
   }
 
-  async function handleToggleChecklistItem(itemId: string, completed: boolean, itemVersion: number) {
+  async function handleToggleChecklistItem(
+    itemId: string,
+    completed: boolean,
+    itemVersion: number,
+  ) {
     if (!task) return
     setTogglingItemId(itemId)
     try {
@@ -221,7 +228,9 @@ export function CaseDetailPage() {
       })
       await refetchTask()
     } catch (error) {
-      showToast(error instanceof ApiError ? getErrorMessage(error) : '체크리스트를 수정하지 못했습니다.')
+      showToast(
+        error instanceof ApiError ? getErrorMessage(error) : '체크리스트를 수정하지 못했습니다.',
+      )
     } finally {
       setTogglingItemId(null)
     }
@@ -284,7 +293,9 @@ export function CaseDetailPage() {
       setLinkOverlay('reissued')
       showToast('보안 링크를 발급했습니다. 아직 자동 전송되지는 않았습니다.')
     } catch (error) {
-      showToast(error instanceof ApiError ? getErrorMessage(error) : '보안 링크를 발급하지 못했습니다.')
+      showToast(
+        error instanceof ApiError ? getErrorMessage(error) : '보안 링크를 발급하지 못했습니다.',
+      )
     } finally {
       setActionPending(false)
     }
@@ -309,7 +320,9 @@ export function CaseDetailPage() {
         <EmptyState
           kind="error"
           title="업무 정보를 불러오지 못했습니다"
-          body={taskError ? getErrorMessage(taskError) : '네트워크 상태를 확인한 뒤 다시 시도해 주세요.'}
+          body={
+            taskError ? getErrorMessage(taskError) : '네트워크 상태를 확인한 뒤 다시 시도해 주세요.'
+          }
           actionLabel="다시 시도"
           onAction={refetchTask}
         />
@@ -324,7 +337,10 @@ export function CaseDetailPage() {
   const checklistReady = completedRequiredChecklist === requiredChecklist.length
   const informationReady = task.missing_required_slots.length === 0
   const documentsReady = readiness ? !readiness.completion_blocked : false
-  const approvalReady = task.status === 'APPROVED' || task.status === 'WAITING_WORKER' || task.status === 'WAITING_EXTERNAL'
+  const approvalReady =
+    task.status === 'APPROVED' ||
+    task.status === 'WAITING_WORKER' ||
+    task.status === 'WAITING_EXTERNAL'
   const canRequestApproval =
     (task.status === 'DRAFT' || task.status === 'NEEDS_INFO') &&
     checklistReady &&
@@ -337,13 +353,46 @@ export function CaseDetailPage() {
     !informationReady && '필수 정보',
     !documentsReady && '서류 준비',
   ].filter(Boolean) as string[]
+  const firstIncompleteChecklistIndex = task.checklist_items.findIndex((item) => !item.completed)
+  const agentHeadline =
+    checklistReady && informationReady && documentsReady
+      ? `${task.title} 검토 준비가 완료되었습니다.`
+      : `${task.title}에 필요한 항목을 확인했습니다.`
+  const agentBody = completionBlockers.length
+    ? `${completionBlockers.join(' · ')} 확인이 필요합니다.`
+    : (task.description ?? '필수 항목과 서류가 모두 준비되었습니다.')
+
+  function handleAgentAction() {
+    if (!task) return
+    if (task.status === 'READY_FOR_REVIEW') {
+      handleOpenReview()
+      return
+    }
+    if (!documentsReady) {
+      setActiveTab('문서')
+      return
+    }
+    setActiveTab('체크리스트')
+  }
 
   return (
     <div>
-      <div className={styles.topBar}>
-        <Link to="/tasks" className={styles.back}>
-          ← 업무함
-        </Link>
+      <div className={styles.headerRow}>
+        <div className={styles.titleGroup}>
+          <h1 className={styles.title}>{task.title}</h1>
+          <p className={styles.meta}>
+            {taskDue.display} · {TASK_SOURCE_LABEL[task.source]} · {TASK_STATUS_LABEL[task.status]}
+          </p>
+        </div>
+        <div className={styles.headerStatusGroup}>
+          <StatusLabel tone={TASK_STATUS_TONE[task.status]}>
+            {TASK_STATUS_LABEL[task.status]}
+          </StatusLabel>
+          {approvalBadge && (
+            <StatusLabel tone={approvalBadge.tone}>{approvalBadge.label}</StatusLabel>
+          )}
+          <StatusLabel tone="info">{TASK_SOURCE_LABEL[task.source]}</StatusLabel>
+        </div>
         <div className={styles.moreWrap} ref={moreMenuRef}>
           <button
             type="button"
@@ -357,7 +406,12 @@ export function CaseDetailPage() {
           {moreMenuOpen && (
             <ul className={styles.moreMenu} role="menu" aria-label="업무 더보기 메뉴">
               <li role="presentation">
-                <button type="button" role="menuitem" className={styles.moreMenuItem} onClick={handleCancelCase}>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={styles.moreMenuItem}
+                  onClick={handleCancelCase}
+                >
                   취소
                 </button>
               </li>
@@ -376,16 +430,6 @@ export function CaseDetailPage() {
         </div>
       </div>
 
-      <div className={styles.headerRow}>
-        <h1 className={styles.title}>{task.title}</h1>
-        <StatusLabel tone={TASK_STATUS_TONE[task.status]}>{TASK_STATUS_LABEL[task.status]}</StatusLabel>
-        {approvalBadge && <StatusLabel tone={approvalBadge.tone}>{approvalBadge.label}</StatusLabel>}
-        <StatusLabel tone="info">{TASK_SOURCE_LABEL[task.source]}</StatusLabel>
-      </div>
-      <p className={styles.meta}>
-        {taskDue.display} · {task.workflow_id}
-      </p>
-
       <Tabs
         tabs={CASE_TAB_ITEMS}
         activeId={activeTab}
@@ -398,20 +442,29 @@ export function CaseDetailPage() {
         <div id="case-panel-0" role="tabpanel" aria-labelledby="case-tab-0">
           <div className={styles.summaryRow}>
             <AgentSummary
-              headline={AGENT_SUMMARY.headline}
-              body={AGENT_SUMMARY.body}
-              actionLabel={AGENT_SUMMARY.actionLabel}
+              headline={agentHeadline}
+              body={agentBody}
+              actionLabel={
+                task.status === 'READY_FOR_REVIEW'
+                  ? '검토하기'
+                  : !documentsReady
+                    ? '문서 확인'
+                    : '항목 확인'
+              }
+              onAction={handleAgentAction}
             />
 
             <div className={styles.contextCard}>
-              <p className={styles.contextLabel}>{CONTEXT_ACCESS.label}</p>
+              <p className={styles.contextLabel}>Agent가 참고한 정보</p>
               <p className={styles.contextValues}>
-                {CONTEXT_ACCESS.rows.map((row) => (
-                  <span key={row.label}>
-                    {row.label} {row.value}
-                    <br />
-                  </span>
-                ))}
+                출처 · {TASK_SOURCE_LABEL[task.source]}
+                <br />
+                필수 항목 · {completedRequiredChecklist}/{requiredChecklist.length}
+                <br />
+                필수 정보 ·{' '}
+                {informationReady ? '확인' : `${task.missing_required_slots.length}개 부족`}
+                <br />
+                필요 서류 · {documentsReady ? '확인' : '보완 필요'}
               </p>
               <button type="button" className={styles.contextLink} onClick={handleExpandContext}>
                 펼쳐 보기 →
@@ -422,51 +475,85 @@ export function CaseDetailPage() {
           <div className={styles.panelRow}>
             <div className={styles.workflowCard}>
               <div className={styles.workflowHeader}>
-                <h2 className={styles.cardTitle}>현재 업무 상태</h2>
-                <StatusLabel tone={TASK_STATUS_TONE[task.status]}>
-                  {TASK_STATUS_LABEL[task.status]}
-                </StatusLabel>
+                <h2 className={styles.cardTitle}>업무 진행</h2>
+                <p className={styles.workflowNote}>현재 · {TASK_STATUS_LABEL[task.status]}</p>
               </div>
-              <p className={styles.gatesDescription}>
-                서버에 저장된 현재 Task와 체크리스트만 표시합니다. 고정된 예시 단계는 사용하지 않습니다.
-              </p>
-              <div className={styles.currentStateRows}>
-                <DetailRow label="업무 출처" value={TASK_SOURCE_LABEL[task.source]} />
-                <DetailRow label={taskDue.label} value={taskDue.display} />
-                <DetailRow
-                  label="필수 체크리스트"
-                  value={`${completedRequiredChecklist} / ${requiredChecklist.length}`}
-                  tone={checklistReady ? 'success' : 'warning'}
-                />
-                <DetailRow
-                  label="필수 정보"
-                  value={informationReady ? '모두 입력됨' : `${task.missing_required_slots.length}개 보완 필요`}
-                  tone={informationReady ? 'success' : 'critical'}
-                />
-              </div>
+              {task.checklist_items.length === 0 ? (
+                <p className={styles.progressEmpty}>이 업무에 등록된 진행 항목이 없습니다.</p>
+              ) : (
+                <div className={styles.stepList}>
+                  {task.checklist_items.map((item, index) => {
+                    const isCurrent = !item.completed && index === firstIncompleteChecklistIndex
+                    return (
+                      <div
+                        key={item.checklist_item_id}
+                        className={`${styles.step} ${isCurrent ? styles.stepCurrent : ''}`}
+                      >
+                        <div className={styles.stepMarkerCol}>
+                          <span
+                            className={`${styles.stepCircle} ${item.completed ? styles.stepCircleDone : isCurrent ? styles.stepCirclePending : styles.stepCircleWaiting}`}
+                          >
+                            {item.completed ? '✓' : index + 1}
+                          </span>
+                          {index < task.checklist_items.length - 1 && (
+                            <span
+                              className={`${styles.connector} ${item.completed ? styles.connectorDone : ''}`}
+                            />
+                          )}
+                        </div>
+                        <div className={styles.stepBody}>
+                          <div>
+                            <p className={styles.stepTitle}>{item.label}</p>
+                            <p className={styles.stepActor}>
+                              {item.required ? '필수 항목' : '선택 항목'}
+                            </p>
+                          </div>
+                          <span
+                            className={`${styles.stepStatus} ${item.completed ? styles.stepStatusDone : isCurrent ? styles.stepStatusPending : styles.stepStatusWaiting}`}
+                          >
+                            {item.completed ? '완료' : isCurrent ? '현재 · 확인 필요' : '대기'}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
               {approvalReady && (
-                <button type="button" className={styles.contextLink} onClick={handleOpenLinkReissue}>
+                <button
+                  type="button"
+                  className={styles.contextLink}
+                  onClick={handleOpenLinkReissue}
+                >
                   근로자 보안 링크 발급·재발급 →
                 </button>
               )}
             </div>
 
-            <div className={styles.gatesCard}>
-              <h2 className={styles.cardTitle}>완료 조건</h2>
-              <p className={styles.gatesDescription}>현재 서버 상태와 필수 조건을 기준으로 확인합니다.</p>
+            <div
+              className={`${styles.gatesCard} ${!canComplete && task.status !== 'COMPLETED' ? styles.gatesCardBlocked : ''}`}
+            >
+              <h2 className={styles.cardTitle}>완료까지 필요한 조건</h2>
+              <p className={styles.gatesDescription}>현재 진행을 막는 조건을 먼저 확인하세요.</p>
 
               <DetailRow
-                label="승인"
-                value={approvalReady ? '완료' : task.status === 'READY_FOR_REVIEW' ? '검토 대기' : '승인 전'}
+                label="요청문 승인"
+                value={
+                  approvalReady
+                    ? '완료'
+                    : task.status === 'READY_FOR_REVIEW'
+                      ? '검토 대기'
+                      : '승인 전'
+                }
                 tone={approvalReady ? 'success' : 'warning'}
               />
               <DetailRow
-                label="필수 체크리스트"
+                label="필수 항목"
                 value={`${completedRequiredChecklist} / ${requiredChecklist.length}`}
                 tone={checklistReady ? 'success' : 'warning'}
               />
               <DetailRow
-                label="서류 준비"
+                label="필요한 서류"
                 value={
                   !readiness
                     ? '확인 중'
@@ -474,18 +561,34 @@ export function CaseDetailPage() {
                       ? `누락 ${readiness.missing.length}건 · 만료 ${readiness.expired.length}건`
                       : '모두 확인됨'
                 }
-                tone={!readiness ? 'default' : readiness.completion_blocked ? 'critical' : 'success'}
+                tone={
+                  !readiness ? 'default' : readiness.completion_blocked ? 'critical' : 'success'
+                }
+              />
+              <DetailRow
+                label="필수 정보"
+                value={
+                  informationReady
+                    ? '모두 확인됨'
+                    : `${task.missing_required_slots.length}개 보완 필요`
+                }
+                tone={informationReady ? 'success' : 'critical'}
               />
 
               {canComplete ? (
-                <button type="button" className={styles.contextLink} onClick={handleOpenExternalCompletion}>
+                <button
+                  type="button"
+                  className={styles.contextLink}
+                  onClick={handleOpenExternalCompletion}
+                >
                   완료 처리 시작 →
                 </button>
               ) : task.status === 'COMPLETED' ? (
                 <p className={styles.gateComplete}>완료 처리되었습니다.</p>
               ) : (
                 <p className={styles.gateBlocked}>
-                  완료 처리 불가 · {completionBlockers.join(' · ') || '현재 상태 확인 필요'}
+                  완료 처리 불가 · {completionBlockers.join(' · ') || '현재 상태 확인 필요'} 확인이
+                  필요합니다.
                 </p>
               )}
             </div>
@@ -494,9 +597,18 @@ export function CaseDetailPage() {
       )}
 
       {activeTab === '체크리스트' && (
-        <div id="case-panel-1" role="tabpanel" aria-labelledby="case-tab-1" className={styles.tabPanel}>
+        <div
+          id="case-panel-1"
+          role="tabpanel"
+          aria-labelledby="case-tab-1"
+          className={styles.tabPanel}
+        >
           {task.checklist_items.length === 0 ? (
-            <EmptyState kind="empty" title="체크리스트가 없습니다" body="이 workflow에는 등록된 체크리스트가 없습니다." />
+            <EmptyState
+              kind="empty"
+              title="체크리스트가 없습니다"
+              body="이 workflow에는 등록된 체크리스트가 없습니다."
+            />
           ) : (
             <div className={styles.checklist}>
               {task.checklist_items.map((item) => (
@@ -533,21 +645,38 @@ export function CaseDetailPage() {
       )}
 
       {activeTab === '문서' && (
-        <div id="case-panel-2" role="tabpanel" aria-labelledby="case-tab-2" className={styles.tabPanel}>
+        <div
+          id="case-panel-2"
+          role="tabpanel"
+          aria-labelledby="case-tab-2"
+          className={styles.tabPanel}
+        >
           {documentsStatus === 'loading' && (
-            <EmptyState kind="loading" title="서류 목록을 불러오는 중입니다" body="잠시만 기다려 주세요." />
+            <EmptyState
+              kind="loading"
+              title="서류 목록을 불러오는 중입니다"
+              body="잠시만 기다려 주세요."
+            />
           )}
           {documentsStatus === 'error' && (
             <EmptyState
               kind="error"
               title="서류 목록을 불러오지 못했습니다"
-              body={documentsError ? getErrorMessage(documentsError) : '네트워크 상태를 확인한 뒤 다시 시도해 주세요.'}
+              body={
+                documentsError
+                  ? getErrorMessage(documentsError)
+                  : '네트워크 상태를 확인한 뒤 다시 시도해 주세요.'
+              }
               actionLabel="다시 시도"
               onAction={refetchDocuments}
             />
           )}
           {documentsStatus === 'empty' && (
-            <EmptyState kind="empty" title="등록된 서류가 없습니다" body="근로자가 서류를 제출하면 여기에 표시됩니다." />
+            <EmptyState
+              kind="empty"
+              title="등록된 서류가 없습니다"
+              body="근로자가 서류를 제출하면 여기에 표시됩니다."
+            />
           )}
           {documentsStatus === 'success' && (
             <div className={styles.documentList}>
@@ -564,7 +693,11 @@ export function CaseDetailPage() {
             </div>
           )}
           {readiness && (readiness.missing.length > 0 || readiness.expired.length > 0) && (
-            <button type="button" className={styles.contextLink} onClick={handleSaveDocumentRequestDraft}>
+            <button
+              type="button"
+              className={styles.contextLink}
+              onClick={handleSaveDocumentRequestDraft}
+            >
               요청 초안 저장 →
             </button>
           )}
@@ -572,7 +705,12 @@ export function CaseDetailPage() {
       )}
 
       {activeTab === '소통' && (
-        <div id="case-panel-3" role="tabpanel" aria-labelledby="case-tab-3" className={styles.tabPanel}>
+        <div
+          id="case-panel-3"
+          role="tabpanel"
+          aria-labelledby="case-tab-3"
+          className={styles.tabPanel}
+        >
           {/* TODO(backend): GET /api/work-items/:id/communication -> CASE_COMMUNICATION 대체 */}
           <div className={styles.commList}>
             {CASE_COMMUNICATION.map((entry) => (
@@ -587,9 +725,18 @@ export function CaseDetailPage() {
       )}
 
       {activeTab === '활동이력' && (
-        <div id="case-panel-4" role="tabpanel" aria-labelledby="case-tab-4" className={styles.tabPanel}>
+        <div
+          id="case-panel-4"
+          role="tabpanel"
+          aria-labelledby="case-tab-4"
+          className={styles.tabPanel}
+        >
           {activityRows.length === 0 ? (
-            <EmptyState kind="empty" title="활동 이력이 없습니다" body="업무가 진행되면 여기에 표시됩니다." />
+            <EmptyState
+              kind="empty"
+              title="활동 이력이 없습니다"
+              body="업무가 진행되면 여기에 표시됩니다."
+            />
           ) : (
             <div className={styles.timeline}>
               {activityRows.map((entry, index) => (
@@ -622,20 +769,29 @@ export function CaseDetailPage() {
                   : '다음 행동 · 필수 조건 확인 후 승인 요청'}
         </span>
         {task.status === 'READY_FOR_REVIEW' && (
-          <Button onClick={handleOpenReview} disabled={actionPending}>승인 검토</Button>
+          <Button onClick={handleOpenReview} disabled={actionPending}>
+            승인 검토
+          </Button>
         )}
         {(task.status === 'DRAFT' || task.status === 'NEEDS_INFO') && (
-          <Button onClick={handleOpenApprovalRequest} disabled={!canRequestApproval || actionPending}>
+          <Button
+            onClick={handleOpenApprovalRequest}
+            disabled={!canRequestApproval || actionPending}
+          >
             승인 요청
           </Button>
         )}
         {canComplete && (
-          <Button onClick={handleOpenExternalCompletion} disabled={actionPending}>완료 처리</Button>
+          <Button onClick={handleOpenExternalCompletion} disabled={actionPending}>
+            완료 처리
+          </Button>
         )}
       </div>
 
       <p className={styles.footnote}>
-        승인·반려·완료 결과는 서버 응답 후 Task를 다시 조회해 반영합니다. 화면에서 성공 상태를 임의로 만들지 않습니다.
+        {approvalReady
+          ? '실제 전달과 외부 제출은 담당자가 직접 수행하고 결과를 증빙으로 남깁니다.'
+          : '승인 전에는 근로자 링크 전달이나 외부 처리를 시작할 수 없습니다.'}
       </p>
 
       <ApprovalRequestModal
@@ -680,7 +836,11 @@ export function CaseDetailPage() {
         onClose={() => setLinkOverlay('none')}
       />
 
-      <Drawer open={contextDrawerOpen} onClose={() => setContextDrawerOpen(false)} title="관련 Context">
+      <Drawer
+        open={contextDrawerOpen}
+        onClose={() => setContextDrawerOpen(false)}
+        title="관련 Context"
+      >
         {/* TODO(backend): GET /api/work-items/:id/context -> CONTEXT_DRAWER 대체 */}
         <div className={styles.contextSection}>
           <h3 className={styles.contextSectionTitle}>Agent가 확인한 내용</h3>

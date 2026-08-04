@@ -1,7 +1,7 @@
 .iconWrap {
   display: flex;
   justify-content: center;
-  margin-top: 30px;
+  margin-top: 22px;
 }
 
 .icon {
@@ -18,7 +18,7 @@
 }
 
 .headline {
-  margin: 30px 0 0;
+  margin: 40px 0 0;
   font-size: 24px;
   font-weight: 700;
   text-align: center;
@@ -33,7 +33,8 @@
 }
 
 .reasonCard {
-  margin-top: 30px;
+  min-height: 96px;
+  margin-top: 47px;
   padding: 16px 20px;
   background: var(--surface-subtle);
   border-radius: var(--fowoco-radius-8);
@@ -54,14 +55,15 @@
 }
 
 .sectionLabel {
-  margin: 30px 0 0;
+  margin: 43px 0 0;
   font-size: 14px;
   font-weight: 500;
   color: var(--text-primary);
 }
 
 .contactCard {
-  margin-top: 12px;
+  min-height: 108px;
+  margin-top: 16px;
   padding: 15px 19px;
   background: var(--surface-default);
   border: 1px solid var(--border-default);
@@ -84,7 +86,7 @@
 .copyButton {
   width: 100%;
   height: 52px;
-  margin-top: 30px;
+  margin-top: 36px;
   background: var(--brand-primary);
   border: none;
   border-radius: var(--fowoco-radius-6);
@@ -95,7 +97,7 @@
 }
 
 .footnote {
-  margin: 12px 0 0;
+  margin: 30px 0 0;
   font-size: 12px;
   text-align: center;
   line-height: 20px;

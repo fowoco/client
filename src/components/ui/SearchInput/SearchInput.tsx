@@ -6,16 +6,23 @@ export interface SearchInputProps {
   onChange: (value: string) => void
   placeholder: string
   ariaLabel: string
+  className?: string
 }
 
-export function SearchInput({ value, onChange, placeholder, ariaLabel }: SearchInputProps) {
+export function SearchInput({
+  value,
+  onChange,
+  placeholder,
+  ariaLabel,
+  className,
+}: SearchInputProps) {
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
     onChange(event.target.value)
   }
 
   return (
     <input
-      className={styles.search}
+      className={`${styles.search} ${className ?? ''}`}
       placeholder={placeholder}
       value={value}
       onChange={handleChange}

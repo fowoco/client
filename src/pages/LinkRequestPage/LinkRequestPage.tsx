@@ -29,6 +29,7 @@ export function LinkRequestPage() {
 function WorkerLinkRequest({ token }: { token: string }) {
   const navigate = useNavigate()
   const [submittingQuestion, setSubmittingQuestion] = useState(false)
+  const [submittingAcknowledgement, setSubmittingAcknowledgement] = useState(false)
   const [questionSent, setQuestionSent] = useState(false)
   const [responseError, setResponseError] = useState<string | null>(null)
   const fetcher = useCallback(() => fetchWorkerLink(token), [token])
@@ -51,16 +52,47 @@ function WorkerLinkRequest({ token }: { token: string }) {
       })
       setQuestionSent(true)
     } catch (caught) {
-      setResponseError(caught instanceof ApiError ? getErrorMessage(caught) : '응답을 보내지 못했습니다.')
+      setResponseError(
+        caught instanceof ApiError ? getErrorMessage(caught) : '응답을 보내지 못했습니다.',
+      )
     } finally {
       setSubmittingQuestion(false)
+    }
+  }
+
+  async function handleAcknowledgement() {
+    if (submittingAcknowledgement) return
+    setSubmittingAcknowledgement(true)
+    setResponseError(null)
+    try {
+      if (data?.allowed_responses.includes('ACKNOWLEDGED')) {
+        await submitWorkerResponse(token, {
+          response_type: 'ACKNOWLEDGED',
+          idempotency_key: crypto.randomUUID(),
+        })
+      }
+      navigate(`/worker-portal/${encodeURIComponent(token)}/upload`)
+    } catch (caught) {
+      if (caught instanceof ApiError && caught.status === 410) {
+        navigate(`/worker-portal/${encodeURIComponent(token)}/expired`, { replace: true })
+        return
+      }
+      setResponseError(
+        caught instanceof ApiError ? getErrorMessage(caught) : '확인 응답을 보내지 못했습니다.',
+      )
+    } finally {
+      setSubmittingAcknowledgement(false)
     }
   }
 
   if (status === 'loading') {
     return (
       <MobileShell right={<span>보안 링크</span>}>
-        <EmptyState kind="loading" title="요청 내용을 확인하고 있습니다" body="잠시만 기다려 주세요." />
+        <EmptyState
+          kind="loading"
+          title="요청 내용을 확인하고 있습니다"
+          body="잠시만 기다려 주세요."
+        />
       </MobileShell>
     )
   }
@@ -71,7 +103,9 @@ function WorkerLinkRequest({ token }: { token: string }) {
         <EmptyState
           kind="error"
           title="요청 내용을 불러오지 못했습니다"
-          body={error instanceof ApiError ? getErrorMessage(error) : '네트워크 상태를 확인해 주세요.'}
+          body={
+            error instanceof ApiError ? getErrorMessage(error) : '네트워크 상태를 확인해 주세요.'
+          }
           actionLabel="다시 시도"
           onAction={refetch}
         />
@@ -80,7 +114,9 @@ function WorkerLinkRequest({ token }: { token: string }) {
   }
 
   const due = getOperationalDateViewModel('TASK_DUE', data.due_date)
-  const canUpload = data.allowed_responses.includes('DOCUMENT_SUBMITTED')
+  const canContinue =
+    data.allowed_responses.includes('ACKNOWLEDGED') ||
+    data.allowed_responses.includes('DOCUMENT_SUBMITTED')
   const canAskQuestion = data.allowed_responses.includes('QUESTION')
 
   return (
@@ -90,7 +126,7 @@ function WorkerLinkRequest({ token }: { token: string }) {
         <p className={styles.expiryBody}>이 화면을 닫아도 같은 링크로 다시 열 수 있습니다.</p>
       </div>
 
-      <p className={styles.requester}>서류 제출 요청</p>
+      <p className={styles.requester}>회사 인사팀 요청</p>
       <h1 className={styles.headline}>
         요청 내용을
         <br />
@@ -108,13 +144,19 @@ function WorkerLinkRequest({ token }: { token: string }) {
       </div>
 
       {questionSent && <p className={styles.responseNotice}>담당자에게 질문 의사를 전했습니다.</p>}
-      {responseError && <p className={styles.responseError} role="alert">{responseError}</p>}
+      {responseError && (
+        <p className={styles.responseError} role="alert">
+          {responseError}
+        </p>
+      )}
 
       <div className={styles.actions}>
         <button
           type="button"
           className={styles.secondary}
-          disabled={!canAskQuestion || submittingQuestion || questionSent}
+          disabled={
+            !canAskQuestion || submittingQuestion || submittingAcknowledgement || questionSent
+          }
           onClick={handleQuestion}
         >
           {questionSent ? '질문 의사 전송됨' : '질문이 있습니다'}
@@ -122,14 +164,14 @@ function WorkerLinkRequest({ token }: { token: string }) {
         <button
           type="button"
           className={styles.primary}
-          disabled={!canUpload}
-          onClick={() => navigate(`/worker-portal/${encodeURIComponent(token)}/upload`)}
+          disabled={!canContinue || submittingAcknowledgement}
+          onClick={handleAcknowledgement}
         >
-          서류 제출하기
+          {submittingAcknowledgement ? '확인 중…' : '안내를 확인했습니다'}
         </button>
       </div>
 
-      <p className={styles.footnote}>제출 결과는 담당자에게 전달되며 같은 요청의 중복 제출은 차단됩니다.</p>
+      <p className={styles.footnote}>다음 화면에서 요청받은 파일을 선택해 제출할 수 있습니다.</p>
     </MobileShell>
   )
 }

@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import {
+  approveTask,
+  buildTaskApprovalSnapshot,
+  completeTask,
+  recordTaskEvidence,
+  rejectTask,
+  requestTaskApproval,
+  type EvidenceType,
+} from '../../api/approvals'
 import { fetchTaskActivities } from '../../api/audit'
 import { fetchDocumentReadiness, fetchDocuments, upsertDocumentRequestDraft } from '../../api/documents'
 import { ApiError, getErrorMessage } from '../../api/errors'
@@ -21,52 +30,40 @@ import { TASK_SOURCE_LABEL, TASK_STATUS_LABEL, TASK_STATUS_TONE } from '../../ut
 import { daysUntil } from '../../utils/urgency'
 import styles from './CaseDetailPage.module.css'
 import {
-  ACTION_DOCK,
   AGENT_SUMMARY,
   CASE_COMMUNICATION,
-  CASE_STEPS,
   CASE_TABS,
-  COMPLETION_GATES,
   CONTEXT_ACCESS,
   CONTEXT_DRAWER,
-  type StepStatus,
 } from './caseDetailData'
 import { ApprovalDecisionModal } from './overlays/ApprovalDecisionModal'
 import { ApprovalRequestModal } from './overlays/ApprovalRequestModal'
-import { ApprovalSnapshotDiffModal } from './overlays/ApprovalSnapshotDiffModal'
 import { ExternalCompletionModal } from './overlays/ExternalCompletionModal'
-import { InternalCompletionModal } from './overlays/InternalCompletionModal'
 import { LinkReissueModal, type ReissueSubmission } from './overlays/LinkReissueModal'
 import { LinkReissuedModal } from './overlays/LinkReissuedModal'
-import { OtherApproverHandledModal } from './overlays/OtherApproverHandledModal'
 import { RejectionReasonModal } from './overlays/RejectionReasonModal'
 
-type ApprovalOverlay = 'none' | 'request' | 'decision' | 'rejection' | 'other-handled' | 'snapshot-diff'
-type ApprovalState = 'pending' | 'approved' | 'rejected'
-type CompletionOverlay = 'none' | 'external' | 'internal-demo'
-type CompletionState = 'blocked' | 'completed'
+type ApprovalOverlay = 'none' | 'request' | 'decision' | 'rejection'
+type CompletionOverlay = 'none' | 'external'
 type LinkOverlay = 'none' | 'reissue' | 'reissued'
-
-const APPROVAL_BADGE: Record<ApprovalState, { label: string; tone: StatusTone }> = {
-  pending: { label: '승인 대기', tone: 'warning' },
-  approved: { label: '승인 완료', tone: 'success' },
-  rejected: { label: '반려됨', tone: 'critical' },
-}
 
 const CASE_TAB_ITEMS = CASE_TABS.map((label) => ({ id: label, label }))
 
-const STEP_CIRCLE_CLASS: Record<StepStatus, string> = {
-  done: styles.stepCircleDone,
-  pending: styles.stepCirclePending,
-  locked: styles.stepCircleLocked,
-  waiting: styles.stepCircleWaiting,
+function getApprovalBadge(status: import('../../api/tasks').TaskStatus): {
+  label: string
+  tone: StatusTone
+} | null {
+  if (status === 'READY_FOR_REVIEW') return { label: '승인 대기', tone: 'warning' }
+  if (status === 'APPROVED' || status === 'WAITING_WORKER' || status === 'WAITING_EXTERNAL') {
+    return { label: '승인 완료', tone: 'success' }
+  }
+  return null
 }
 
-const STEP_STATUS_CLASS: Record<StepStatus, string> = {
-  done: styles.stepStatusDone,
-  pending: styles.stepStatusPending,
-  locked: styles.stepStatusLocked,
-  waiting: styles.stepStatusWaiting,
+const EVIDENCE_TYPE_BY_LABEL: Record<string, EvidenceType> = {
+  접수번호: 'RECEIPT',
+  파일: 'DOCUMENT',
+  '화면 캡처': 'OFFICIAL_RESULT',
 }
 
 export function CaseDetailPage() {
@@ -75,9 +72,8 @@ export function CaseDetailPage() {
   const [moreMenuOpen, setMoreMenuOpen] = useState(false)
   const [contextDrawerOpen, setContextDrawerOpen] = useState(false)
   const [approvalOverlay, setApprovalOverlay] = useState<ApprovalOverlay>('none')
-  const [approvalState, setApprovalState] = useState<ApprovalState>('pending')
   const [completionOverlay, setCompletionOverlay] = useState<CompletionOverlay>('none')
-  const [completionState, setCompletionState] = useState<CompletionState>('blocked')
+  const [actionPending, setActionPending] = useState(false)
   const [togglingItemId, setTogglingItemId] = useState<string | null>(null)
   const [linkOverlay, setLinkOverlay] = useState<LinkOverlay>('none')
   const [lastReissue, setLastReissue] = useState<ReissueSubmission | null>(null)
@@ -127,71 +123,84 @@ export function CaseDetailPage() {
     setApprovalOverlay('request')
   }
 
-  function handleSubmitApprovalRequest() {
-    // TODO(backend): POST /api/work-items/:id/approval-request -> 승인 대기 상태로 전환
-    setApprovalOverlay('none')
-    showToast('승인을 요청했습니다.')
+  async function handleSubmitApprovalRequest() {
+    if (!task || actionPending) return
+    setActionPending(true)
+    try {
+      await requestTaskApproval(task.task_id, buildTaskApprovalSnapshot(task))
+      setApprovalOverlay('none')
+      refetchTask()
+      showToast('승인을 요청했습니다.')
+    } catch (error) {
+      showToast(error instanceof ApiError ? getErrorMessage(error) : '승인을 요청하지 못했습니다.')
+    } finally {
+      setActionPending(false)
+    }
   }
 
   function handleOpenReview() {
-    // 데모 진입점: 실제로는 승인자 계정으로 로그인해야 볼 수 있는 화면이다.
-    setApprovalOverlay(approvalState === 'pending' ? 'decision' : 'other-handled')
+    if (task?.status !== 'READY_FOR_REVIEW') return
+    setApprovalOverlay('decision')
   }
 
-  function handleApprove() {
-    // TODO(backend): POST /api/work-items/:id/approval-decisions { decision: 'approved' }
-    setApprovalState('approved')
-    setApprovalOverlay('none')
-    showToast('승인했습니다.')
+  async function handleApprove() {
+    if (!task || actionPending) return
+    setActionPending(true)
+    try {
+      await approveTask(task.task_id, { expected_version: task.version })
+      setApprovalOverlay('none')
+      refetchTask()
+      showToast('승인했습니다.')
+    } catch (error) {
+      showToast(error instanceof ApiError ? getErrorMessage(error) : '승인하지 못했습니다.')
+    } finally {
+      setActionPending(false)
+    }
   }
 
   function handleStartReject() {
     setApprovalOverlay('rejection')
   }
 
-  function handleConfirmReject(reason: string) {
-    // TODO(backend): POST /api/work-items/:id/approval-decisions { decision: 'rejected', reason }
-    void reason
-    setApprovalState('rejected')
-    setApprovalOverlay('none')
-    showToast('반려했습니다.')
-  }
-
-  function handleOpenSnapshotDiff() {
-    setApprovalOverlay('snapshot-diff')
-  }
-
-  function handleRequestReapproval() {
-    // TODO(backend): POST /api/work-items/:id/approval-request -> 재승인 요청, 승인 대기 상태로 전환
-    setApprovalState('pending')
-    setApprovalOverlay('none')
-    showToast('재승인을 요청했습니다.')
+  async function handleConfirmReject(reason: string) {
+    if (!task || actionPending) return
+    setActionPending(true)
+    try {
+      await rejectTask(task.task_id, { expected_version: task.version, reason })
+      setApprovalOverlay('none')
+      refetchTask()
+      showToast('반려했습니다.')
+    } catch (error) {
+      showToast(error instanceof ApiError ? getErrorMessage(error) : '반려하지 못했습니다.')
+    } finally {
+      setActionPending(false)
+    }
   }
 
   function handleOpenExternalCompletion() {
-    if (approvalState !== 'approved' || completionState === 'completed') return
+    if (!task || !['APPROVED', 'WAITING_WORKER', 'WAITING_EXTERNAL'].includes(task.status)) return
     setCompletionOverlay('external')
   }
 
-  function handleCompleteExternal(evidenceType: string, evidenceValue: string, memo: string) {
-    // TODO(backend): POST /api/work-items/:id/complete { evidenceType, evidenceValue, memo }
-    void evidenceType
-    void evidenceValue
-    void memo
-    setCompletionState('completed')
-    setCompletionOverlay('none')
-    showToast('완료 처리했습니다.')
-  }
-
-  function handleOpenInternalCompletionDemo() {
-    setCompletionOverlay('internal-demo')
-  }
-
-  function handleCompleteInternalDemo(memo: string) {
-    // 이 데모 케이스는 외부기관 유형이라 실제 완료 상태에는 반영하지 않는다.
-    void memo
-    setCompletionOverlay('none')
-    showToast('(데모) 내부업무를 완료 처리했습니다.')
+  async function handleCompleteExternal(evidenceType: string, evidenceValue: string, memo: string) {
+    if (!task || actionPending) return
+    const normalizedEvidenceType = EVIDENCE_TYPE_BY_LABEL[evidenceType]
+    if (!normalizedEvidenceType) return
+    setActionPending(true)
+    try {
+      const evidence = await recordTaskEvidence(task.task_id, {
+        evidence_type: normalizedEvidenceType,
+        note: [evidenceValue.trim(), memo.trim()].filter(Boolean).join(' · '),
+      })
+      await completeTask(task.task_id, evidence.task_version)
+      setCompletionOverlay('none')
+      refetchTask()
+      showToast('업무를 완료했습니다.')
+    } catch (error) {
+      showToast(error instanceof ApiError ? getErrorMessage(error) : '업무를 완료하지 못했습니다.')
+    } finally {
+      setActionPending(false)
+    }
   }
 
   function handleMoreActions() {
@@ -236,11 +245,6 @@ export function CaseDetailPage() {
 
   function handleExpandContext() {
     setContextDrawerOpen(true)
-  }
-
-  function handleSaveDraft() {
-    // TODO(backend): PATCH /api/work-items/:id/draft -> 현재 입력 상태 저장
-    showToast('초안을 저장했습니다.')
   }
 
   async function handleSaveDocumentRequestDraft() {
@@ -296,6 +300,25 @@ export function CaseDetailPage() {
 
   const dueDays = daysUntil(task.due_date)
   const dueLabel = dueDays === null ? '마감일 없음' : dueDays <= 0 ? '오늘 마감' : `D-${dueDays}`
+  const approvalBadge = getApprovalBadge(task.status)
+  const requiredChecklist = task.checklist_items.filter((item) => item.required)
+  const completedRequiredChecklist = requiredChecklist.filter((item) => item.completed).length
+  const checklistReady = completedRequiredChecklist === requiredChecklist.length
+  const informationReady = task.missing_required_slots.length === 0
+  const documentsReady = readiness ? !readiness.completion_blocked : false
+  const approvalReady = task.status === 'APPROVED' || task.status === 'WAITING_WORKER' || task.status === 'WAITING_EXTERNAL'
+  const canRequestApproval =
+    (task.status === 'DRAFT' || task.status === 'NEEDS_INFO') &&
+    checklistReady &&
+    informationReady &&
+    documentsReady
+  const canComplete = approvalReady && checklistReady && informationReady && documentsReady
+  const completionBlockers = [
+    !approvalReady && '승인',
+    !checklistReady && '필수 체크리스트',
+    !informationReady && '필수 정보',
+    !documentsReady && '서류 준비',
+  ].filter(Boolean) as string[]
 
   return (
     <div>
@@ -338,9 +361,7 @@ export function CaseDetailPage() {
       <div className={styles.headerRow}>
         <h1 className={styles.title}>{task.title}</h1>
         <StatusLabel tone={TASK_STATUS_TONE[task.status]}>{TASK_STATUS_LABEL[task.status]}</StatusLabel>
-        <StatusLabel tone={APPROVAL_BADGE[approvalState].tone}>
-          {APPROVAL_BADGE[approvalState].label}
-        </StatusLabel>
+        {approvalBadge && <StatusLabel tone={approvalBadge.tone}>{approvalBadge.label}</StatusLabel>}
         <StatusLabel tone="info">{TASK_SOURCE_LABEL[task.source]}</StatusLabel>
       </div>
       <p className={styles.meta}>
@@ -383,65 +404,48 @@ export function CaseDetailPage() {
           <div className={styles.panelRow}>
             <div className={styles.workflowCard}>
               <div className={styles.workflowHeader}>
-                <h2 className={styles.cardTitle}>처리 단계</h2>
-                <p className={styles.workflowNote}>필수 단계 3 / 5 완료</p>
+                <h2 className={styles.cardTitle}>현재 업무 상태</h2>
+                <StatusLabel tone={TASK_STATUS_TONE[task.status]}>
+                  {TASK_STATUS_LABEL[task.status]}
+                </StatusLabel>
               </div>
-
-              <div className={styles.stepList}>
-                {CASE_STEPS.map((step, index) => (
-                  <div key={step.no} className={styles.step}>
-                    <div className={styles.stepMarkerCol}>
-                      <span className={`${styles.stepCircle} ${STEP_CIRCLE_CLASS[step.status]}`}>
-                        {step.status === 'done' ? '✓' : step.no}
-                      </span>
-                      {index < CASE_STEPS.length - 1 && (
-                        <span
-                          className={`${styles.connector} ${
-                            step.status === 'done' ? styles.connectorDone : ''
-                          }`}
-                        />
-                      )}
-                    </div>
-                    <div className={styles.stepBody}>
-                      <div>
-                        <p className={styles.stepTitle}>{step.title}</p>
-                        <p className={styles.stepActor}>{step.actor}</p>
-                        {step.title === '보안 링크 전달' && (
-                          <button
-                            type="button"
-                            className={styles.contextLink}
-                            onClick={handleOpenLinkReissue}
-                          >
-                            보안 링크 재발급 →
-                          </button>
-                        )}
-                      </div>
-                      <span className={`${styles.stepStatus} ${STEP_STATUS_CLASS[step.status]}`}>
-                        {step.statusLabel}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+              <p className={styles.gatesDescription}>
+                서버에 저장된 현재 Task와 체크리스트만 표시합니다. 고정된 예시 단계는 사용하지 않습니다.
+              </p>
+              <div className={styles.currentStateRows}>
+                <DetailRow label="업무 출처" value={TASK_SOURCE_LABEL[task.source]} />
+                <DetailRow label="업무 마감일" value={task.due_date ? `${task.due_date} · ${dueLabel}` : '미지정'} />
+                <DetailRow
+                  label="필수 체크리스트"
+                  value={`${completedRequiredChecklist} / ${requiredChecklist.length}`}
+                  tone={checklistReady ? 'success' : 'warning'}
+                />
+                <DetailRow
+                  label="필수 정보"
+                  value={informationReady ? '모두 입력됨' : `${task.missing_required_slots.length}개 보완 필요`}
+                  tone={informationReady ? 'success' : 'critical'}
+                />
               </div>
+              {approvalReady && (
+                <button type="button" className={styles.contextLink} onClick={handleOpenLinkReissue}>
+                  근로자 보안 링크 발급·재발급 →
+                </button>
+              )}
             </div>
 
             <div className={styles.gatesCard}>
               <h2 className={styles.cardTitle}>완료 조건</h2>
-              <p className={styles.gatesDescription}>{COMPLETION_GATES.description}</p>
+              <p className={styles.gatesDescription}>현재 서버 상태와 필수 조건을 기준으로 확인합니다.</p>
 
               <DetailRow
                 label="승인"
-                value={
-                  approvalState === 'approved' ? '완료' : approvalState === 'rejected' ? '반려됨' : '대기'
-                }
-                tone={
-                  approvalState === 'approved' ? 'success' : approvalState === 'rejected' ? 'critical' : 'warning'
-                }
+                value={approvalReady ? '완료' : task.status === 'READY_FOR_REVIEW' ? '검토 대기' : '승인 전'}
+                tone={approvalReady ? 'success' : 'warning'}
               />
               <DetailRow
-                label={COMPLETION_GATES.rows[1].label}
-                value={COMPLETION_GATES.rows[1].value}
-                tone={COMPLETION_GATES.rows[1].tone}
+                label="필수 체크리스트"
+                value={`${completedRequiredChecklist} / ${requiredChecklist.length}`}
+                tone={checklistReady ? 'success' : 'warning'}
               />
               <DetailRow
                 label="서류 준비"
@@ -454,30 +458,18 @@ export function CaseDetailPage() {
                 }
                 tone={!readiness ? 'default' : readiness.completion_blocked ? 'critical' : 'success'}
               />
-              <DetailRow
-                label="완료 증빙"
-                value={completionState === 'completed' ? '접수번호 등록됨' : '접수번호 필요'}
-                tone={completionState === 'completed' ? 'success' : 'critical'}
-              />
-              <DetailRow
-                label="담당자 직접 처리"
-                value={completionState === 'completed' ? '확인됨' : '미확인'}
-                tone={completionState === 'completed' ? 'success' : 'critical'}
-              />
 
-              {approvalState === 'approved' && completionState === 'blocked' ? (
+              {canComplete ? (
                 <button type="button" className={styles.contextLink} onClick={handleOpenExternalCompletion}>
                   완료 처리 시작 →
                 </button>
-              ) : completionState === 'completed' ? (
+              ) : task.status === 'COMPLETED' ? (
                 <p className={styles.gateComplete}>완료 처리되었습니다.</p>
               ) : (
-                <p className={styles.gateBlocked}>{COMPLETION_GATES.blocked}</p>
+                <p className={styles.gateBlocked}>
+                  완료 처리 불가 · {completionBlockers.join(' · ') || '현재 상태 확인 필요'}
+                </p>
               )}
-
-              <button type="button" className={styles.draftSave} onClick={handleOpenInternalCompletionDemo}>
-                데모: 내부업무 완료 보기
-              </button>
             </div>
           </div>
         </div>
@@ -599,28 +591,48 @@ export function CaseDetailPage() {
       )}
 
       <div className={styles.actionDock}>
-        <span className={styles.nextStep}>{ACTION_DOCK.nextStep}</span>
-        <button type="button" className={styles.draftSave} onClick={handleOpenReview}>
-          데모: 승인자로 검토
-        </button>
-        <button type="button" className={styles.draftSave} onClick={handleOpenSnapshotDiff}>
-          데모: 재승인 필요 보기
-        </button>
-        <button type="button" className={styles.draftSave} onClick={handleSaveDraft}>
-          {ACTION_DOCK.draftSaveLabel}
-        </button>
-        <Button onClick={handleOpenApprovalRequest}>{ACTION_DOCK.approveLabel}</Button>
+        <span className={styles.nextStep}>
+          {task.status === 'READY_FOR_REVIEW'
+            ? '다음 행동 · 승인 검토'
+            : task.status === 'COMPLETED'
+              ? '이 업무는 완료되었습니다.'
+              : task.status === 'CANCELLED'
+                ? '이 업무는 취소되었습니다.'
+                : approvalReady
+                  ? '다음 행동 · 실행 결과와 증빙 확인'
+                  : '다음 행동 · 필수 조건 확인 후 승인 요청'}
+        </span>
+        {task.status === 'READY_FOR_REVIEW' && (
+          <Button onClick={handleOpenReview} disabled={actionPending}>승인 검토</Button>
+        )}
+        {(task.status === 'DRAFT' || task.status === 'NEEDS_INFO') && (
+          <Button onClick={handleOpenApprovalRequest} disabled={!canRequestApproval || actionPending}>
+            승인 요청
+          </Button>
+        )}
+        {canComplete && (
+          <Button onClick={handleOpenExternalCompletion} disabled={actionPending}>완료 처리</Button>
+        )}
       </div>
 
-      <p className={styles.footnote}>{ACTION_DOCK.footnote}</p>
+      <p className={styles.footnote}>
+        승인·반려·완료 결과는 서버 응답 후 Task를 다시 조회해 반영합니다. 화면에서 성공 상태를 임의로 만들지 않습니다.
+      </p>
 
       <ApprovalRequestModal
         open={approvalOverlay === 'request'}
+        taskTitle={task.title}
+        dueDate={task.due_date}
+        submitting={actionPending}
         onClose={() => setApprovalOverlay('none')}
         onSubmit={handleSubmitApprovalRequest}
       />
       <ApprovalDecisionModal
         open={approvalOverlay === 'decision'}
+        taskTitle={task.title}
+        dueDate={task.due_date}
+        workflowId={task.workflow_id}
+        submitting={actionPending}
         onClose={() => setApprovalOverlay('none')}
         onApprove={handleApprove}
         onReject={handleStartReject}
@@ -630,24 +642,10 @@ export function CaseDetailPage() {
         onBack={() => setApprovalOverlay('decision')}
         onConfirm={handleConfirmReject}
       />
-      <OtherApproverHandledModal
-        open={approvalOverlay === 'other-handled'}
-        onClose={() => setApprovalOverlay('none')}
-      />
-      <ApprovalSnapshotDiffModal
-        open={approvalOverlay === 'snapshot-diff'}
-        onClose={() => setApprovalOverlay('none')}
-        onRequestReapproval={handleRequestReapproval}
-      />
       <ExternalCompletionModal
         open={completionOverlay === 'external'}
         onClose={() => setCompletionOverlay('none')}
         onComplete={handleCompleteExternal}
-      />
-      <InternalCompletionModal
-        open={completionOverlay === 'internal-demo'}
-        onClose={() => setCompletionOverlay('none')}
-        onComplete={handleCompleteInternalDemo}
       />
       <LinkReissueModal
         open={linkOverlay === 'reissue'}

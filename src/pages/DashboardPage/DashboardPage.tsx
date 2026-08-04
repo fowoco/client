@@ -1,30 +1,30 @@
+import { useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AgentSummary } from '../../components/ui/AgentSummary/AgentSummary'
+import { fetchTasks } from '../../api/tasks'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { WorkItemRow } from '../../components/ui/WorkItemRow/WorkItemRow'
-import { useAsyncDemoData } from '../../hooks/useAsyncDemoData'
+import { useApiQuery } from '../../hooks/useApiQuery'
 import styles from './DashboardPage.module.css'
 import {
-  AGENT_SUMMARY,
-  AI_PREPARED_CHECKLIST,
   AI_REQUEST_PROMPT_CHIPS,
-  APPROVAL_QUEUE,
-  METRIC_STRIP,
-  TODAY_WORK_ITEMS,
-  UPCOMING_TIMELINE,
+  buildDashboardMetrics,
+  buildDashboardWorkItems,
+  buildUpcomingTimeline,
 } from './dashboardData'
 
 export function DashboardPage() {
   const navigate = useNavigate()
-  const status = useAsyncDemoData(TODAY_WORK_ITEMS.length === 0)
+  const taskFetcher = useCallback(() => fetchTasks({ size: 100 }), [])
+  const isEmpty = useCallback((page: { items: unknown[] }) => page.items.length === 0, [])
+  const { status, data: taskPage, error, refetch } = useApiQuery(taskFetcher, isEmpty)
+  const tasks = useMemo(() => taskPage?.items ?? [], [taskPage])
+  const metrics = useMemo(() => buildDashboardMetrics(tasks), [tasks])
+  const workItems = useMemo(() => buildDashboardWorkItems(tasks), [tasks])
+  const upcomingTimeline = useMemo(() => buildUpcomingTimeline(tasks), [tasks])
 
   return (
     <div>
-      <button
-        type="button"
-        className={styles.commandInput}
-        onClick={() => navigate('/tasks/new')}
-      >
+      <button type="button" className={styles.commandInput} onClick={() => navigate('/tasks/new')}>
         <span className={styles.commandPlaceholder}>
           무엇을 준비해야 하나요? 자연어로 요청하거나 파일을 가져오세요.
         </span>
@@ -44,26 +44,12 @@ export function DashboardPage() {
         ))}
       </div>
 
-      <div className={styles.metricStrip}>
-        {METRIC_STRIP.map((metric) => (
-          <button
-            key={metric.id}
-            type="button"
-            className={styles.metricCard}
-            onClick={() => navigate('/tasks')}
-          >
-            <span className={styles.metricLabel}>{metric.label}</span>
-            <span className={styles.metricValue}>{metric.value}건 ›</span>
-          </button>
-        ))}
-      </div>
-
       {status === 'loading' && (
         <div className={styles.stateWrap}>
           <EmptyState
             kind="loading"
             title="업무 현황을 불러오는 중입니다"
-            body="기한·필수정보·응답 상태를 확인하고 있습니다."
+            body="Task API에서 최신 업무 상태를 확인하고 있습니다."
             note="처리 중 · 중복 실행 차단"
           />
         </div>
@@ -74,9 +60,9 @@ export function DashboardPage() {
           <EmptyState
             kind="error"
             title="업무 현황을 불러오지 못했습니다"
-            body="네트워크 상태를 확인한 뒤 다시 시도해 주세요."
+            body={error?.message ?? '네트워크 상태를 확인한 뒤 다시 시도해 주세요.'}
             actionLabel="다시 시도"
-            onAction={() => navigate('/dashboard', { replace: true })}
+            onAction={refetch}
           />
         </div>
       )}
@@ -85,7 +71,7 @@ export function DashboardPage() {
         <div className={styles.stateWrap}>
           <EmptyState
             kind="empty"
-            title="오늘 처리할 업무가 없습니다"
+            title="등록된 업무가 없습니다"
             body="새 요청을 입력하거나 파일을 가져와 업무를 만들어 보세요."
             actionLabel="업무 만들기"
             onAction={() => navigate('/tasks/new')}
@@ -95,74 +81,32 @@ export function DashboardPage() {
 
       {status === 'success' && (
         <>
-          <h1 className={styles.headline}>
-            오늘 {APPROVAL_QUEUE.count}건의 승인이 업무 진행을 막고 있습니다.
-          </h1>
-          <p className={styles.description}>
-            Agent가 기한·필수정보·응답 상태를 확인해 지금 볼 업무만 정리했습니다.
-          </p>
-
-          <div className={styles.summaryRow}>
-            <AgentSummary
-              headline={AGENT_SUMMARY.headline}
-              body={AGENT_SUMMARY.body}
-              actionLabel={AGENT_SUMMARY.actionLabel}
-            />
-
-            <div className={styles.approvalCard}>
-              <p className={styles.approvalLabel}>내 승인 대기</p>
-              <p
-                className={`${styles.approvalCount} ${
-                  APPROVAL_QUEUE.count === 0 ? styles.approvalCountClear : ''
-                }`}
-              >
-                {APPROVAL_QUEUE.count}건
-              </p>
-              <p className={styles.approvalOldest}>
-                {APPROVAL_QUEUE.oldestLabel}
-                <br />
-                {APPROVAL_QUEUE.oldestValue}
-              </p>
+          <div className={styles.metricStrip}>
+            {metrics.map((metric) => (
               <button
+                key={metric.id}
                 type="button"
-                className={styles.approvalLink}
+                className={styles.metricCard}
                 onClick={() => navigate('/tasks')}
               >
-                검토하기 →
+                <span className={styles.metricLabel}>{metric.label}</span>
+                <span className={styles.metricValue}>{metric.value}건 ›</span>
               </button>
-            </div>
-
-            <div className={styles.aiPreparedPanel}>
-              <p className={styles.aiPreparedTitle}>✦ AI 업무 진행 상황</p>
-              <p className={styles.aiPreparedBody}>
-                Agent가 필요한 서류와 요청문 초안을 준비했습니다. 확인이 필요한 항목을 보완한 뒤
-                승인하면 근로자 요청 단계로 이어집니다.
-              </p>
-              <ul className={styles.aiPreparedList}>
-                {AI_PREPARED_CHECKLIST.map((item) => (
-                  <li key={item.id} className={styles.aiPreparedItem}>
-                    <span
-                      className={`${styles.aiPreparedIcon} ${
-                        item.status === 'next' ? styles.aiPreparedIconNext : ''
-                      }`}
-                      aria-hidden="true"
-                    >
-                      {item.status === 'next' ? '!' : '✓'}
-                    </span>
-                    {item.label}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            ))}
           </div>
+
+          <h1 className={styles.headline}>지금 처리할 업무 {workItems.length}건을 확인해 주세요.</h1>
+          <p className={styles.description}>
+            Task API의 기한과 상태를 기준으로 최대 5건을 정리했습니다. 승인 대기 수치는 승인 API 연결 전까지 표시하지 않습니다.
+          </p>
 
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>지금 처리할 업무</h2>
-            <p className={styles.sectionNote}>우선순위와 다음 행동 기준 · 최대 5건</p>
+            <p className={styles.sectionNote}>기한 오름차순 · 최대 5건</p>
           </div>
 
           <div className={styles.workItemList}>
-            {TODAY_WORK_ITEMS.map((item) => (
+            {workItems.map((item) => (
               <WorkItemRow
                 key={item.id}
                 title={item.title}
@@ -174,18 +118,19 @@ export function DashboardPage() {
             ))}
           </div>
 
-          <div className={styles.timeline}>
-            <span className={styles.timelineLabel}>다가오는 7일</span>
-            {UPCOMING_TIMELINE.map((item) => (
-              <span key={item} className={styles.timelineItem}>
-                {item}
-              </span>
-            ))}
-          </div>
+          {upcomingTimeline.length > 0 && (
+            <div className={styles.timeline}>
+              <span className={styles.timelineLabel}>다가오는 7일</span>
+              {upcomingTimeline.map((item) => (
+                <span key={item} className={styles.timelineItem}>{item}</span>
+              ))}
+            </div>
+          )}
 
-          <p className={styles.footnote}>
-            근거·문서·활동이력은 업무 선택 후 Context Drawer에서 확인합니다.
-          </p>
+          {taskPage && taskPage.total_elements > 100 && (
+            <p className={styles.capNotice}>최근 100건 기준으로 계산했습니다. 전체 업무는 업무함에서 확인해 주세요.</p>
+          )}
+          <p className={styles.footnote}>근거·문서·활동이력은 업무를 연 뒤 확인할 수 있습니다.</p>
         </>
       )}
     </div>

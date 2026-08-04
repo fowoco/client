@@ -1,59 +1,9 @@
+import type { TaskSummaryResponse } from '../../api/tasks'
 import type { WorkItemUrgency } from '../../components/ui/WorkItemRow/WorkItemRow'
+import { TASK_STATUS_LABEL, TASK_STATUS_NEXT_ACTION } from '../../utils/taskStatus'
+import { daysUntil } from '../../utils/urgency'
 import { EXAMPLE_PROMPTS } from '../CreateWorkPage/createWorkData'
 
-// TODO(backend): 이 파일의 상수는 데모용 목데이터. 실제 연동 시 아래 엔드포인트로 대체
-// - GET /api/dashboard/work-items -> TODAY_WORK_ITEMS
-// - GET /api/dashboard/upcoming-timeline -> UPCOMING_TIMELINE
-// - GET /api/dashboard/approval-queue -> APPROVAL_QUEUE
-// - GET /api/dashboard/agent-summary -> AGENT_SUMMARY
-
-export interface WorkItem {
-  id: string
-  title: string
-  meta: string
-  nextAction: string
-  urgency: WorkItemUrgency
-}
-
-export const TODAY_WORK_ITEMS: WorkItem[] = [
-  {
-    id: 'WI-1',
-    title: '응웬반A 체류연장 준비',
-    meta: 'D-12 · 승인 대기 · 담당 김경민',
-    nextAction: '다음 · 요청문 승인',
-    urgency: 'warning',
-  },
-  {
-    id: 'WI-2',
-    title: '외국인등록증 사본 제출 요청',
-    meta: '오늘 · 근로자 응답 대기',
-    nextAction: '다음 · 응답 확인',
-    urgency: 'warning',
-  },
-  {
-    id: 'WI-3',
-    title: '7월 외부기관 제출자료 취합',
-    meta: 'D-2 · 증빙 필요 · 담당 박서준',
-    nextAction: '다음 · 자료 검토',
-    urgency: 'warning',
-  },
-]
-
-export const UPCOMING_TIMELINE = ['오늘 · 보험자료 확인', 'D-2 · 외부기관 제출', 'D-7 · 체류만료 사전점검']
-
-export const APPROVAL_QUEUE = {
-  count: 2,
-  oldestLabel: '가장 오래된 요청',
-  oldestValue: '3시간 전',
-}
-
-export const AGENT_SUMMARY = {
-  headline: '체류연장 업무 1건에서 여권 사본이 부족합니다.',
-  body: '근로자 요청문과 72시간 보안 링크를 준비했습니다. 승인 후 직접 전달할 수 있습니다.',
-  actionLabel: '다음 행동 · 요청문 검토',
-}
-
-// Figma HOME-001(node 1291:209)의 자연어 입력 프롬프트 칩은 CreateWorkPage의 예시 칩과 동일 문구.
 export const AI_REQUEST_PROMPT_CHIPS = EXAMPLE_PROMPTS
 
 export interface DashboardMetric {
@@ -62,23 +12,87 @@ export interface DashboardMetric {
   value: number
 }
 
-// TODO(backend): GET /api/dashboard/metrics -> METRIC_STRIP 대체
-export const METRIC_STRIP: DashboardMetric[] = [
-  { id: 'pending-approval', label: '승인 대기', value: APPROVAL_QUEUE.count },
-  { id: 'remaining-work', label: '남은 업무', value: 6 },
-  { id: 'due-risk', label: '기한 위험', value: 1 },
-  { id: 'done-today', label: '오늘 완료', value: 8 },
-]
-
-export interface AiPreparedItem {
+export interface DashboardWorkItem {
   id: string
-  label: string
-  status: 'done' | 'next'
+  title: string
+  meta: string
+  nextAction: string
+  urgency: WorkItemUrgency
 }
 
-// TODO(backend): GET /api/dashboard/agent-progress -> AI_PREPARED_CHECKLIST 대체
-export const AI_PREPARED_CHECKLIST: AiPreparedItem[] = [
-  { id: 'docs-checked', label: '필요 서류 5개 확인 완료', status: 'done' },
-  { id: 'draft-ready', label: '체류연장 요청문 초안 준비', status: 'done' },
-  { id: 'next-step', label: '다음 단계 · 담당자 검토 및 승인', status: 'next' },
-]
+function isOpenTask(task: TaskSummaryResponse) {
+  return task.status !== 'COMPLETED' && task.status !== 'CANCELLED'
+}
+
+function isSameLocalDate(dateTime: string, target: Date) {
+  const value = new Date(dateTime)
+  return (
+    value.getFullYear() === target.getFullYear() &&
+    value.getMonth() === target.getMonth() &&
+    value.getDate() === target.getDate()
+  )
+}
+
+function dueLabel(dueDate: string | null) {
+  const days = daysUntil(dueDate)
+  if (days === null) return '기한 없음'
+  if (days < 0) return `${Math.abs(days)}일 지남`
+  if (days === 0) return '오늘'
+  return `D-${days}`
+}
+
+function urgency(dueDate: string | null): WorkItemUrgency {
+  const days = daysUntil(dueDate)
+  if (days !== null && days <= 0) return 'critical'
+  if (days !== null && days <= 7) return 'warning'
+  return 'neutral'
+}
+
+export function buildDashboardMetrics(tasks: TaskSummaryResponse[], now = new Date()): DashboardMetric[] {
+  const openTasks = tasks.filter(isOpenTask)
+  return [
+    { id: 'ready-for-review', label: '검토 필요', value: openTasks.filter((task) => task.status === 'READY_FOR_REVIEW').length },
+    { id: 'remaining-work', label: '남은 업무', value: openTasks.length },
+    {
+      id: 'due-risk',
+      label: '기한 위험',
+      value: openTasks.filter((task) => {
+        const days = daysUntil(task.due_date)
+        return days !== null && days <= 7
+      }).length,
+    },
+    {
+      id: 'done-today',
+      label: '오늘 완료',
+      value: tasks.filter((task) => task.status === 'COMPLETED' && isSameLocalDate(task.updated_at, now)).length,
+    },
+  ]
+}
+
+export function buildDashboardWorkItems(tasks: TaskSummaryResponse[]): DashboardWorkItem[] {
+  return tasks
+    .filter(isOpenTask)
+    .sort((a, b) => {
+      if (!a.due_date) return 1
+      if (!b.due_date) return -1
+      return a.due_date.localeCompare(b.due_date)
+    })
+    .slice(0, 5)
+    .map((task) => ({
+      id: task.task_id,
+      title: task.title,
+      meta: `${dueLabel(task.due_date)} · ${TASK_STATUS_LABEL[task.status]}`,
+      nextAction: TASK_STATUS_NEXT_ACTION[task.status],
+      urgency: urgency(task.due_date),
+    }))
+}
+
+export function buildUpcomingTimeline(tasks: TaskSummaryResponse[]) {
+  return tasks
+    .filter(isOpenTask)
+    .map((task) => ({ task, days: daysUntil(task.due_date) }))
+    .filter(({ days }) => days !== null && days >= 0 && days <= 7)
+    .sort((a, b) => (a.days ?? 0) - (b.days ?? 0))
+    .slice(0, 3)
+    .map(({ task }) => `${dueLabel(task.due_date)} · ${task.title}`)
+}

@@ -68,6 +68,10 @@
   margin-top: 16px;
 }
 
+.metricStrip + .headline {
+  margin-top: 40px;
+}
+
 @media (max-width: 720px) {
   .metricStrip {
     grid-template-columns: repeat(2, 1fr);
@@ -261,4 +265,10 @@
   margin: 16px 0 0;
   font-size: 12px;
   color: var(--text-secondary);
+}
+
+.capNotice {
+  margin: 16px 0 0;
+  color: var(--status-warning);
+  font-size: 12px;
 }

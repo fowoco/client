@@ -6,10 +6,6 @@ import { LINK_REQUEST } from './linkRequestData'
 export function LinkRequestPage() {
   const navigate = useNavigate()
 
-  function handleAskQuestion() {
-    // TODO(backend): POST /api/links/:token/questions -> HR 담당자에게 문의 전달
-  }
-
   return (
     <MobileShell right={<span>보안 링크</span>}>
       <div className={styles.expiryNotice}>
@@ -35,15 +31,15 @@ export function LinkRequestPage() {
       </div>
 
       <div className={styles.actions}>
-        <button type="button" className={styles.secondary} onClick={handleAskQuestion}>
-          질문이 있습니다
+        <button type="button" className={styles.secondary} disabled title="문의 API 연결 필요">
+          질문 API 연결 필요
         </button>
         <button
           type="button"
           className={styles.primary}
           onClick={() => navigate('/worker-portal/upload')}
         >
-          안내를 확인했습니다
+          파일 선택 화면 보기
         </button>
       </div>
 

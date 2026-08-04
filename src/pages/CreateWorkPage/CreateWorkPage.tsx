@@ -13,14 +13,18 @@ import { TASK_TYPE_LABEL } from '../../utils/taskStatus'
 import styles from './CreateWorkPage.module.css'
 import {
   AGENT_TRACE_PREVIEW,
-  EXAMPLE_PROMPT_INTENTS,
   EXAMPLE_PROMPTS,
   INPUT_MODES,
   MAX_LENGTH,
-  instructionWithHint,
   type InputModeId,
 } from './createWorkData'
 import { ImportWizardModal } from './importWizard/ImportWizardModal'
+import {
+  readActiveWorkRequestDraft,
+  saveActiveWorkRequestDraft,
+  saveAiRunWorkRequestDraft,
+  type WorkRequestDraft,
+} from './workRequestDraft'
 
 const TASK_TYPE_OPTIONS = [
   { value: '', label: '업무 유형 선택' },
@@ -33,21 +37,21 @@ const TASK_TYPE_OPTIONS = [
 export function CreateWorkPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  // HOME-001 대시보드의 AI 요청 프롬프트 칩에서 넘어온 경우 선택한 문구를 미리 채워둔다.
-  const prefill = (location.state as { prefill?: string } | null)?.prefill
-  const [mode, setMode] = useState<InputModeId>('nl')
-  const [request, setRequest] = useState(prefill ?? '')
-  const [intentHint, setIntentHint] = useState<string | null>(null)
+  const routeState = location.state as
+    | { prefill?: string; request?: string; mode?: InputModeId; workerId?: string }
+    | null
+  const storedDraft = readActiveWorkRequestDraft()
+  const [mode, setMode] = useState<InputModeId>(routeState?.mode ?? storedDraft?.mode ?? 'nl')
+  const [request, setRequest] = useState(routeState?.request ?? routeState?.prefill ?? storedDraft?.request ?? '')
   const [importWizardOpen, setImportWizardOpen] = useState(false)
   const showToast = useToastStore((state) => state.showToast)
 
-  // fowoco/server Task API에는 자연어 분석 엔드포인트가 없어(#153 조사 결과), 실제 생성은
-  // 근로자·업무유형·workflow를 직접 고르는 구조화 폼으로 처리한다. 위 자연어 입력은
-  // description으로 재활용한다.
+  // 자연어 분석과 별개로 Task API의 구조화 생성 경로를 함께 제공한다. 자연어 요청은
+  // 직접 생성 시 description으로 저장하고, 분석 시에는 가공하지 않은 원문을 전달한다.
   const { data: workerPage } = useApiQuery(useCallback(() => fetchWorkers({ size: 100 }), []))
   const { data: catalog } = useApiQuery(useCallback(() => fetchWorkflowCatalog(), []))
 
-  const [workerId, setWorkerId] = useState('')
+  const [workerId, setWorkerId] = useState(routeState?.workerId ?? storedDraft?.workerId ?? '')
   const [taskType, setTaskType] = useState<TaskType | ''>('')
   const [workflowId, setWorkflowId] = useState('')
   const [title, setTitle] = useState('')
@@ -79,6 +83,10 @@ export function CreateWorkPage() {
   )
   const selectedWorkflow = availableWorkflows.find((workflow) => workflow.workflow_id === workflowId)
   const canSubmit = workerId !== '' && taskType !== '' && workflowId !== '' && title.trim() !== '' && !submitting
+
+  function currentDraft(): WorkRequestDraft {
+    return { request, mode, workerId, attachments: [] }
+  }
 
   function handleTaskTypeChange(value: string) {
     setTaskType(value as TaskType | '')
@@ -117,7 +125,6 @@ export function CreateWorkPage() {
 
   function handleExampleClick(example: (typeof EXAMPLE_PROMPTS)[number]) {
     setRequest(example)
-    setIntentHint(EXAMPLE_PROMPT_INTENTS[example])
   }
 
   async function handleAnalyze() {
@@ -125,10 +132,14 @@ export function CreateWorkPage() {
     setAnalyzing(true)
     setAnalysisError(null)
     try {
-      const instruction = instructionWithHint(request, intentHint)
       const idempotencyKey = globalThis.crypto.randomUUID()
-      const aiRun = await createAiRun(instruction, idempotencyKey)
-      navigate(`/tasks/new/review?aiRunId=${encodeURIComponent(aiRun.ai_run_id)}`, { state: { aiRun } })
+      const aiRun = await createAiRun(request, idempotencyKey)
+      const draft = currentDraft()
+      saveActiveWorkRequestDraft(draft)
+      saveAiRunWorkRequestDraft(aiRun.ai_run_id, draft)
+      navigate(`/tasks/new/review?aiRunId=${encodeURIComponent(aiRun.ai_run_id)}`, {
+        state: { aiRun, draft },
+      })
     } catch (error) {
       setAnalysisError(error instanceof ApiError ? getErrorMessage(error) : '요청을 분석하지 못했습니다.')
     } finally {
@@ -137,12 +148,8 @@ export function CreateWorkPage() {
   }
 
   function handleSaveDraft() {
-    // TODO(backend): PATCH /api/work-items/draft -> 현재 입력 상태 저장
-    showToast('초안을 저장했습니다.')
-  }
-
-  function handleLinkWorker() {
-    // TODO(backend): GET /api/workers?q= -> 근로자 검색·연결 피커
+    saveActiveWorkRequestDraft(currentDraft())
+    showToast('이 브라우저 탭에 초안을 저장했습니다.')
   }
 
   return (
@@ -168,6 +175,7 @@ export function CreateWorkPage() {
             type="button"
             className={`${styles.modeCard} ${mode === option.id ? styles.modeCardActive : ''}`}
             onClick={() => setMode(option.id)}
+            disabled={!option.available}
           >
             <p className={styles.modeTitle}>{option.label}</p>
             <p className={styles.modeDescription}>{option.description}</p>
@@ -210,9 +218,7 @@ export function CreateWorkPage() {
 
           <div className={styles.contextRow}>
             <span className={styles.contextLabel}>선택 근로자</span>
-            <span className={`${styles.contextValue} ${styles.contextValueAccent}`}>
-              없음 · 선택값
-            </span>
+            <span className={styles.contextValue}>{workerId ? '연결됨' : '선택 안 함'}</span>
           </div>
           <div className={styles.contextRow}>
             <span className={styles.contextLabel}>현재 화면</span>
@@ -223,9 +229,12 @@ export function CreateWorkPage() {
             <span className={styles.contextValue}>없음</span>
           </div>
 
-          <button type="button" className={styles.linkWorker} onClick={handleLinkWorker}>
-            ＋ 근로자 연결
-          </button>
+          <Dropdown
+            options={workerOptions}
+            value={workerId}
+            onChange={setWorkerId}
+            ariaLabel="분석 대상 근로자 선택"
+          />
         </div>
       </div>
 
@@ -265,7 +274,7 @@ export function CreateWorkPage() {
         거칩니다.
       </p>
 
-      <div className={styles.directCreateCard}>
+      <div className={styles.directCreateCard} id="direct-create">
         <h2 className={styles.directCreateTitle}>바로 업무 생성</h2>
         <p className={styles.directCreateHint}>
           Agent 분석 없이 근로자·업무 유형·처리 절차를 직접 골라 업무를 만듭니다. 위 요청 내용은

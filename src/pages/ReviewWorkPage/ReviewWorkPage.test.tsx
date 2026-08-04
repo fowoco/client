@@ -25,12 +25,13 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-function renderPage() {
+function renderPage(path = '/tasks/new/review') {
   render(
-    <MemoryRouter initialEntries={['/tasks/new/review']}>
+    <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route path="/tasks/new/review" element={<ReviewWorkPage />} />
         <Route path="/tasks" element={<p>업무함</p>} />
+        <Route path="/tasks/new" element={<p>업무 생성 페이지</p>} />
       </Routes>
       <ToastViewport />
     </MemoryRouter>,
@@ -146,10 +147,27 @@ describe('ReviewWorkPage', () => {
     await user.click(screen.getByRole('button', { name: '승인 요청으로 이동 →' }))
 
     expect(await screen.findByRole('heading', { name: '승인이 완료됐습니다.' })).toBeInTheDocument()
-    expect(screen.getByText(`승인자 ${APPROVAL_SUMMARY.approver}`)).toBeInTheDocument()
+    expect(screen.getByText(APPROVAL_SUMMARY.approver)).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '업무함으로 이동 →' }))
 
     expect(await screen.findByText('업무함')).toBeInTheDocument()
+  })
+
+  it('opens directly on a given step via the ?step= query param', () => {
+    renderPage('/tasks/new/review?step=4')
+
+    expect(screen.getByRole('heading', { name: '승인이 완료됐습니다.' })).toBeInTheDocument()
+  })
+
+  it('jumps freely between steps by clicking the shared indicator', async () => {
+    const user = userEvent.setup()
+    renderPage('/tasks/new/review?step=4')
+
+    await user.click(screen.getByRole('button', { name: '초안 검토' }))
+    expect(screen.getByText('Agent가 요청을 1개의 업무로 정리했습니다.')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '요청 입력' }))
+    expect(await screen.findByText('업무 생성 페이지')).toBeInTheDocument()
   })
 })

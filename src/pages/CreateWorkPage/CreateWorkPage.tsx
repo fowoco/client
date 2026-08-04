@@ -32,6 +32,11 @@ export function CreateWorkPage() {
     showToast('초안을 저장했습니다.')
   }
 
+  function handleStepClick(index: number) {
+    if (index === 0) return
+    navigate(`/tasks/new/review?step=${index}`)
+  }
+
   return (
     <div>
       <div className={styles.topBar}>
@@ -43,7 +48,7 @@ export function CreateWorkPage() {
         </button>
       </div>
 
-      <WorkflowStepIndicator steps={REVIEW_STEPS} currentIndex={0} />
+      <WorkflowStepIndicator steps={REVIEW_STEPS} currentIndex={0} onStepClick={handleStepClick} />
 
       <h1 className={styles.headline}>무엇을 처리해야 하나요?</h1>
       <p className={styles.description}>한 문장으로 요청하거나 파일로 근로자 명단을 가져올 수 있습니다.</p>

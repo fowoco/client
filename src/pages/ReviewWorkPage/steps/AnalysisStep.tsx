@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
+import { StatusLabel } from '../../../components/ui/StatusLabel/StatusLabel'
 import styles from '../ReviewWorkPage.module.css'
-import { ANALYSIS_STAGES } from '../reviewWorkData'
+import { ANALYSIS_STAGES, UNDERSTOOD_REQUEST } from '../reviewWorkData'
 
 const STAGE_DELAY_MS = 500
 const DONE_DELAY_MS = 400
@@ -36,21 +37,52 @@ export function AnalysisStep({ onDone }: AnalysisStepProps) {
           <h1 className={styles.headline}>Agent가 요청을 분석하고 있습니다.</h1>
           <p className={styles.description}>등록된 근로자 정보와 처리 절차를 확인하고 있습니다.</p>
         </div>
+        <StatusLabel tone="info">분석 중</StatusLabel>
       </div>
 
-      <ul className={styles.analysisList}>
-        {ANALYSIS_STAGES.map((stage, index) => (
-          <li key={stage} className={styles.analysisRow}>
-            <span
-              className={`${styles.analysisIcon} ${index < doneCount ? styles.analysisIconDone : ''}`}
-              aria-hidden="true"
-            >
-              {index < doneCount ? '✓' : index + 1}
-            </span>
-            {stage}
-          </li>
-        ))}
-      </ul>
+      <div className={styles.workspace}>
+        <div className={styles.draftPanel}>
+          <div className={styles.draftPanelHeader}>
+            <h2 className={styles.draftTitle}>분석 진행 상황</h2>
+            <span className={styles.draftBadge}>Agent 분석</span>
+          </div>
+
+          <div className={styles.checklist}>
+            <p className={styles.checklistTitle}>단계별 진행</p>
+            <div className={styles.checklistGrid}>
+              {ANALYSIS_STAGES.map((stage, index) => (
+                <p key={stage} className={styles.checklistItem}>
+                  <span aria-hidden="true">{index < doneCount ? '✓' : '·'}</span> {stage}
+                </p>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.left}>
+          <div className={styles.card}>
+            <div className={styles.draftPanelHeader}>
+              <h2 className={styles.cardTitle}>Agent가 이해한 요청</h2>
+              <span className={styles.draftBadge}>실시간 분석</span>
+            </div>
+
+            <div className={styles.fieldGrid}>
+              <div>
+                <p className={styles.fieldLabel}>요청 목적</p>
+                <p className={styles.fieldValue}>{UNDERSTOOD_REQUEST.purpose}</p>
+              </div>
+              <div>
+                <p className={styles.fieldLabel}>업무 영역</p>
+                <p className={styles.fieldValue}>{UNDERSTOOD_REQUEST.domain}</p>
+              </div>
+              <div>
+                <p className={styles.fieldLabel}>추천 처리 절차</p>
+                <p className={styles.fieldValue}>{UNDERSTOOD_REQUEST.procedure}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

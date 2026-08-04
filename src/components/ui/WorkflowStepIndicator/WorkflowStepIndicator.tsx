@@ -8,11 +8,13 @@ export interface WorkflowStep {
 export interface WorkflowStepIndicatorProps {
   steps: WorkflowStep[]
   currentIndex: number
+  /** 지정하면 각 단계를 클릭해 자유롭게 이동할 수 있다. */
+  onStepClick?: (index: number) => void
 }
 
 // CreateWorkPage(1.요청입력)와 ReviewWorkPage(2~5단계)가 함께 쓰는 5단계 진행 표시기.
 // 하나로 이어지는 흐름처럼 보이도록 두 페이지에서 같은 컴포넌트·같은 steps 데이터를 쓴다.
-export function WorkflowStepIndicator({ steps, currentIndex }: WorkflowStepIndicatorProps) {
+export function WorkflowStepIndicator({ steps, currentIndex, onStepClick }: WorkflowStepIndicatorProps) {
   return (
     <ol className={styles.stepIndicator} aria-label="진행 단계">
       {steps.map((step, index) => (
@@ -22,8 +24,17 @@ export function WorkflowStepIndicator({ steps, currentIndex }: WorkflowStepIndic
             index === currentIndex ? styles.stepItemCurrent : ''
           }`}
         >
-          <span aria-hidden="true">{index < currentIndex ? '✓' : step.no}</span>
-          {step.label}
+          {onStepClick ? (
+            <button type="button" className={styles.stepButton} onClick={() => onStepClick(index)}>
+              <span aria-hidden="true">{index < currentIndex ? '✓' : step.no}</span>
+              {step.label}
+            </button>
+          ) : (
+            <>
+              <span aria-hidden="true">{index < currentIndex ? '✓' : step.no}</span>
+              {step.label}
+            </>
+          )}
           {index < steps.length - 1 && (
             <span className={styles.stepArrow} aria-hidden="true">
               →

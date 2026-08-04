@@ -1,10 +1,15 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { ToastViewport } from '../../components/ui/ToastViewport/ToastViewport'
 import { useToastStore } from '../../store/toastStore'
 import { CreateWorkPage } from './CreateWorkPage'
+
+function ReviewStub() {
+  const location = useLocation()
+  return <p>검토 화면{location.search}</p>
+}
 
 beforeEach(() => {
   useToastStore.setState({ toasts: [] })
@@ -27,7 +32,7 @@ function renderPage() {
             </>
           }
         />
-        <Route path="/tasks/new/review" element={<p>검토 화면</p>} />
+        <Route path="/tasks/new/review" element={<ReviewStub />} />
       </Routes>
     </MemoryRouter>,
   )
@@ -62,6 +67,15 @@ describe('CreateWorkPage', () => {
     await user.click(screen.getByRole('button', { name: '요청 분석하기 →' }))
 
     expect(await screen.findByText('검토 화면')).toBeInTheDocument()
+  })
+
+  it('jumps to a later review step when clicking it in the shared step indicator', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByRole('button', { name: '초안 검토' }))
+
+    expect(await screen.findByText('검토 화면?step=2')).toBeInTheDocument()
   })
 
   it('switches the active input mode', async () => {

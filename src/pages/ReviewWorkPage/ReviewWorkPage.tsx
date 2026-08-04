@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { WorkflowStepIndicator } from '../../components/ui/WorkflowStepIndicator/WorkflowStepIndicator'
 import styles from './ReviewWorkPage.module.css'
 import { REVIEW_STEPS } from './reviewWorkData'
@@ -12,8 +12,23 @@ import { TaskCreationStep } from './steps/TaskCreationStep'
 // 1.요청입력은 CreateWorkPage(/tasks/new)에서 진행되고, 같은 WorkflowStepIndicator를 공유한다.
 type WizardStepIndex = 1 | 2 | 3 | 4
 
+function parseStepIndex(value: string | null): WizardStepIndex {
+  const parsed = Number(value)
+  return parsed === 2 || parsed === 3 || parsed === 4 ? parsed : 1
+}
+
 export function ReviewWorkPage() {
-  const [stepIndex, setStepIndex] = useState<WizardStepIndex>(1)
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const [stepIndex, setStepIndex] = useState<WizardStepIndex>(() => parseStepIndex(searchParams.get('step')))
+
+  function handleStepClick(index: number) {
+    if (index === 0) {
+      navigate('/tasks/new')
+      return
+    }
+    setStepIndex(index as WizardStepIndex)
+  }
 
   return (
     <div>
@@ -23,7 +38,7 @@ export function ReviewWorkPage() {
         </Link>
       </div>
 
-      <WorkflowStepIndicator steps={REVIEW_STEPS} currentIndex={stepIndex} />
+      <WorkflowStepIndicator steps={REVIEW_STEPS} currentIndex={stepIndex} onStepClick={handleStepClick} />
 
       {stepIndex === 1 && <AnalysisStep onDone={() => setStepIndex(2)} />}
       {stepIndex === 2 && <DraftReviewStep onComplete={() => setStepIndex(3)} />}

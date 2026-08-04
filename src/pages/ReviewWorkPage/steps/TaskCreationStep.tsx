@@ -19,11 +19,31 @@ export function TaskCreationStep({ onDone }: TaskCreationStepProps) {
         <StatusLabel tone="success">생성 완료</StatusLabel>
       </div>
 
-      <div className={styles.card}>
-        <h2 className={styles.cardTitle}>{TASK_CREATION_SUMMARY.title}</h2>
-        <DetailRow label="담당자" value={PREPARED_DRAFT.assignee} />
-        <DetailRow label="처리 절차" value={TASK_CREATION_SUMMARY.procedure} />
-        <DetailRow label="완료 증빙" value={PREPARED_DRAFT.completionEvidence} />
+      <div className={styles.workspace}>
+        <div className={styles.draftPanel}>
+          <div className={styles.draftPanelHeader}>
+            <h2 className={styles.draftTitle}>생성된 업무</h2>
+            <span className={styles.draftBadge}>업무 생성</span>
+          </div>
+
+          <p className={styles.draftHeadline}>{TASK_CREATION_SUMMARY.title}</p>
+
+          <DetailRow label="담당자" value={PREPARED_DRAFT.assignee} />
+          <DetailRow label="처리 절차" value={TASK_CREATION_SUMMARY.procedure} />
+          <DetailRow label="완료 증빙" value={PREPARED_DRAFT.completionEvidence} />
+        </div>
+
+        <div className={styles.left}>
+          <div className={styles.card}>
+            <div className={styles.draftPanelHeader}>
+              <h2 className={styles.cardTitle}>다음 단계 안내</h2>
+              <span className={styles.draftBadge}>승인 대기</span>
+            </div>
+            <p className={styles.missingQuestion}>
+              생성된 업무는 담당자 승인을 거쳐야 근로자 전달·외부 제출 단계로 이어집니다.
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className={styles.actions}>

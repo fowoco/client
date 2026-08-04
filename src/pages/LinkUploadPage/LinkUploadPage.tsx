@@ -1,6 +1,16 @@
-import { useRef, useState, type ChangeEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { ApiError, getErrorMessage } from '../../api/errors'
+import {
+  fetchWorkerLink,
+  submitWorkerResponse,
+  uploadWorkerLinkDocument,
+  type WorkerResponseSubmitResponse,
+  type WorkerResponseType,
+} from '../../api/workerLinks'
 import { MobileShell } from '../../components/mobile/MobileShell'
+import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
+import { useApiQuery } from '../../hooks/useApiQuery'
 import styles from './LinkUploadPage.module.css'
 import { HELP_LINKS } from './linkUploadData'
 
@@ -13,10 +23,25 @@ function formatFileSize(bytes: number) {
 }
 
 export function LinkUploadPage() {
+  const { token } = useParams()
   const navigate = useNavigate()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [submission, setSubmission] = useState<WorkerResponseSubmitResponse | null>(null)
+  const [responseMessage, setResponseMessage] = useState<string | null>(null)
+  const fetcher = useCallback(
+    () => (token ? fetchWorkerLink(token) : Promise.reject(new Error('missing token'))),
+    [token],
+  )
+  const { status, data, error, refetch } = useApiQuery(fetcher)
+
+  useEffect(() => {
+    if (token && status === 'error' && error?.status === 410) {
+      navigate(`/worker-portal/${encodeURIComponent(token)}/expired`, { replace: true })
+    }
+  }, [error, navigate, status, token])
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const selected = event.target.files?.[0] ?? null
@@ -43,8 +68,99 @@ export function LinkUploadPage() {
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
+  async function handleSubmit() {
+    if (!token || !file || submitting) return
+    setSubmitting(true)
+    setFileError(null)
+    const uploadRequestId = crypto.randomUUID()
+    try {
+      const upload = await uploadWorkerLinkDocument(token, file, uploadRequestId)
+      const result = await submitWorkerResponse(token, {
+        response_type: 'DOCUMENT_SUBMITTED',
+        upload_ids: [upload.upload_id],
+        idempotency_key: crypto.randomUUID(),
+      })
+      setSubmission(result)
+    } catch (caught) {
+      if (caught instanceof ApiError && caught.status === 410) {
+        navigate(`/worker-portal/${encodeURIComponent(token)}/expired`, { replace: true })
+        return
+      }
+      setFileError(caught instanceof ApiError ? getErrorMessage(caught) : '파일을 제출하지 못했습니다.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleHelpResponse(responseType: WorkerResponseType, successMessage: string) {
+    if (!token || submitting) return
+    setSubmitting(true)
+    setFileError(null)
+    try {
+      await submitWorkerResponse(token, {
+        response_type: responseType,
+        idempotency_key: crypto.randomUUID(),
+      })
+      setResponseMessage(successMessage)
+    } catch (caught) {
+      setFileError(caught instanceof ApiError ? getErrorMessage(caught) : '응답을 보내지 못했습니다.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (!token) {
+    return (
+      <MobileShell title="서류 제출" onBack={() => navigate(-1)}>
+        <EmptyState kind="error" title="제출 링크가 필요합니다" body="회사 담당자가 전달한 전체 링크를 다시 열어 주세요." />
+      </MobileShell>
+    )
+  }
+
+  if (status === 'loading') {
+    return (
+      <MobileShell title="서류 제출" onBack={() => navigate(-1)}>
+        <EmptyState kind="loading" title="제출 링크를 확인하고 있습니다" body="잠시만 기다려 주세요." />
+      </MobileShell>
+    )
+  }
+
+  if (status === 'error' || !data) {
+    return (
+      <MobileShell title="서류 제출" onBack={() => navigate(-1)}>
+        <EmptyState
+          kind="error"
+          title="제출 링크를 확인하지 못했습니다"
+          body={error instanceof ApiError ? getErrorMessage(error) : '네트워크 상태를 확인해 주세요.'}
+          actionLabel="다시 시도"
+          onAction={refetch}
+        />
+      </MobileShell>
+    )
+  }
+
+  if (submission) {
+    return (
+      <MobileShell title="제출 완료" right={<span>완료</span>}>
+        <div className={styles.successCard}>
+          <span className={styles.successIcon}>✓</span>
+          <h1 className={styles.successTitle}>서류를 제출했습니다</h1>
+          <p className={styles.successBody}>담당자가 파일을 확인하면 다음 상태로 진행됩니다.</p>
+          <p className={styles.successMeta}>접수 ID · {submission.response_id}</p>
+        </div>
+      </MobileShell>
+    )
+  }
+
+  const canSubmitDocument = data.allowed_responses.includes('DOCUMENT_SUBMITTED')
+  const helpResponses: Array<{ label: string; type: WorkerResponseType; message: string }> = [
+    { label: HELP_LINKS[0], type: 'QUESTION', message: '담당자에게 질문 의사를 전했습니다.' },
+    { label: HELP_LINKS[1], type: 'NOT_UNDERSTOOD', message: '담당자에게 추가 설명을 요청했습니다.' },
+    { label: HELP_LINKS[2], type: 'DIFFICULT', message: '담당자에게 처리 어려움 상태를 전했습니다.' },
+  ]
+
   return (
-    <MobileShell title="여권 사본 제출" onBack={() => navigate(-1)} right={<span>1 / 1</span>}>
+    <MobileShell title="요청 서류 제출" onBack={() => navigate(-1)} right={<span>보안 링크</span>}>
       <h1 className={styles.headline}>
         사진 또는 파일을
         <br />
@@ -72,6 +188,7 @@ export function LinkUploadPage() {
       />
 
       {fileError && <p className={styles.fileError} role="alert">{fileError}</p>}
+      {responseMessage && <p className={styles.responseNotice}>{responseMessage}</p>}
 
       {file && (
         <div className={styles.selectedFile}>
@@ -89,26 +206,31 @@ export function LinkUploadPage() {
 
       <p className={styles.helpLabel}>제출이 어렵다면</p>
       <div className={styles.helpLinks}>
-        {HELP_LINKS.map((label, index) => (
+        {helpResponses.map((response, index) => (
           <button
-            key={label}
+            key={response.type}
             type="button"
             className={`${styles.helpLink} ${index === 0 ? styles.helpLinkPrimary : ''}`}
-            disabled
-            title="문의 API 연결 필요"
+            disabled={!data.allowed_responses.includes(response.type) || submitting}
+            onClick={() => handleHelpResponse(response.type, response.message)}
           >
-            <span>{label}</span>
+            <span>{response.label}</span>
             <span>→</span>
           </button>
         ))}
       </div>
 
-      <button type="button" className={styles.submit} disabled>
-        제출 API 연결 필요
+      <button
+        type="button"
+        className={styles.submit}
+        disabled={!file || !canSubmitDocument || submitting}
+        onClick={handleSubmit}
+      >
+        {submitting ? '제출 중…' : '서류 제출'}
       </button>
 
       <p className={styles.footnote}>
-        파일 선택과 형식 검증만 가능합니다. 보안 링크 토큰·업로드·제출 API 연결 후 실제 기록됩니다.
+        업로드가 끝난 뒤 제출 응답까지 접수되어야 담당자 화면에 반영됩니다.
       </p>
     </MobileShell>
   )

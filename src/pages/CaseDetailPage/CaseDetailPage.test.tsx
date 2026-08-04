@@ -105,6 +105,9 @@ function mockTaskAndActivities(
     if (url.endsWith('/complete')) {
       return Promise.resolve(jsonResponse({ resource_id: 'T-1', task_id: 'T-1', task_status: 'COMPLETED', task_version: 2 }))
     }
+    if (url.endsWith('/worker-link')) {
+      return Promise.resolve(jsonResponse({ worker_url: 'worker-token-1', expires_at: '2026-08-07T00:00:00Z' }, { status: 201 }))
+    }
     return Promise.resolve(jsonResponse(task(taskOverrides)))
   })
 }
@@ -453,7 +456,7 @@ describe('CaseDetailPage', () => {
     expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/complete'))).toBe(true)
   })
 
-  it('reissues the security link and shows the new-link overlay', async () => {
+  it('issues the security link through the API and shows the real URL', async () => {
     const user = userEvent.setup()
     mockTaskAndActivities({ status: 'APPROVED' })
     renderPage()
@@ -466,6 +469,7 @@ describe('CaseDetailPage', () => {
     await user.click(screen.getByRole('button', { name: '새 링크 생성' }))
 
     expect(screen.getByRole('dialog', { name: '새 링크가 준비되었습니다' })).toBeInTheDocument()
-    expect(screen.getByText('fowoco.kr/s/7K9P-****-Q2M4')).toBeInTheDocument()
+    expect(screen.getByText('http://localhost:3000/worker-portal/worker-token-1')).toBeInTheDocument()
+    expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/worker-link'))).toBe(true)
   })
 })

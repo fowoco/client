@@ -13,7 +13,7 @@ describe('ApprovalRequestModal', () => {
   it('calls onSubmit when the request button is clicked', async () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn()
-    render(<ApprovalRequestModal open onClose={vi.fn()} onSubmit={onSubmit} />)
+    render(<ApprovalRequestModal open taskTitle="체류연장" dueDate="2026-08-10" onClose={vi.fn()} onSubmit={onSubmit} />)
 
     await user.click(screen.getByRole('button', { name: '승인 요청 보내기' }))
 
@@ -23,7 +23,7 @@ describe('ApprovalRequestModal', () => {
   it('calls onClose when cancel is clicked', async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
-    render(<ApprovalRequestModal open onClose={onClose} onSubmit={vi.fn()} />)
+    render(<ApprovalRequestModal open taskTitle="체류연장" dueDate={null} onClose={onClose} onSubmit={vi.fn()} />)
 
     await user.click(screen.getByRole('button', { name: '취소' }))
 
@@ -36,7 +36,17 @@ describe('ApprovalDecisionModal', () => {
     const user = userEvent.setup()
     const onApprove = vi.fn()
     const onReject = vi.fn()
-    render(<ApprovalDecisionModal open onClose={vi.fn()} onApprove={onApprove} onReject={onReject} />)
+    render(
+      <ApprovalDecisionModal
+        open
+        taskTitle="체류연장"
+        dueDate="2026-08-10"
+        workflowId="wf-stay"
+        onClose={vi.fn()}
+        onApprove={onApprove}
+        onReject={onReject}
+      />,
+    )
 
     await user.click(screen.getByRole('button', { name: '반려' }))
     expect(onReject).toHaveBeenCalledOnce()

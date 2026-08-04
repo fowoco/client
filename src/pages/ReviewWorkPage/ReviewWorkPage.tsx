@@ -1,11 +1,14 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { ApiError, getErrorMessage } from '../../api/errors'
+import { fetchAiRun, type AiRunResponse } from '../../api/aiRuns'
 import { Button } from '../../components/ui/Button/Button'
 import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
 import { Dropdown } from '../../components/ui/Dropdown/Dropdown'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import { useToastStore } from '../../store/toastStore'
 import styles from './ReviewWorkPage.module.css'
+import { AiRunReview } from './AiRunReview'
 import {
   CURRENT_STEP_INDEX,
   DRAFT_REASONS,
@@ -23,9 +26,64 @@ const INSTITUTION_OPTIONS = [
 
 export function ReviewWorkPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [institution, setInstitution] = useState('')
+  const navigationRun = (location.state as { aiRun?: AiRunResponse } | null)?.aiRun
+  const aiRunId = new URLSearchParams(location.search).get('aiRunId')
+  const [recoveredRun, setRecoveredRun] = useState<AiRunResponse | null>(null)
+  const [recovering, setRecovering] = useState(Boolean(aiRunId && !navigationRun))
+  const [recoveryError, setRecoveryError] = useState<string | null>(null)
   const canCreate = institution !== ''
   const showToast = useToastStore((state) => state.showToast)
+  const aiRun = navigationRun ?? recoveredRun
+
+  useEffect(() => {
+    if (!aiRunId || navigationRun) return
+
+    let cancelled = false
+    setRecovering(true)
+    setRecoveryError(null)
+    fetchAiRun(aiRunId)
+      .then((run) => {
+        if (!cancelled) setRecoveredRun(run)
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setRecoveryError(error instanceof ApiError ? getErrorMessage(error) : '분석 결과를 불러오지 못했습니다.')
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setRecovering(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [aiRunId, navigationRun])
+
+  if (aiRun) {
+    return <AiRunReview initialRun={aiRun} />
+  }
+
+  if (recovering || recoveryError) {
+    return (
+      <div>
+        <div className={styles.topBar}>
+          <Link to="/tasks/new" className={styles.back}>← 요청 수정</Link>
+        </div>
+        <div className={styles.headerRow}>
+          <div>
+            <h1 className={styles.headline}>
+              {recovering ? 'Agent 분석 결과를 불러오고 있습니다.' : 'Agent 분석 결과를 불러오지 못했습니다.'}
+            </h1>
+            <p className={styles.description} role={recoveryError ? 'alert' : undefined}>
+              {recoveryError ?? '저장된 실행 번호로 최신 상태를 확인합니다.'}
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   function handleCreate() {
     // TODO(backend): POST /api/work-items { ...UNDERSTOOD_REQUEST, institution } -> 생성 후 WORK-001로 이동

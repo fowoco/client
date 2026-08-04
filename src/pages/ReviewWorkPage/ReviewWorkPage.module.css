@@ -35,6 +35,11 @@
   padding: 0;
 }
 
+.runReference {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
 .headerRow {
   display: flex;
   align-items: flex-start;
@@ -205,6 +210,24 @@
   border-radius: var(--fowoco-radius-6);
 }
 
+.instruction {
+  margin: 0;
+  padding: 16px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  background: var(--surface-subtle);
+  border-radius: var(--fowoco-radius-8);
+}
+
+.runMetadata {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
 .cardLinks {
   display: flex;
   gap: 24px;
@@ -246,6 +269,33 @@
   color: var(--status-warning);
 }
 
+.questionField + .questionField {
+  margin-top: 16px;
+}
+
+.questionInput {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  color: var(--text-primary);
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
+  box-sizing: border-box;
+}
+
+.errorCard {
+  padding: var(--fowoco-spacing-20) var(--fowoco-spacing-24);
+  background: var(--fowoco-red-50, #fff1f1);
+  border-radius: var(--fowoco-radius-8);
+}
+
+.fieldError {
+  margin: 12px 0 0;
+  color: var(--status-critical, #b42318);
+  font-size: 13px;
+}
+
 .draftPanel {
   padding: var(--fowoco-spacing-20) var(--fowoco-spacing-24);
   background: var(--surface-default);
@@ -273,6 +323,29 @@
   font-weight: 700;
   line-height: 30px;
   color: var(--text-primary);
+}
+
+.emptyState {
+  margin: 16px 0 0;
+  line-height: 1.6;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.candidateCard {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.candidateCard:last-child {
+  border-bottom: 0;
+}
+
+.candidateMeta {
+  margin: 6px 0 0;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  color: var(--text-secondary);
 }
 
 .draftLink {

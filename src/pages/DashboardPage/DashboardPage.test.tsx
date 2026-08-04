@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes, useParams } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { TaskPageResponse, TaskSummaryResponse } from '../../api/tasks'
 import { DashboardPage } from './DashboardPage'
@@ -95,12 +95,18 @@ function TaskDetailProbe() {
   return <p>업무 상세 {taskId}</p>
 }
 
+function WorkCreateProbe() {
+  const location = useLocation()
+  const prefill = (location.state as { prefill?: string } | null)?.prefill
+  return <p>업무 생성 {prefill}</p>
+}
+
 function renderPage() {
   return render(
     <MemoryRouter initialEntries={['/dashboard']}>
       <Routes>
         <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/tasks/new" element={<p>업무 생성 페이지</p>} />
+        <Route path="/tasks/new" element={<WorkCreateProbe />} />
         <Route path="/tasks" element={<p>업무함</p>} />
         <Route path="/tasks/:taskId" element={<TaskDetailProbe />} />
       </Routes>
@@ -189,12 +195,26 @@ describe('DashboardPage', () => {
     expect(await screen.findByText(/최근 100건 기준입니다/)).toBeInTheDocument()
   })
 
-  it('navigates to work creation with the chosen prompt chip prefilled', async () => {
+  it('fills the input from a prompt chip and forwards it on submit', async () => {
     const user = userEvent.setup()
     renderPage()
 
     await user.click(screen.getByRole('button', { name: AI_REQUEST_PROMPT_CHIPS[0] }))
+    const requestInput = screen.getByRole('textbox', { name: 'Agent 업무 요청' })
+    expect(requestInput).toHaveValue(AI_REQUEST_PROMPT_CHIPS[0])
 
-    expect(await screen.findByText('업무 생성 페이지')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '업무 요청 계속하기' }))
+
+    expect(await screen.findByText(`업무 생성 ${AI_REQUEST_PROMPT_CHIPS[0]}`)).toBeInTheDocument()
+  })
+
+  it('accepts a natural-language request directly and submits it with Enter', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    const requestInput = screen.getByRole('textbox', { name: 'Agent 업무 요청' })
+    await user.type(requestInput, '응웬반A 체류기간 연장 준비{Enter}')
+
+    expect(await screen.findByText('업무 생성 응웬반A 체류기간 연장 준비')).toBeInTheDocument()
   })
 })

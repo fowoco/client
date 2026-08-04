@@ -19,9 +19,9 @@ afterEach(() => {
   useToastStore.setState({ toasts: [] })
 })
 
-function renderPage() {
+function renderPage(initialEntry: string | { pathname: string; state?: unknown } = '/tasks/new') {
   render(
-    <MemoryRouter initialEntries={['/tasks/new']}>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
         <Route
           path="/tasks/new"
@@ -39,6 +39,12 @@ function renderPage() {
 }
 
 describe('CreateWorkPage', () => {
+  it('uses a request forwarded from the dashboard as the initial input', () => {
+    renderPage({ pathname: '/tasks/new', state: { prefill: '응웬반A 체류기간 연장 준비' } })
+
+    expect(screen.getByLabelText('업무 요청 내용')).toHaveValue('응웬반A 체류기간 연장 준비')
+  })
+
   it('disables the analyze button until a request is entered', async () => {
     const user = userEvent.setup()
     renderPage()

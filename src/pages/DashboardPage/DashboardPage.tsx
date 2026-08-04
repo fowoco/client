@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchTasks } from '../../api/tasks'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
@@ -17,6 +17,7 @@ import {
 
 export function DashboardPage() {
   const navigate = useNavigate()
+  const [agentRequest, setAgentRequest] = useState('')
   const taskFetcher = useCallback(() => fetchTasks({ size: 100 }), [])
   const isEmpty = useCallback((page: { items: unknown[] }) => page.items.length === 0, [])
   const { status, data: taskPage, error, refetch } = useApiQuery(taskFetcher, isEmpty)
@@ -34,6 +35,13 @@ export function DashboardPage() {
         ? '현재 등록된 업무가 없습니다.'
         : '업무 현황을 확인하고 있습니다.'
 
+  function handleAgentRequestSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const prefill = agentRequest.trim()
+    if (!prefill) return
+    navigate('/tasks/new', { state: { prefill } })
+  }
+
   return (
     <div className={styles.page}>
       <header className={styles.pageHeader}>
@@ -48,21 +56,33 @@ export function DashboardPage() {
           <img src={agentSparkIcon} alt="" aria-hidden="true" />
           <h2 id="agent-request-title">Agent 업무 요청</h2>
         </div>
-        <button
-          type="button"
-          className={styles.commandInput}
-          onClick={() => navigate('/tasks/new')}
-        >
-          <span>처리할 업무를 자연어로 입력해 주세요. 예: 응웬반A의 체류기간 연장 준비</span>
-          <img src={commandSubmitIcon} alt="업무 요청 입력하기" />
-        </button>
+        <form className={styles.commandForm} onSubmit={handleAgentRequestSubmit}>
+          <input
+            type="text"
+            className={styles.commandInput}
+            value={agentRequest}
+            onChange={(event) => setAgentRequest(event.target.value)}
+            placeholder="처리할 업무를 자연어로 입력해 주세요. 예: 응웬반A의 체류기간 연장 준비"
+            aria-label="Agent 업무 요청"
+            maxLength={2000}
+          />
+          <button
+            type="submit"
+            className={styles.commandSubmit}
+            aria-label="업무 요청 계속하기"
+            disabled={agentRequest.trim() === ''}
+          >
+            <img src={commandSubmitIcon} alt="" aria-hidden="true" />
+          </button>
+        </form>
         <div className={styles.promptChips}>
           {AI_REQUEST_PROMPT_CHIPS.map((chip) => (
             <button
               key={chip}
               type="button"
               className={styles.promptChip}
-              onClick={() => navigate('/tasks/new', { state: { prefill: chip } })}
+              aria-pressed={agentRequest === chip}
+              onClick={() => setAgentRequest(chip)}
             >
               {chip}
             </button>

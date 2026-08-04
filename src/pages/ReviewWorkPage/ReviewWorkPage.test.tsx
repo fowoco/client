@@ -1,19 +1,10 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AiRunResponse } from '../../api/aiRuns'
-import { ToastViewport } from '../../components/ui/ToastViewport/ToastViewport'
-import { useToastStore } from '../../store/toastStore'
+import type { WorkRequestDraft } from '../CreateWorkPage/workRequestDraft'
 import { ReviewWorkPage } from './ReviewWorkPage'
-import {
-  DRAFT_REASONS,
-  MISSING_INFO,
-  PREPARED_CHECKLIST,
-  PREPARED_DRAFT,
-  REVIEW_STEPS,
-  UNDERSTOOD_REQUEST,
-} from './reviewWorkData'
 
 function jsonResponse(body: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(body), {
@@ -23,8 +14,56 @@ function jsonResponse(body: unknown, init: ResponseInit = {}) {
   })
 }
 
+const CATALOG = {
+  bundle_id: 'B-1',
+  bundle_version: '1',
+  bundle_status: 'ACTIVE',
+  source_repository: 'fowoco/knowledge',
+  generated_at: '2026-08-04T00:00:00Z',
+  workflows: [
+    { workflow_id: 'WF-STY-001', name: '체류기간 연장 처리', intent: 'EXPIRY_RENEWAL', sensitivity: 'NORMAL', supported_task_types: [], required_slots: [], checklist_items: [], completion_evidence: [], source_ids: [] },
+    { workflow_id: 'WF-PAY-001', name: '급여 자료 확인', intent: 'PAYROLL_EXPLANATION', sensitivity: 'NORMAL', supported_task_types: [], required_slots: [], checklist_items: [], completion_evidence: [], source_ids: [] },
+  ],
+}
+const WORKERS = {
+  items: [
+    { worker_id: 'W-1', display_name: '응웬반A' },
+  ],
+  page: 0,
+  size: 100,
+  total_elements: 1,
+}
+
+function needsInfoRun(overrides: Partial<AiRunResponse> = {}): AiRunResponse {
+  return {
+    ai_run_id: 'A-1',
+    request_id: 'R-1',
+    instruction: '응웬반A 체류연장 준비해줘',
+    status: 'SUCCEEDED',
+    analysis_outcome: 'NEEDS_INFO',
+    detected_intent: 'EXPIRY_RENEWAL',
+    error_code: null,
+    attempt_count: 2,
+    version: 2,
+    questions: [
+      { slot_key: 'due_at', label: '신청 목표일을 입력해 주세요.', input_type: 'DATE', required: true, answer: null },
+    ],
+    candidates: [],
+    created_at: '2026-08-04T00:00:00Z',
+    updated_at: '2026-08-04T00:00:01Z',
+    ...overrides,
+  }
+}
+
+const DRAFT: WorkRequestDraft = {
+  request: '응웬반A 체류연장 준비해줘',
+  mode: 'nl',
+  workerId: 'W-1',
+  attachments: [],
+}
+
 beforeEach(() => {
-  useToastStore.setState({ toasts: [] })
+  window.sessionStorage.clear()
   vi.stubGlobal('fetch', vi.fn())
 })
 
@@ -32,91 +71,33 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-function renderPage(aiRun?: AiRunResponse, path = '/tasks/new/review') {
+function renderPage(aiRun?: AiRunResponse, path = '/tasks/new/review', draft?: WorkRequestDraft) {
   render(
-    <MemoryRouter initialEntries={[aiRun ? { pathname: path, state: { aiRun } } : path]}>
+    <MemoryRouter initialEntries={[aiRun ? { pathname: path, state: { aiRun, draft } } : path]}>
       <ReviewWorkPage />
-      <ToastViewport />
     </MemoryRouter>,
   )
 }
 
 describe('ReviewWorkPage', () => {
-  it('renders the understood request and prepared draft', () => {
-    renderPage()
-    expect(screen.getByText(UNDERSTOOD_REQUEST.purpose)).toBeInTheDocument()
-    expect(screen.getByText(PREPARED_DRAFT.rows[0].value)).toBeInTheDocument()
-  })
-
-  it('disables create button until the missing institution is selected', async () => {
-    const user = userEvent.setup()
+  it('does not show static example data without an analysis run', () => {
     renderPage()
 
-    const create = screen.getByRole('button', { name: '정보 확인 후 업무 생성' })
-    expect(create).toBeDisabled()
-
-    await user.click(screen.getByRole('button', { name: MISSING_INFO.placeholder }))
-    await user.click(screen.getByRole('option', { name: MISSING_INFO.options[0] }))
-
-    expect(create).toBeEnabled()
+    expect(screen.getByText('검토할 분석 결과가 없습니다.')).toBeInTheDocument()
+    expect(screen.getByText(/예시 업무는 표시하지 않습니다/)).toBeInTheDocument()
   })
 
-  it('shows a toast when a draft is saved', async () => {
-    const user = userEvent.setup()
-    renderPage()
+  it('renders the exact request with Korean intent and review steps', () => {
+    renderPage(needsInfoRun(), undefined, DRAFT)
 
-    await user.click(screen.getByRole('button', { name: '초안 저장' }))
-
-    expect(screen.getByText('초안을 저장했습니다.')).toBeInTheDocument()
+    expect(screen.getByText(DRAFT.request)).toBeInTheDocument()
+    expect(screen.getByText('체류기간 연장')).toBeInTheDocument()
+    expect(screen.getAllByRole('listitem')).toHaveLength(4)
+    expect(screen.getByText('현재 분석 API에서 제공하지 않음')).toBeInTheDocument()
   })
 
-  it('renders every step of the progress indicator', () => {
-    renderPage()
-    expect(screen.getAllByRole('listitem')).toHaveLength(REVIEW_STEPS.length)
-    for (const step of REVIEW_STEPS) {
-      expect(screen.getAllByText(step.label).length).toBeGreaterThan(0)
-    }
-  })
-
-  it('renders the AI checklist and draft reasoning', () => {
-    renderPage()
-    for (const item of PREPARED_CHECKLIST) {
-      expect(screen.getByText(item)).toBeInTheDocument()
-    }
-    for (const reason of DRAFT_REASONS) {
-      expect(screen.getByText(`· ${reason}`)).toBeInTheDocument()
-    }
-  })
-
-  it('shows a toast when viewing evidence', async () => {
-    const user = userEvent.setup()
-    renderPage()
-
-    await user.click(screen.getByRole('button', { name: '근거 보기 ▾' }))
-
-    expect(screen.getByText('분석 근거 보기는 준비 중입니다.')).toBeInTheDocument()
-  })
-
-  it('submits missing information and renders the returned candidate', async () => {
-    const initialRun: AiRunResponse = {
-      ai_run_id: 'A-1',
-      request_id: 'R-1',
-      instruction: '응웬반A 체류연장 준비해줘, EXPIRY_RENEWAL',
-      status: 'SUCCEEDED',
-      analysis_outcome: 'NEEDS_INFO',
-      detected_intent: 'EXPIRY_RENEWAL',
-      error_code: null,
-      attempt_count: 2,
-      version: 2,
-      questions: [
-        { slot_key: 'due_at', label: '신청 목표일을 입력해 주세요.', input_type: 'DATE', required: true, answer: null },
-      ],
-      candidates: [],
-      created_at: '2026-08-04T00:00:00Z',
-      updated_at: '2026-08-04T00:00:01Z',
-    }
-    const completedRun: AiRunResponse = {
-      ...initialRun,
+  it('submits missing information and renders server-backed candidate labels', async () => {
+    const completedRun = needsInfoRun({
       analysis_outcome: 'REVIEW_REQUIRED',
       attempt_count: 3,
       version: 3,
@@ -132,41 +113,76 @@ describe('ReviewWorkPage', () => {
           confidence: 0.96,
         },
       ],
-    }
-    vi.mocked(fetch).mockResolvedValue(jsonResponse(completedRun, { status: 202 }))
+    })
+    vi.mocked(fetch).mockImplementation((input) => {
+      const url = String(input)
+      if (url.includes('/answers')) return Promise.resolve(jsonResponse(completedRun, { status: 202 }))
+      if (url.includes('/workflow-catalogs')) return Promise.resolve(jsonResponse(CATALOG))
+      if (url.includes('/workers')) return Promise.resolve(jsonResponse(WORKERS))
+      return Promise.resolve(jsonResponse(completedRun))
+    })
     const user = userEvent.setup()
-    renderPage(initialRun)
+    renderPage(needsInfoRun(), undefined, DRAFT)
 
     await user.type(screen.getByLabelText('신청 목표일을 입력해 주세요. *'), '2026-08-31')
     await user.click(screen.getByRole('button', { name: '답변하고 다시 분석' }))
 
-    expect(await screen.findByText('WF-STY-001')).toBeInTheDocument()
-    const answerCall = vi.mocked(fetch).mock.calls[0]
-    expect(String(answerCall[0])).toContain('/ai-runs/A-1/answers')
-    expect(JSON.parse((answerCall[1] as RequestInit).body as string)).toEqual({
+    expect((await screen.findAllByText('체류기간 연장 처리')).length).toBeGreaterThan(0)
+    expect(screen.getByText('응웬반A')).toBeInTheDocument()
+    expect(screen.queryByText('0.96')).not.toBeInTheDocument()
+    const answerCall = vi.mocked(fetch).mock.calls.find(([url]) => String(url).includes('/answers'))
+    expect(JSON.parse((answerCall?.[1] as RequestInit).body as string)).toEqual({
       expected_version: 2,
       answers: { due_at: '2026-08-31' },
     })
   })
 
-  it('restores the AI run from the URL after a refresh', async () => {
-    const savedRun: AiRunResponse = {
-      ai_run_id: 'A-RESTORED',
-      request_id: 'R-RESTORED',
-      instruction: '응웬반A 체류연장 준비해줘, EXPIRY_RENEWAL',
-      status: 'SUCCEEDED',
-      analysis_outcome: 'NEEDS_INFO',
-      detected_intent: 'EXPIRY_RENEWAL',
-      error_code: null,
-      attempt_count: 1,
-      version: 1,
-      questions: [
-        { slot_key: 'due_at', label: '신청 목표일을 입력해 주세요.', input_type: 'DATE', required: true, answer: null },
+  it('lets HR include and exclude independent candidates without pretending to create tasks', async () => {
+    const compoundRun = needsInfoRun({
+      analysis_outcome: 'REVIEW_REQUIRED',
+      questions: [],
+      candidates: [
+        { candidate_id: 'C-1', candidate_ref: 'candidate-1', worker_id: 'W-1', workflow_id: 'WF-STY-001', extracted_slots: { due_at: '2026-08-31' }, missing_slots: [], confidence: 0.92 },
+        { candidate_id: 'C-2', candidate_ref: 'candidate-2', worker_id: 'W-1', workflow_id: 'WF-PAY-001', extracted_slots: {}, missing_slots: [], confidence: 0.72 },
       ],
-      candidates: [],
-      created_at: '2026-08-04T00:00:00Z',
-      updated_at: '2026-08-04T00:00:01Z',
-    }
+    })
+    vi.mocked(fetch).mockImplementation((input) => {
+      const url = String(input)
+      if (url.includes('/workflow-catalogs')) return Promise.resolve(jsonResponse(CATALOG))
+      if (url.includes('/workers')) return Promise.resolve(jsonResponse(WORKERS))
+      return Promise.resolve(jsonResponse(compoundRun))
+    })
+    const user = userEvent.setup()
+    renderPage(compoundRun, undefined, DRAFT)
+
+    expect(screen.getByText('2개의 업무를 찾았습니다.')).toBeInTheDocument()
+    expect(screen.getByText('2개 포함')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '선택한 2개 업무 생성' })).toBeDisabled()
+
+    await waitFor(() => expect(screen.getAllByText('급여 자료 확인').length).toBeGreaterThan(0))
+    await user.click(screen.getByRole('button', { name: '급여 자료 확인 제외' }))
+
+    expect(screen.getByText('1개 포함')).toBeInTheDocument()
+    expect(screen.getByText(/후보 확정 API가 아직 없어/)).toBeInTheDocument()
+  })
+
+  it('retries a failed analysis with the unchanged original request', async () => {
+    const failedRun = needsInfoRun({ status: 'FAILED', analysis_outcome: null, questions: [], error_code: 'AI_RUNTIME_FAILED' })
+    const retriedRun = needsInfoRun({ ai_run_id: 'A-2', attempt_count: 1, version: 1 })
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(retriedRun, { status: 202 }))
+    const user = userEvent.setup()
+    renderPage(failedRun, undefined, DRAFT)
+
+    await user.click(screen.getByRole('button', { name: '같은 요청 다시 분석' }))
+
+    await waitFor(() => {
+      const retryCall = vi.mocked(fetch).mock.calls.find(([url]) => String(url).endsWith('/ai-runs'))
+      expect(JSON.parse((retryCall?.[1] as RequestInit).body as string)).toEqual({ instruction: DRAFT.request })
+    })
+  })
+
+  it('restores the AI run from the URL after a refresh', async () => {
+    const savedRun = needsInfoRun({ ai_run_id: 'A-RESTORED', request_id: 'R-RESTORED', attempt_count: 1, version: 1 })
     vi.mocked(fetch).mockResolvedValue(jsonResponse(savedRun))
 
     renderPage(undefined, '/tasks/new/review?aiRunId=A-RESTORED')

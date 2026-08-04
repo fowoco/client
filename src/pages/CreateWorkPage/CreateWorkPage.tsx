@@ -128,7 +128,7 @@ export function CreateWorkPage() {
       const instruction = instructionWithHint(request, intentHint)
       const idempotencyKey = globalThis.crypto.randomUUID()
       const aiRun = await createAiRun(instruction, idempotencyKey)
-      navigate('/tasks/new/review', { state: { aiRun } })
+      navigate(`/tasks/new/review?aiRunId=${encodeURIComponent(aiRun.ai_run_id)}`, { state: { aiRun } })
     } catch (error) {
       setAnalysisError(error instanceof ApiError ? getErrorMessage(error) : '요청을 분석하지 못했습니다.')
     } finally {

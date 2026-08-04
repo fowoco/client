@@ -32,9 +32,9 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-function renderPage(aiRun?: AiRunResponse) {
+function renderPage(aiRun?: AiRunResponse, path = '/tasks/new/review') {
   render(
-    <MemoryRouter initialEntries={[aiRun ? { pathname: '/tasks/new/review', state: { aiRun } } : '/tasks/new/review']}>
+    <MemoryRouter initialEntries={[aiRun ? { pathname: path, state: { aiRun } } : path]}>
       <ReviewWorkPage />
       <ToastViewport />
     </MemoryRouter>,
@@ -147,5 +147,32 @@ describe('ReviewWorkPage', () => {
       expected_version: 2,
       answers: { due_at: '2026-08-31' },
     })
+  })
+
+  it('restores the AI run from the URL after a refresh', async () => {
+    const savedRun: AiRunResponse = {
+      ai_run_id: 'A-RESTORED',
+      request_id: 'R-RESTORED',
+      instruction: '응웬반A 체류연장 준비해줘, EXPIRY_RENEWAL',
+      status: 'SUCCEEDED',
+      analysis_outcome: 'NEEDS_INFO',
+      detected_intent: 'EXPIRY_RENEWAL',
+      error_code: null,
+      attempt_count: 1,
+      version: 1,
+      questions: [
+        { slot_key: 'due_at', label: '신청 목표일을 입력해 주세요.', input_type: 'DATE', required: true, answer: null },
+      ],
+      candidates: [],
+      created_at: '2026-08-04T00:00:00Z',
+      updated_at: '2026-08-04T00:00:01Z',
+    }
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(savedRun))
+
+    renderPage(undefined, '/tasks/new/review?aiRunId=A-RESTORED')
+
+    expect(screen.getByText('Agent 분석 결과를 불러오고 있습니다.')).toBeInTheDocument()
+    expect(await screen.findByText(savedRun.instruction)).toBeInTheDocument()
+    expect(String(vi.mocked(fetch).mock.calls[0][0])).toContain('/ai-runs/A-RESTORED')
   })
 })

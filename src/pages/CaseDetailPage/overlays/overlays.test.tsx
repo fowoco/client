@@ -4,9 +4,6 @@ import { describe, expect, it, vi } from 'vitest'
 import { ApprovalRequestModal } from './ApprovalRequestModal'
 import { ApprovalDecisionModal } from './ApprovalDecisionModal'
 import { RejectionReasonModal } from './RejectionReasonModal'
-import { OtherApproverHandledModal } from './OtherApproverHandledModal'
-import { ApprovalSnapshotDiffModal } from './ApprovalSnapshotDiffModal'
-import { InternalCompletionModal } from './InternalCompletionModal'
 import { ExternalCompletionModal } from './ExternalCompletionModal'
 
 describe('ApprovalRequestModal', () => {
@@ -80,44 +77,6 @@ describe('RejectionReasonModal', () => {
     await user.click(screen.getByRole('button', { name: '돌아가기' }))
 
     expect(onBack).toHaveBeenCalledOnce()
-  })
-})
-
-describe('OtherApproverHandledModal', () => {
-  it('calls onClose when confirmed', async () => {
-    const user = userEvent.setup()
-    const onClose = vi.fn()
-    render(<OtherApproverHandledModal open onClose={onClose} />)
-
-    await user.click(screen.getByRole('button', { name: '확인' }))
-
-    expect(onClose).toHaveBeenCalledOnce()
-  })
-})
-
-describe('ApprovalSnapshotDiffModal', () => {
-  it('renders diff rows and calls onRequestReapproval', async () => {
-    const user = userEvent.setup()
-    const onRequestReapproval = vi.fn()
-    render(<ApprovalSnapshotDiffModal open onClose={vi.fn()} onRequestReapproval={onRequestReapproval} />)
-
-    expect(screen.getByText('마감일')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '재승인 요청' }))
-
-    expect(onRequestReapproval).toHaveBeenCalledOnce()
-  })
-})
-
-describe('InternalCompletionModal', () => {
-  it('calls onComplete with the memo text', async () => {
-    const user = userEvent.setup()
-    const onComplete = vi.fn()
-    render(<InternalCompletionModal open onClose={vi.fn()} onComplete={onComplete} />)
-
-    await user.type(screen.getByPlaceholderText('완료 메모 · 선택사항'), '전화 확인 완료')
-    await user.click(screen.getByRole('button', { name: '파일 없이 완료' }))
-
-    expect(onComplete).toHaveBeenCalledWith('전화 확인 완료')
   })
 })
 

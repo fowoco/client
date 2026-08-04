@@ -43,26 +43,3 @@ export const CASE_COMMUNICATION: CaseCommunicationEntry[] = [
   { id: 'comm-2', time: '어제 17:40', actor: '김경민', message: '근로자에게 서류 제출 안내 문자를 발송했습니다.' },
   { id: 'comm-3', time: '어제 09:05', actor: '응웬반A', message: '서류를 준비 중이라고 답장했습니다.' },
 ]
-
-// 승인 플로우 오버레이 5종 데모 데이터 (Figma "05_States & Overlays" 기준)
-export const OTHER_APPROVER_HANDLED = {
-  policyNote: 'ANY_ONE · 먼저 처리된 결과가 최종입니다.',
-  rows: [
-    { label: '승인 요청일', value: '2026.07.20 10:14' },
-    { label: '지정 승인자', value: '김수진 · 박지훈' },
-    { label: '처리자', value: '김수진 HR_MANAGER' },
-    { label: '처리일', value: '2026.07.20 10:22' },
-    { label: '처리 결과', value: '승인됨' },
-    { label: '사유', value: '필수서류와 마감일 확인' },
-  ],
-}
-
-export const APPROVAL_SNAPSHOT_DIFF = {
-  warningNote: '승인된 핵심 내용이 변경되어 재승인이 필요합니다.',
-  rows: [
-    { field: '마감일', before: '2026.07.24', after: '2026.07.25', result: '재승인' as const },
-    { field: '요청 서류', before: '여권 사본', after: '여권·등록증 사본', result: '재승인' as const },
-    { field: '안내문 본문', before: 'V1 승인 문구', after: '마감일 안내 추가', result: '재승인' as const },
-    { field: '내부 메모', before: '초안 확인', after: '전화 확인 완료', result: '승인 유지' as const },
-  ],
-}

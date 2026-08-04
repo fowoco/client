@@ -1,57 +1,17 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { ToastViewport } from '../../components/ui/ToastViewport/ToastViewport'
 import { useToastStore } from '../../store/toastStore'
 import { CreateWorkPage } from './CreateWorkPage'
 
-function jsonResponse(body: unknown, init: ResponseInit = {}) {
-  return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' }, ...init })
-}
-
-function errorResponse(status: number, code: string, message: string) {
-  return jsonResponse(
-    { timestamp: '2026-07-27T01:23:45Z', status, code, message, path: '/api/v1/tasks', request_id: 'req-1', field_errors: [] },
-    { status },
-  )
-}
-
-const WORKER_PAGE = { items: [{ worker_id: 'W-1', display_name: '응웬반A' }], page: 0, size: 100, total_elements: 1 }
-const CATALOG = {
-  bundle_id: 'b-1',
-  bundle_version: '1',
-  bundle_status: 'ACTIVE',
-  source_repository: 'fowoco/knowledge',
-  generated_at: '2026-07-01T00:00:00Z',
-  workflows: [
-    {
-      workflow_id: 'wf-stay-extension',
-      name: '체류기간 연장 처리',
-      intent: '체류기간 연장',
-      sensitivity: 'NORMAL',
-      supported_task_types: ['STAY_PERIOD_EXTENSION'],
-      required_slots: ['접수번호'],
-      checklist_items: [],
-      completion_evidence: [],
-      source_ids: [],
-    },
-  ],
-}
-
 beforeEach(() => {
   useToastStore.setState({ toasts: [] })
-  vi.stubGlobal('fetch', vi.fn())
-  vi.mocked(fetch).mockImplementation((input) => {
-    const url = String(input)
-    if (url.includes('/workflow-catalogs')) return Promise.resolve(jsonResponse(CATALOG))
-    if (url.includes('/workers')) return Promise.resolve(jsonResponse(WORKER_PAGE))
-    return Promise.resolve(jsonResponse({ task_id: 'T-new' }, { status: 201 }))
-  })
 })
 
 afterEach(() => {
-  vi.unstubAllGlobals()
+  useToastStore.setState({ toasts: [] })
 })
 
 function renderPage() {
@@ -67,7 +27,7 @@ function renderPage() {
             </>
           }
         />
-        <Route path="/tasks/:taskId" element={<p>업무 상세</p>} />
+        <Route path="/tasks/new/review" element={<p>검토 화면</p>} />
       </Routes>
     </MemoryRouter>,
   )
@@ -92,6 +52,16 @@ describe('CreateWorkPage', () => {
     await user.click(screen.getByRole('button', { name: '체류연장 준비' }))
 
     expect(screen.getByLabelText('업무 요청 내용')).toHaveValue('체류연장 준비')
+  })
+
+  it('navigates to the review flow when analyzing a request', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.type(screen.getByLabelText('업무 요청 내용'), '체류연장 서류 준비')
+    await user.click(screen.getByRole('button', { name: '요청 분석하기 →' }))
+
+    expect(await screen.findByText('검토 화면')).toBeInTheDocument()
   })
 
   it('switches the active input mode', async () => {
@@ -121,78 +91,5 @@ describe('CreateWorkPage', () => {
     await user.click(screen.getByRole('button', { name: '임시 저장' }))
 
     expect(screen.getByText('초안을 저장했습니다.')).toBeInTheDocument()
-  })
-
-  it('disables the direct-create button until worker/type/workflow/title are filled', async () => {
-    const user = userEvent.setup()
-    renderPage()
-
-    const submit = screen.getByRole('button', { name: '업무 생성' })
-    expect(submit).toBeDisabled()
-
-    await user.click(screen.getByRole('button', { name: '근로자 선택' }))
-    await user.click(await screen.findByRole('option', { name: '응웬반A' }))
-
-    await user.click(screen.getByRole('button', { name: '업무 유형 선택' }))
-    await user.click(screen.getByRole('option', { name: '체류기간 연장' }))
-
-    await user.click(screen.getByRole('button', { name: 'Workflow 선택' }))
-    await user.click(await screen.findByRole('option', { name: '체류기간 연장 처리' }))
-
-    expect(submit).toBeDisabled()
-
-    await user.type(screen.getByLabelText('제목'), '체류연장 준비')
-    expect(submit).toBeEnabled()
-  })
-
-  it('creates the task and navigates to its detail page on submit', async () => {
-    const user = userEvent.setup()
-    renderPage()
-
-    await user.click(screen.getByRole('button', { name: '근로자 선택' }))
-    await user.click(await screen.findByRole('option', { name: '응웬반A' }))
-    await user.click(screen.getByRole('button', { name: '업무 유형 선택' }))
-    await user.click(screen.getByRole('option', { name: '체류기간 연장' }))
-    await user.click(screen.getByRole('button', { name: 'Workflow 선택' }))
-    await user.click(await screen.findByRole('option', { name: '체류기간 연장 처리' }))
-    await user.type(screen.getByLabelText('제목'), '체류연장 준비')
-
-    await user.click(screen.getByRole('button', { name: '업무 생성' }))
-
-    expect(await screen.findByText('업무 상세')).toBeInTheDocument()
-    const createCall = vi.mocked(fetch).mock.calls.find(([url]) => String(url).endsWith('/tasks'))
-    expect(createCall).toBeDefined()
-    const body = JSON.parse((createCall![1] as RequestInit).body as string)
-    expect(body).toMatchObject({
-      worker_id: 'W-1',
-      task_type: 'STAY_PERIOD_EXTENSION',
-      workflow_id: 'wf-stay-extension',
-      title: '체류연장 준비',
-    })
-  })
-
-  it('shows an error message when task creation fails', async () => {
-    vi.mocked(fetch).mockImplementation((input) => {
-      const url = String(input)
-      if (url.includes('/workflow-catalogs')) return Promise.resolve(jsonResponse(CATALOG))
-      if (url.includes('/workers')) return Promise.resolve(jsonResponse(WORKER_PAGE))
-      return Promise.resolve(errorResponse(422, 'VALIDATION_FAILED', 'raw'))
-    })
-    const user = userEvent.setup()
-    renderPage()
-
-    await user.click(screen.getByRole('button', { name: '근로자 선택' }))
-    await user.click(await screen.findByRole('option', { name: '응웬반A' }))
-    await user.click(screen.getByRole('button', { name: '업무 유형 선택' }))
-    await user.click(screen.getByRole('option', { name: '체류기간 연장' }))
-    await user.click(screen.getByRole('button', { name: 'Workflow 선택' }))
-    await user.click(await screen.findByRole('option', { name: '체류기간 연장 처리' }))
-    await user.type(screen.getByLabelText('제목'), '체류연장 준비')
-
-    await user.click(screen.getByRole('button', { name: '업무 생성' }))
-
-    await waitFor(() => {
-      expect(screen.getByText('입력값을 다시 확인해 주세요.')).toBeInTheDocument()
-    })
   })
 })

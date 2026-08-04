@@ -1,4 +1,5 @@
 import type { ChangeEvent } from 'react'
+import searchIcon from './search.svg'
 import styles from './SearchInput.module.css'
 
 export interface SearchInputProps {
@@ -21,12 +22,15 @@ export function SearchInput({
   }
 
   return (
-    <input
-      className={`${styles.search} ${className ?? ''}`}
-      placeholder={placeholder}
-      value={value}
-      onChange={handleChange}
-      aria-label={ariaLabel}
-    />
+    <label className={`${styles.field} ${className ?? ''}`}>
+      <img className={styles.icon} src={searchIcon} alt="" aria-hidden="true" />
+      <input
+        className={styles.search}
+        placeholder={placeholder}
+        value={value}
+        onChange={handleChange}
+        aria-label={ariaLabel}
+      />
+    </label>
   )
 }

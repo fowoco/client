@@ -1,51 +1,52 @@
 import { useNavigate } from 'react-router-dom'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
-import { WorkItemRow } from '../../components/ui/WorkItemRow/WorkItemRow'
+import { WorkItemRow, type WorkItemStatusTone } from '../../components/ui/WorkItemRow/WorkItemRow'
 import { useAsyncDemoData } from '../../hooks/useAsyncDemoData'
-import { CalendarIcon, CheckCircleIcon, WarningTriangleIcon } from './DashboardIcons'
+import agentSparkIcon from './assets/agent-spark.svg'
+import commandSubmitIcon from './assets/command-submit.svg'
 import styles from './DashboardPage.module.css'
 import {
   AGENT_PREPARED,
   AI_REQUEST_PROMPT_CHIPS,
-  COMMAND_BAR,
+  APPROVAL_QUEUE,
   METRIC_STRIP,
   TODAY_WORK_ITEMS,
-  TOP_APPROVAL,
-  type MetricIconKey,
+  type DashboardWorkStatus,
 } from './dashboardData'
 
-const METRIC_ICON: Record<MetricIconKey, typeof CheckCircleIcon> = {
-  check: CheckCircleIcon,
-  calendar: CalendarIcon,
-  warning: WarningTriangleIcon,
-  response: CheckCircleIcon,
+const STATUS_TONE: Record<DashboardWorkStatus, WorkItemStatusTone> = {
+  승인대기: 'warning',
+  요청전송: 'primary',
+  서류대기: 'neutral',
 }
 
 export function DashboardPage() {
   const navigate = useNavigate()
   const status = useAsyncDemoData(TODAY_WORK_ITEMS.length === 0)
-  const pendingApprovalCount = METRIC_STRIP.find((metric) => metric.id === 'pending-approval')?.value ?? 0
 
   return (
-    <div>
-      {status === 'success' && (
-        <>
-          <h1 className={styles.headline}>지금 확인이 필요한 승인 {pendingApprovalCount}건이 있습니다.</h1>
-          <p className={styles.description}>
-            Agent가 필요한 자료와 다음 행동을 먼저 준비했습니다. 검토와 최종 결정은 담당자가 수행합니다.
-          </p>
-        </>
-      )}
+    <div className={styles.page}>
+      <header className={styles.pageHeader}>
+        <h1 className={styles.headline}>
+          지금 확인이 필요한 승인 {APPROVAL_QUEUE.blockingCount}건이 있습니다.
+        </h1>
+        <p className={styles.description}>
+          Agent가 필요한 자료와 다음 행동을 먼저 준비했습니다. 검토와 최종 결정은 담당자가 수행합니다.
+        </p>
+      </header>
 
-      <div className={styles.commandBox}>
-        <div className={styles.commandBoxHeader}>
-          <span className={styles.commandBoxTitle}>✦ {COMMAND_BAR.title}</span>
-          <span className={styles.commandBoxChevron} aria-hidden="true">
-            ⌃
-          </span>
+      <section className={styles.agentRequest} aria-labelledby="agent-request-title">
+        <div className={styles.agentRequestTitle}>
+          <img src={agentSparkIcon} alt="" aria-hidden="true" />
+          <h2 id="agent-request-title">Agent 업무 요청</h2>
         </div>
-        <button type="button" className={styles.commandInput} onClick={() => navigate('/tasks/new')}>
-          <span className={styles.commandPlaceholder}>{COMMAND_BAR.placeholder}</span>
+        <button
+          type="button"
+          className={styles.commandInput}
+          onClick={() => navigate('/tasks/new')}
+        >
+          <span>처리할 업무를 자연어로 입력해 주세요. 예: 응웬반A의 체류기간 연장 준비</span>
+          <img src={commandSubmitIcon} alt="업무 요청 입력하기" />
         </button>
         <div className={styles.promptChips}>
           {AI_REQUEST_PROMPT_CHIPS.map((chip) => (
@@ -59,22 +60,7 @@ export function DashboardPage() {
             </button>
           ))}
         </div>
-      </div>
-
-      <div className={styles.metricStrip}>
-        {METRIC_STRIP.map((metric) => {
-          const Icon = METRIC_ICON[metric.icon]
-          return (
-            <button key={metric.id} type="button" className={styles.metricCard} onClick={() => navigate('/tasks')}>
-              <span className={styles.metricLabel}>{metric.label}</span>
-              <span className={styles.metricValueRow}>
-                <span className={styles.metricValue}>{metric.value}건 ›</span>
-                <Icon className={styles.metricIcon} />
-              </span>
-            </button>
-          )
-        })}
-      </div>
+      </section>
 
       {status === 'loading' && (
         <div className={styles.stateWrap}>
@@ -112,90 +98,125 @@ export function DashboardPage() {
       )}
 
       {status === 'success' && (
-        <div className={styles.mainGrid}>
-          <div className={styles.mainColumn}>
-            <div className={styles.topApprovalCard}>
-              <div className={styles.topApprovalHeader}>
-                <h2 className={styles.sectionTitle}>먼저 검토할 승인 업무</h2>
-                <span className={styles.sectionNote}>{TOP_APPROVAL.requestedLabel}</span>
-              </div>
-              <button
-                type="button"
-                className={styles.topApprovalItem}
-                onClick={() => navigate(`/tasks/${TODAY_WORK_ITEMS[0].id}`)}
-              >
-                <span className={styles.topApprovalContent}>
-                  <span className={styles.topApprovalTitle}>{TOP_APPROVAL.title}</span>
-                  <span className={styles.topApprovalMeta}>{TOP_APPROVAL.meta}</span>
-                  <span className={styles.topApprovalNote}>{TOP_APPROVAL.note}</span>
-                </span>
-                <span className={styles.topApprovalChevron} aria-hidden="true">
-                  ›
-                </span>
-              </button>
-              <button
-                type="button"
-                className={styles.topApprovalAction}
-                onClick={() => navigate(`/tasks/${TODAY_WORK_ITEMS[0].id}`)}
-              >
-                {TOP_APPROVAL.actionLabel}
-              </button>
-            </div>
-
-            <div className={styles.sectionHeader}>
-              <h2 className={styles.sectionTitle}>오늘의 우선 업무</h2>
-              <p className={styles.sectionNote}>지금 할 일 · {TODAY_WORK_ITEMS.length}건</p>
-            </div>
-
-            <div className={styles.workItemList}>
-              {TODAY_WORK_ITEMS.map((item) => (
-                <WorkItemRow
-                  key={item.id}
-                  title={item.title}
-                  meta={item.meta}
-                  nextAction={item.nextAction}
-                  urgency={item.urgency}
-                  onClick={() => navigate(`/tasks/${item.id}`)}
-                />
+        <div className={styles.dashboardGrid}>
+          <div className={styles.primaryColumn}>
+            <div className={styles.metricStrip} aria-label="오늘의 업무 지표">
+              {METRIC_STRIP.map((metric) => (
+                <button
+                  key={metric.id}
+                  type="button"
+                  className={styles.metricCard}
+                  onClick={() => navigate(`/tasks?view=${metric.id}`)}
+                >
+                  <span className={styles.metricText}>
+                    <span className={styles.metricLabel}>{metric.label}</span>
+                    <span className={styles.metricValue}>{metric.value}건 ›</span>
+                  </span>
+                  <span className={`${styles.metricIcon} ${styles[`metricIcon_${metric.tone}`]}`}>
+                    <img src={metric.iconSrc} alt="" aria-hidden="true" />
+                  </span>
+                </button>
               ))}
             </div>
+
+            <section className={styles.priorityApproval} aria-labelledby="priority-approval-title">
+              <div className={styles.priorityHeader}>
+                <h2 id="priority-approval-title">먼저 검토할 승인 업무</h2>
+                <span>요청 · {APPROVAL_QUEUE.oldestValue}</span>
+              </div>
+              <div className={styles.priorityBody}>
+                <div className={styles.priorityContent}>
+                  <div className={styles.priorityCopy}>
+                    <strong>{APPROVAL_QUEUE.title}</strong>
+                    <span>{APPROVAL_QUEUE.meta}</span>
+                    <span>{APPROVAL_QUEUE.note}</span>
+                  </div>
+                  <button type="button" onClick={() => navigate('/tasks')}>
+                    승인 검토
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  className={styles.priorityNext}
+                  aria-label="다음 승인 업무"
+                  onClick={() => navigate('/tasks')}
+                >
+                  ›
+                </button>
+              </div>
+            </section>
+
+            <section className={styles.todayTasks} aria-labelledby="today-tasks-title">
+              <div className={styles.sectionHeader}>
+                <h2 id="today-tasks-title">오늘의 우선 업무</h2>
+                <p>지금 할 일 · {TODAY_WORK_ITEMS.length}건</p>
+              </div>
+              <div className={styles.workItemList}>
+                {TODAY_WORK_ITEMS.map((item) => (
+                  <WorkItemRow
+                    key={item.id}
+                    title={item.title}
+                    statusLabel={item.status}
+                    statusTone={STATUS_TONE[item.status]}
+                    detailItems={[item.schedule, ...(item.assignee ? [item.assignee] : [])]}
+                    nextAction={item.nextAction}
+                    urgency={item.urgency}
+                    onClick={() => navigate(`/tasks/${item.id}`)}
+                  />
+                ))}
+              </div>
+            </section>
           </div>
 
-          <aside className={styles.agentPanel}>
-            <p className={styles.agentPanelTitle}>✦ Agent가 준비한 내용</p>
-            <p className={styles.agentPanelSummary}>{AGENT_PREPARED.summary}</p>
-            <p className={styles.agentPanelNote}>{AGENT_PREPARED.note}</p>
-
-            <p className={styles.agentGroupLabel}>{AGENT_PREPARED.readyLabel}</p>
-            <ul className={styles.agentReadyList}>
-              {AGENT_PREPARED.ready.map((item) => (
-                <li key={item.id} className={styles.agentReadyItem}>
-                  <span aria-hidden="true">✓</span> {item.label}
-                </li>
-              ))}
-            </ul>
-
-            <div className={styles.agentNeedsInfoBox}>
-              <p className={styles.agentGroupLabelWarning}>{AGENT_PREPARED.needsInfoLabel}</p>
-              {AGENT_PREPARED.needsInfo.map((item) => (
-                <div key={item.id} className={styles.agentPendingItem}>
-                  <p className={styles.agentPendingLabel}>
-                    <span aria-hidden="true">!</span> {item.label}
-                  </p>
-                  <p className={styles.agentPendingNote}>{item.note}</p>
-                </div>
-              ))}
+          <aside className={styles.agentPrepared} aria-labelledby="agent-prepared-title">
+            <div className={styles.agentPreparedTitle}>
+              <img src={agentSparkIcon} alt="" aria-hidden="true" />
+              <h2 id="agent-prepared-title">Agent가 준비한 내용</h2>
+            </div>
+            <div className={styles.preparedIntro}>
+              <strong>준비 완료 4건 · HR 확인 필요 2건</strong>
+              <p>Agent는 초안까지만 준비하며, 검토와 승인은 담당자가 수행합니다.</p>
             </div>
 
-            <p className={styles.agentGroupLabel}>{AGENT_PREPARED.afterApprovalLabel}</p>
-            {AGENT_PREPARED.afterApproval.map((item) => (
-              <div key={item.id} className={styles.agentPendingItem}>
-                <p className={styles.agentPendingLabel}>
-                  <span aria-hidden="true">→</span> {item.label}
-                </p>
-                <p className={styles.agentPendingNote}>{item.note}</p>
-              </div>
-            ))}
+            <div className={styles.preparedSections}>
+              <section className={styles.preparedSection}>
+                <h3>준비 완료 · 4건</h3>
+                <ul>
+                  {AGENT_PREPARED.prepared.map((item) => (
+                    <li key={item.id}>
+                      <span className={styles.doneMark}>✓</span>
+                      <strong>{item.label}</strong>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+
+              <section className={`${styles.preparedSection} ${styles.reviewSection}`}>
+                <h3>HR 확인 필요 · 2건</h3>
+                <ul>
+                  {AGENT_PREPARED.review.map((item) => (
+                    <li key={item.id} className={styles.describedItem}>
+                      <span className={styles.reviewMark}>!</span>
+                      <strong>{item.label}</strong>
+                      <p>{item.description}</p>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+
+              <section className={styles.preparedSection}>
+                <h3>승인 후 진행 · 2건</h3>
+                <ul>
+                  {AGENT_PREPARED.afterApproval.map((item) => (
+                    <li key={item.id} className={styles.describedItem}>
+                      <span className={styles.nextMark}>→</span>
+                      <strong>{item.label}</strong>
+                      <p>{item.description}</p>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            </div>
           </aside>
         </div>
       )}

@@ -67,7 +67,6 @@ function TaskStateWorkspace({
           <h2 id="work-inbox-list-title" className={styles.listTitle}>
             근로자 {workers.length}명
           </h2>
-          <span className={styles.listCountNote}>업무 상태 미확인</span>
         </div>
         <div className={styles.targetList} role="listbox" aria-label="업무 대상 근로자">
           {visibleWorkers.map((worker) => {
@@ -185,15 +184,15 @@ export function WorkListPage() {
     <div className={styles.page}>
       <header>
         <h1 className={styles.headline}>업무함</h1>
-        <p className={styles.description}>근로자별 진행 Case와 지금 처리할 업무를 확인합니다.</p>
+        <p className={styles.description}>근로자별 진행 업무 건과 지금 할 일을 확인합니다.</p>
       </header>
 
       <div className={styles.toolbar}>
         <SearchInput
           value={query}
           onChange={setQuery}
-          placeholder="근로자·Case·업무 검색"
-          ariaLabel="근로자·Case·업무 검색"
+          placeholder="근로자·업무 건·지금 할 일 검색"
+          ariaLabel="근로자·업무 건·지금 할 일 검색"
           className={styles.searchInput}
         />
         <Dropdown

@@ -46,7 +46,6 @@ export function WorkInboxTargetList({
         <h2 id="work-inbox-list-title" className={styles.listTitle}>
           근로자 {totalCount}명
         </h2>
-        <span className={styles.listCountNote}>업무 연결 기준</span>
       </div>
 
       {capNotice && <p className={styles.capNotice}>{capNotice}</p>}

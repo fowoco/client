@@ -229,7 +229,7 @@ describe('CaseDetailPage', () => {
     await user.click(screen.getByRole('tab', { name: CASE_TABS[2] }))
 
     expect(await screen.findByText('여권 사본')).toBeInTheDocument()
-    expect(screen.getByText('확인 완료')).toBeInTheDocument()
+    expect(screen.getByText('완료')).toBeInTheDocument()
   })
 
   it('shows the document-readiness gate and saves a document request draft when documents are missing', async () => {

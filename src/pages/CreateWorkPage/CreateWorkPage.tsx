@@ -6,9 +6,11 @@ import { fetchWorkers } from '../../api/workers'
 import { fetchWorkflowCatalog } from '../../api/workflows'
 import { Button } from '../../components/ui/Button/Button'
 import { Dropdown } from '../../components/ui/Dropdown/Dropdown'
+import { WorkflowStepIndicator } from '../../components/ui/WorkflowStepIndicator/WorkflowStepIndicator'
 import { useApiQuery } from '../../hooks/useApiQuery'
 import { useToastStore } from '../../store/toastStore'
 import { TASK_TYPE_LABEL } from '../../utils/taskStatus'
+import { REVIEW_STEPS } from '../ReviewWorkPage/reviewWorkData'
 import styles from './CreateWorkPage.module.css'
 import {
   AGENT_TRACE_PREVIEW,
@@ -137,6 +139,8 @@ export function CreateWorkPage() {
           임시 저장
         </button>
       </div>
+
+      <WorkflowStepIndicator steps={REVIEW_STEPS} currentIndex={0} />
 
       <h1 className={styles.headline}>무엇을 처리해야 하나요?</h1>
       <p className={styles.description}>

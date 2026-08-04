@@ -62,10 +62,77 @@ export function DraftReviewStep({ onComplete }: DraftReviewStepProps) {
       </div>
 
       <div className={styles.workspace}>
+        <div className={styles.draftPanel}>
+          <div className={styles.draftPanelHeader}>
+            <h2 className={styles.draftTitle}>AI가 준비한 업무 초안</h2>
+            <span className={styles.draftBadge}>Agent 초안</span>
+          </div>
+
+          <p className={styles.draftHeadline}>
+            {PREPARED_DRAFT.title.map((line) => (
+              <span key={line}>
+                {line}
+                <br />
+              </span>
+            ))}
+          </p>
+
+          <div className={styles.checklist}>
+            <p className={styles.checklistTitle}>Agent가 확인하고 준비한 내용</p>
+            <div className={styles.checklistGrid}>
+              {PREPARED_CHECKLIST.map((item) => (
+                <p key={item} className={styles.checklistItem}>
+                  <span aria-hidden="true">✓</span> {item}
+                </p>
+              ))}
+            </div>
+          </div>
+
+          {target ? (
+            <DetailRow label="대상" value={target} />
+          ) : (
+            <div className={styles.targetDropdownRow}>
+              <span className={styles.fieldLabel}>대상</span>
+              <Dropdown
+                options={TARGET_DROPDOWN_OPTIONS}
+                value={target ?? ''}
+                onChange={setTarget}
+                ariaLabel="대상 선택"
+              />
+            </div>
+          )}
+          <DetailRow label="담당자" value={PREPARED_DRAFT.assignee} />
+          <DetailRow label="나라" value={PREPARED_DRAFT.country} />
+          <DetailRow label="승인상태" value={PREPARED_DRAFT.approvalStatus} tone="warning" />
+          <DetailRow label="필수 단계" value={`${PREPARED_DRAFT.requiredStepCount}개`} />
+          <DetailRow label="완료 증빙" value={PREPARED_DRAFT.completionEvidence} />
+
+          <div className={styles.reasonBox}>
+            <p className={styles.reasonTitle}>이 초안을 준비한 이유</p>
+            <div className={styles.reasonGrid}>
+              {DRAFT_REASONS.map((reason) => (
+                <p key={reason} className={styles.reasonItem}>
+                  · {reason}
+                </p>
+              ))}
+            </div>
+          </div>
+
+          <div className={styles.dueBadgeRow}>
+            <span className={styles.dueBadge}>기한 · {PREPARED_DRAFT.dueLabel}</span>
+          </div>
+
+          <button type="button" className={styles.draftLink} onClick={handleEditDraft}>
+            초안 내용 수정
+          </button>
+        </div>
+
         <div className={styles.left}>
           <div className={styles.card}>
-            <h2 className={styles.cardTitle}>Agent가 이해한 요청</h2>
-            <p className={styles.cardBadge}>Agent 초안 · 원문과 현재 Context 기반</p>
+            <div className={styles.draftPanelHeader}>
+              <h2 className={styles.cardTitle}>Agent가 확인한 내용</h2>
+              <span className={styles.draftBadge}>보유 데이터</span>
+            </div>
 
             <div className={styles.fieldGrid}>
               <div>
@@ -112,69 +179,6 @@ export function DraftReviewStep({ onComplete }: DraftReviewStepProps) {
             <p className={styles.missingWarning}>이 정보가 확인되기 전에는 승인 요청과 외부 전달이 차단됩니다.</p>
           </div>
         </div>
-
-        <aside className={styles.draftPanel}>
-          <div className={styles.draftPanelHeader}>
-            <div>
-              <h2 className={styles.draftTitle}>준비한 업무 초안</h2>
-              <p className={styles.draftBadge}>Agent가 준비함 · HR 확인 필요</p>
-            </div>
-            <span className={styles.requiredStepBadge}>필수 단계 {PREPARED_DRAFT.requiredStepCount}개</span>
-          </div>
-
-          <p className={styles.draftHeadline}>
-            {PREPARED_DRAFT.title.map((line) => (
-              <span key={line}>
-                {line}
-                <br />
-              </span>
-            ))}
-          </p>
-
-          <div className={styles.checklist}>
-            <p className={styles.checklistTitle}>Agent가 확인하고 준비한 내용</p>
-            {PREPARED_CHECKLIST.map((item) => (
-              <p key={item} className={styles.checklistItem}>
-                <span aria-hidden="true">✓</span> {item}
-              </p>
-            ))}
-          </div>
-
-          {target ? (
-            <DetailRow label="대상" value={target} />
-          ) : (
-            <div className={styles.targetDropdownRow}>
-              <span className={styles.fieldLabel}>대상</span>
-              <Dropdown
-                options={TARGET_DROPDOWN_OPTIONS}
-                value={target ?? ''}
-                onChange={setTarget}
-                ariaLabel="대상 선택"
-              />
-            </div>
-          )}
-          <DetailRow label="담당자" value={PREPARED_DRAFT.assignee} />
-          <DetailRow label="나라" value={PREPARED_DRAFT.country} />
-          <DetailRow label="승인상태" value={PREPARED_DRAFT.approvalStatus} tone="warning" />
-          <DetailRow label="완료 증빙" value={PREPARED_DRAFT.completionEvidence} />
-
-          <div className={styles.reasonBox}>
-            <p className={styles.reasonTitle}>이 초안을 준비한 이유</p>
-            {DRAFT_REASONS.map((reason) => (
-              <p key={reason} className={styles.reasonItem}>
-                · {reason}
-              </p>
-            ))}
-          </div>
-
-          <div className={styles.dueBadgeRow}>
-            <span className={styles.dueBadge}>기한 · {PREPARED_DRAFT.dueLabel}</span>
-          </div>
-
-          <button type="button" className={styles.draftLink} onClick={handleEditDraft}>
-            초안 내용 수정
-          </button>
-        </aside>
       </div>
 
       <div className={styles.actions}>

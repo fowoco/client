@@ -81,7 +81,7 @@ describe('ReviewWorkPage', () => {
     expect(screen.getByText(UNDERSTOOD_REQUEST.purpose)).toBeInTheDocument()
     expect(screen.getAllByText(PREPARED_DRAFT.target as string).length).toBeGreaterThan(0)
     expect(screen.getByText(`기한 · ${PREPARED_DRAFT.dueLabel}`)).toBeInTheDocument()
-    expect(screen.getByText(`필수 단계 ${PREPARED_DRAFT.requiredStepCount}개`)).toBeInTheDocument()
+    expect(screen.getByText(`${PREPARED_DRAFT.requiredStepCount}개`)).toBeInTheDocument()
     for (const item of PREPARED_CHECKLIST) {
       expect(screen.getByText(item)).toBeInTheDocument()
     }

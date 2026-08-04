@@ -101,6 +101,26 @@
   cursor: pointer;
 }
 
+.primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.responseNotice {
+  margin: 20px 0 0;
+  padding: 12px 16px;
+  border-radius: var(--fowoco-radius-8);
+  background: var(--fowoco-green-50);
+  color: var(--fowoco-green-600);
+  font-size: 13px;
+}
+
+.responseError {
+  margin: 20px 0 0;
+  color: var(--status-critical);
+  font-size: 13px;
+}
+
 .footnote {
   margin: 12px 0 0;
   font-size: 12px;

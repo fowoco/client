@@ -13,6 +13,7 @@ import { fetchTaskActivities } from '../../api/audit'
 import { fetchDocumentReadiness, fetchDocuments, upsertDocumentRequestDraft } from '../../api/documents'
 import { ApiError, getErrorMessage } from '../../api/errors'
 import { cancelTask, fetchTaskById, updateChecklistItem } from '../../api/tasks'
+import { issueWorkerLink, resolveWorkerPortalUrl } from '../../api/workerLinks'
 import { AgentSourceLabel } from '../../components/ui/AgentSourceLabel/AgentSourceLabel'
 import { AgentSummary } from '../../components/ui/AgentSummary/AgentSummary'
 import { Button } from '../../components/ui/Button/Button'
@@ -77,6 +78,8 @@ export function CaseDetailPage() {
   const [togglingItemId, setTogglingItemId] = useState<string | null>(null)
   const [linkOverlay, setLinkOverlay] = useState<LinkOverlay>('none')
   const [lastReissue, setLastReissue] = useState<ReissueSubmission | null>(null)
+  const [issuedWorkerUrl, setIssuedWorkerUrl] = useState<string | null>(null)
+  const [issuedExpiresAt, setIssuedExpiresAt] = useState<string | null>(null)
   const moreMenuRef = useRef<HTMLDivElement>(null)
   const showToast = useToastStore((state) => state.showToast)
 
@@ -265,10 +268,26 @@ export function CaseDetailPage() {
     setLinkOverlay('reissue')
   }
 
-  function handleSubmitLinkReissue(submission: ReissueSubmission) {
-    // TODO(backend): POST /api/v1/tasks/:taskId/worker-link { rotateExisting: true } (feat/7-worker-link, 미병합)
-    setLastReissue(submission)
-    setLinkOverlay('reissued')
+  async function handleSubmitLinkReissue(submission: ReissueSubmission) {
+    if (!task || actionPending) return
+    const expiryHours = submission.expiry === '24시간' ? 24 : submission.expiry === '7일' ? 168 : 72
+    setActionPending(true)
+    try {
+      const issued = await issueWorkerLink(
+        task.task_id,
+        { expires_in_hours: expiryHours, rotate_existing: true },
+        crypto.randomUUID(),
+      )
+      setLastReissue(submission)
+      setIssuedWorkerUrl(resolveWorkerPortalUrl(issued.worker_url, window.location.origin))
+      setIssuedExpiresAt(issued.expires_at)
+      setLinkOverlay('reissued')
+      showToast('보안 링크를 발급했습니다. 아직 자동 전송되지는 않았습니다.')
+    } catch (error) {
+      showToast(error instanceof ApiError ? getErrorMessage(error) : '보안 링크를 발급하지 못했습니다.')
+    } finally {
+      setActionPending(false)
+    }
   }
 
   if (taskStatus === 'loading') {
@@ -656,6 +675,8 @@ export function CaseDetailPage() {
       <LinkReissuedModal
         open={linkOverlay === 'reissued'}
         submission={lastReissue}
+        workerUrl={issuedWorkerUrl}
+        expiresAt={issuedExpiresAt}
         onClose={() => setLinkOverlay('none')}
       />
 

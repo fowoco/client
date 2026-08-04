@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ApiError, getErrorMessage } from '../../api/errors'
+import { createAiRun } from '../../api/aiRuns'
 import { createTask, type TaskType } from '../../api/tasks'
 import { fetchWorkers } from '../../api/workers'
 import { fetchWorkflowCatalog } from '../../api/workflows'
@@ -12,9 +13,11 @@ import { TASK_TYPE_LABEL } from '../../utils/taskStatus'
 import styles from './CreateWorkPage.module.css'
 import {
   AGENT_TRACE_PREVIEW,
+  EXAMPLE_PROMPT_INTENTS,
   EXAMPLE_PROMPTS,
   INPUT_MODES,
   MAX_LENGTH,
+  instructionWithHint,
   type InputModeId,
 } from './createWorkData'
 import { ImportWizardModal } from './importWizard/ImportWizardModal'
@@ -34,6 +37,7 @@ export function CreateWorkPage() {
   const prefill = (location.state as { prefill?: string } | null)?.prefill
   const [mode, setMode] = useState<InputModeId>('nl')
   const [request, setRequest] = useState(prefill ?? '')
+  const [intentHint, setIntentHint] = useState<string | null>(null)
   const [importWizardOpen, setImportWizardOpen] = useState(false)
   const showToast = useToastStore((state) => state.showToast)
 
@@ -50,6 +54,8 @@ export function CreateWorkPage() {
   const [dueDate, setDueDate] = useState('')
   const [slotValues, setSlotValues] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
+  const [analyzing, setAnalyzing] = useState(false)
+  const [analysisError, setAnalysisError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
 
   const workerOptions = useMemo(
@@ -109,13 +115,25 @@ export function CreateWorkPage() {
     }
   }
 
-  function handleExampleClick(example: string) {
+  function handleExampleClick(example: (typeof EXAMPLE_PROMPTS)[number]) {
     setRequest(example)
+    setIntentHint(EXAMPLE_PROMPT_INTENTS[example])
   }
 
-  function handleAnalyze() {
-    // TODO(backend): POST /api/work-items/analyze { mode, request } -> 분류·필수정보 확인 결과 반영
-    navigate('/tasks/new/review')
+  async function handleAnalyze() {
+    if (request.trim() === '' || analyzing) return
+    setAnalyzing(true)
+    setAnalysisError(null)
+    try {
+      const instruction = instructionWithHint(request, intentHint)
+      const idempotencyKey = globalThis.crypto.randomUUID()
+      const aiRun = await createAiRun(instruction, idempotencyKey)
+      navigate('/tasks/new/review', { state: { aiRun } })
+    } catch (error) {
+      setAnalysisError(error instanceof ApiError ? getErrorMessage(error) : '요청을 분석하지 못했습니다.')
+    } finally {
+      setAnalyzing(false)
+    }
   }
 
   function handleSaveDraft() {
@@ -235,10 +253,12 @@ export function CreateWorkPage() {
         <Link to="/tasks" className={styles.cancel}>
           취소
         </Link>
-        <Button onClick={handleAnalyze} disabled={request.trim() === ''}>
+        <Button onClick={handleAnalyze} disabled={request.trim() === '' || analyzing} isLoading={analyzing}>
           요청 분석하기 →
         </Button>
       </div>
+
+      {analysisError && <p className={styles.fieldError}>{analysisError}</p>}
 
       <p className={styles.footnote}>
         버튼·파일·정기 실행은 등록된 처리 절차로 직접 연결되며, 자연어 요청만 분류와 정보 확인을

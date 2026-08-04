@@ -3,15 +3,12 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { DashboardPage } from './DashboardPage'
-import styles from './DashboardPage.module.css'
 import {
-  AGENT_SUMMARY,
-  AI_PREPARED_CHECKLIST,
+  AGENT_PREPARED,
   AI_REQUEST_PROMPT_CHIPS,
-  APPROVAL_QUEUE,
   METRIC_STRIP,
   TODAY_WORK_ITEMS,
-  UPCOMING_TIMELINE,
+  TOP_APPROVAL,
 } from './dashboardData'
 
 function renderPage(demoState = 'success') {
@@ -20,34 +17,36 @@ function renderPage(demoState = 'success') {
       <Routes>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/tasks/new" element={<p>업무 생성 페이지</p>} />
+        <Route path="/tasks" element={<p>업무함</p>} />
+        <Route path="/tasks/:taskId" element={<p>업무 상세</p>} />
       </Routes>
     </MemoryRouter>,
   )
 }
 
 describe('DashboardPage', () => {
-  it('renders the agent summary', () => {
+  it('renders the pending-approval headline', () => {
     renderPage()
-    expect(screen.getByText(AGENT_SUMMARY.headline)).toBeInTheDocument()
+    const pendingApproval = METRIC_STRIP.find((metric) => metric.id === 'pending-approval')
+    expect(
+      screen.getByText(`지금 확인이 필요한 승인 ${pendingApproval?.value}건이 있습니다.`),
+    ).toBeInTheDocument()
   })
 
-  it('colors the approval count as warning while there are pending approvals', () => {
+  it('renders the top approval card and navigates to its task on click', async () => {
+    const user = userEvent.setup()
     renderPage()
-    expect(APPROVAL_QUEUE.count).toBeGreaterThan(0)
-    expect(screen.getByText(`${APPROVAL_QUEUE.count}건`)).not.toHaveClass(styles.approvalCountClear)
+
+    expect(screen.getByText(TOP_APPROVAL.title)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: TOP_APPROVAL.actionLabel }))
+
+    expect(await screen.findByText('업무 상세')).toBeInTheDocument()
   })
 
   it('renders every work item row', () => {
     renderPage()
     for (const item of TODAY_WORK_ITEMS) {
       expect(screen.getByText(item.title)).toBeInTheDocument()
-    }
-  })
-
-  it('renders the upcoming timeline', () => {
-    renderPage()
-    for (const item of UPCOMING_TIMELINE) {
-      expect(screen.getByText(item)).toBeInTheDocument()
     }
   })
 
@@ -75,11 +74,26 @@ describe('DashboardPage', () => {
     }
   })
 
-  it('renders the AI prepared checklist', () => {
+  it('renders the agent-prepared panel with ready, needs-info, and after-approval groups', () => {
     renderPage()
-    for (const item of AI_PREPARED_CHECKLIST) {
-      expect(screen.getByText(item.label)).toBeInTheDocument()
+    for (const item of AGENT_PREPARED.ready) {
+      expect(screen.getByText(item.label, { exact: false })).toBeInTheDocument()
     }
+    for (const item of AGENT_PREPARED.needsInfo) {
+      expect(screen.getByText(item.label, { exact: false })).toBeInTheDocument()
+    }
+    for (const item of AGENT_PREPARED.afterApproval) {
+      expect(screen.getByText(item.label, { exact: false })).toBeInTheDocument()
+    }
+  })
+
+  it('navigates to work creation when the command box is clicked', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByText(/처리할 업무를 자연어로 입력해 주세요/))
+
+    expect(await screen.findByText('업무 생성 페이지')).toBeInTheDocument()
   })
 
   it('navigates to work creation with the chosen prompt chip prefilled', async () => {

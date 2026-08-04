@@ -77,7 +77,6 @@ export function WorkInboxTargetList({
                 <span className={styles.targetName}>{group.worker.display_name}</span>
                 <StatusLabel tone={status.tone}>{status.label}</StatusLabel>
               </span>
-              <span className={styles.targetTaskTitle}>{task.task.title}</span>
               <span className={styles.targetMeta}>
                 {getWorkflowLabel(task)} · {due.label}
               </span>

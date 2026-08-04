@@ -1,17 +1,18 @@
 .page {
   width: 100%;
-  margin: 0;
+  margin: -20px 0 0;
 }
 
 .headline {
   margin: 0;
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 700;
+  line-height: 32px;
   color: var(--text-primary);
 }
 
 .description {
-  margin: 6px 0 0;
+  margin: 5px 0 0;
   font-size: 14px;
   line-height: 1.5;
   color: var(--text-secondary);
@@ -22,7 +23,19 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--fowoco-spacing-16);
-  margin-top: var(--fowoco-spacing-20);
+  min-height: 58px;
+  margin-top: var(--fowoco-spacing-12);
+}
+
+.searchInput {
+  height: 40px;
+  max-width: none;
+  padding: 0 14px;
+  font-size: 13px;
+}
+
+.sortDropdown button {
+  height: 40px;
 }
 
 .stateWrap {
@@ -60,11 +73,11 @@
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(230px, 29%) minmax(0, 1fr);
+  grid-template-columns: clamp(280px, 28.82%, 332px) minmax(0, 1fr);
   min-height: 520px;
-  height: calc(100svh - 244px);
-  max-height: 720px;
-  margin-top: var(--fowoco-spacing-24);
+  height: calc(100svh - 208px);
+  max-height: 712px;
+  margin-top: 0;
   overflow: hidden;
   background: var(--surface-default);
   border: 1px solid var(--border-default);
@@ -80,8 +93,9 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
+  padding: var(--fowoco-spacing-16);
   border-right: 1px solid var(--border-default);
-  background: var(--surface-default);
+  background: var(--surface-page);
 }
 
 .listHeader {
@@ -90,14 +104,14 @@
   align-items: baseline;
   justify-content: space-between;
   gap: var(--fowoco-spacing-8);
-  min-height: 56px;
-  padding: 17px 16px 13px;
-  border-bottom: 1px solid var(--border-default);
+  min-height: 28px;
+  padding: 0;
 }
 
 .listTitle {
   margin: 0;
-  font-size: 15px;
+  font-size: 18px;
+  line-height: 24px;
   font-weight: 700;
   color: var(--text-primary);
 }
@@ -110,9 +124,10 @@
 
 .capNotice {
   flex-shrink: 0;
-  margin: 0;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border-default);
+  margin: var(--fowoco-spacing-8) 0 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
   background: var(--fowoco-amber-50);
   font-size: 11px;
   line-height: 1.5;
@@ -125,15 +140,16 @@
   flex: 1;
   flex-direction: column;
   gap: var(--fowoco-spacing-8);
-  padding: var(--fowoco-spacing-12);
+  margin-top: var(--fowoco-spacing-12);
+  padding: 0;
   overflow-y: auto;
 }
 
 .targetOption {
   position: relative;
   width: 100%;
-  min-height: 84px;
-  padding: 12px 13px;
+  min-height: 80px;
+  padding: 12px 16px;
   overflow: hidden;
   text-align: left;
   background: var(--surface-default);
@@ -157,10 +173,21 @@
 }
 
 .targetOptionSelected {
-  padding-left: 16px;
+  padding-left: 29px;
   border-color: var(--brand-primary);
   background: var(--fowoco-teal-50);
-  box-shadow: inset 3px 0 0 var(--brand-primary);
+  box-shadow: none;
+}
+
+.targetOptionSelected::before {
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 16px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--brand-primary);
+  content: '';
 }
 
 .targetOptionTop {
@@ -173,14 +200,13 @@
 .targetName {
   min-width: 0;
   overflow: hidden;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 500;
   color: var(--text-primary);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.targetTaskTitle,
 .targetMeta {
   display: block;
   overflow: hidden;
@@ -188,52 +214,77 @@
   white-space: nowrap;
 }
 
-.targetTaskTitle {
-  margin-top: var(--fowoco-spacing-8);
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
 .targetMeta {
-  margin-top: var(--fowoco-spacing-4);
-  font-size: 11px;
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 20px;
   color: var(--text-secondary);
 }
 
 .detailPanel {
   min-width: 0;
   min-height: 0;
-  padding: var(--fowoco-spacing-24);
+  padding: var(--fowoco-spacing-16) var(--fowoco-spacing-24);
   overflow-y: auto;
   background: var(--surface-default);
 }
 
 .detailHeader {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: var(--fowoco-spacing-16);
+  min-height: 72px;
 }
 
 .detailName {
   margin: 0;
-  font-size: 22px;
+  font-size: 18px;
+  line-height: 26px;
   font-weight: 700;
   color: var(--text-primary);
 }
 
 .detailMeta {
-  margin: 6px 0 0;
-  font-size: 12px;
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 20px;
   color: var(--text-secondary);
 }
 
+.agentSuggestion {
+  min-height: 40px;
+  margin: 0;
+  padding: 9px 16px;
+  border-radius: var(--fowoco-radius-6);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 22px;
+  color: var(--brand-primary);
+}
+
 .priorityCase {
-  margin-top: var(--fowoco-spacing-24);
-  padding: var(--fowoco-spacing-20);
+  margin-top: var(--fowoco-spacing-16);
+  padding: 0;
+  overflow: hidden;
   border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-8);
+  border-radius: var(--fowoco-radius-6);
+}
+
+.priorityCaseHeader,
+.decisionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fowoco-spacing-12);
+  min-height: 74px;
+  padding: 15px 20px;
+  background: var(--surface-subtle);
+  border-bottom: 1px solid var(--border-default);
+}
+
+.priorityCaseBody {
+  padding: 12px 16px;
 }
 
 .sectionHeadingRow {
@@ -246,13 +297,14 @@
 .caseEyebrow,
 .caseIdentifier {
   margin: 0;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--text-primary);
 }
 
 .caseIdentifier {
-  margin-top: var(--fowoco-spacing-16);
+  margin: 0 0 var(--fowoco-spacing-4);
+  font-size: 12px;
   font-weight: 500;
   color: var(--brand-primary);
 }
@@ -278,8 +330,9 @@
 }
 
 .caseTitle {
-  margin: var(--fowoco-spacing-8) 0 0;
-  font-size: 17px;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
   line-height: 1.45;
   color: var(--text-primary);
 }
@@ -296,14 +349,14 @@
   grid-template-columns: auto minmax(120px, 1fr);
   align-items: center;
   gap: var(--fowoco-spacing-12);
-  margin-top: var(--fowoco-spacing-16);
-  font-size: 11px;
+  margin-top: var(--fowoco-spacing-4);
+  font-size: 13px;
   color: var(--text-secondary);
 }
 
 .progress {
   width: 100%;
-  height: 6px;
+  height: 8px;
   overflow: hidden;
   appearance: none;
   border: none;
@@ -328,12 +381,12 @@
 
 .detailSection,
 .decisionSection {
-  margin-top: var(--fowoco-spacing-24);
+  margin-top: var(--fowoco-spacing-16);
 }
 
 .sectionTitle {
   margin: 0;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--text-primary);
 }
@@ -364,8 +417,8 @@
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: var(--fowoco-spacing-12);
-  min-height: 72px;
-  padding: 12px 14px;
+  min-height: 80px;
+  padding: 12px 16px;
   border: 1px solid var(--border-default);
   border-radius: var(--fowoco-radius-6);
   background: var(--surface-default);
@@ -378,8 +431,8 @@
 .reviewTaskTitle {
   margin: 0;
   overflow: hidden;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 500;
   color: var(--text-primary);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -396,25 +449,38 @@
 
 .reviewTaskButton {
   flex-shrink: 0;
-  height: 36px;
-  padding: 6px 12px;
+  width: 120px;
+  height: 40px;
+  padding: 8px 16px;
   font-size: 12px;
 }
 
 .decisionSection {
-  padding-top: var(--fowoco-spacing-20);
-  border-top: 1px solid var(--border-default);
+  overflow: hidden;
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
+}
+
+.decisionBody {
+  padding: 8px 16px 12px;
+}
+
+.decisionStatusRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--fowoco-spacing-12);
 }
 
 .decisionSummary {
-  margin: var(--fowoco-spacing-16) 0 0;
-  font-size: 13px;
+  margin: 0;
+  font-size: 14px;
   line-height: 1.6;
   color: var(--text-primary);
 }
 
 .decisionMeta {
-  margin: var(--fowoco-spacing-8) 0 0;
+  margin: 2px 0 0;
   font-size: 12px;
   color: var(--text-secondary);
 }
@@ -463,6 +529,17 @@
 
   .detailPanel {
     overflow-y: visible;
+  }
+}
+
+@media (max-width: 1180px) {
+  .page {
+    margin-top: 0;
+  }
+
+  .workspace {
+    height: auto;
+    max-height: none;
   }
 }
 

@@ -33,18 +33,21 @@
 
 .title {
   flex: 1;
+  margin: 0;
   font-size: 16px;
   font-weight: 500;
   color: var(--text-primary);
 }
 
 .brand {
+  margin: 0;
   font-size: 18px;
   font-weight: 700;
   color: var(--brand-primary);
 }
 
 .right {
+  margin-left: auto;
   font-size: 12px;
   font-weight: 500;
   color: var(--text-secondary);
@@ -60,5 +63,5 @@
 }
 
 .content {
-  padding: 24px 20px 40px;
+  padding: 24px 20px 22px;
 }

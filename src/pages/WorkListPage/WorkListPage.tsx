@@ -194,13 +194,15 @@ export function WorkListPage() {
           onChange={setQuery}
           placeholder="근로자·Case·업무 검색"
           ariaLabel="근로자·Case·업무 검색"
+          className={styles.searchInput}
         />
         <Dropdown
           options={SORT_OPTIONS}
           value={sort}
           onChange={(value) => setSort(value as WorkInboxSort)}
           ariaLabel="업무함 정렬"
-          width="176px"
+          className={styles.sortDropdown}
+          width="133px"
         />
       </div>
 

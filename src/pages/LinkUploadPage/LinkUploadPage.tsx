@@ -86,7 +86,9 @@ export function LinkUploadPage() {
         navigate(`/worker-portal/${encodeURIComponent(token)}/expired`, { replace: true })
         return
       }
-      setFileError(caught instanceof ApiError ? getErrorMessage(caught) : '파일을 제출하지 못했습니다.')
+      setFileError(
+        caught instanceof ApiError ? getErrorMessage(caught) : '파일을 제출하지 못했습니다.',
+      )
     } finally {
       setSubmitting(false)
     }
@@ -103,7 +105,9 @@ export function LinkUploadPage() {
       })
       setResponseMessage(successMessage)
     } catch (caught) {
-      setFileError(caught instanceof ApiError ? getErrorMessage(caught) : '응답을 보내지 못했습니다.')
+      setFileError(
+        caught instanceof ApiError ? getErrorMessage(caught) : '응답을 보내지 못했습니다.',
+      )
     } finally {
       setSubmitting(false)
     }
@@ -112,7 +116,11 @@ export function LinkUploadPage() {
   if (!token) {
     return (
       <MobileShell title="서류 제출" onBack={() => navigate(-1)}>
-        <EmptyState kind="error" title="제출 링크가 필요합니다" body="회사 담당자가 전달한 전체 링크를 다시 열어 주세요." />
+        <EmptyState
+          kind="error"
+          title="제출 링크가 필요합니다"
+          body="회사 담당자가 전달한 전체 링크를 다시 열어 주세요."
+        />
       </MobileShell>
     )
   }
@@ -120,7 +128,11 @@ export function LinkUploadPage() {
   if (status === 'loading') {
     return (
       <MobileShell title="서류 제출" onBack={() => navigate(-1)}>
-        <EmptyState kind="loading" title="제출 링크를 확인하고 있습니다" body="잠시만 기다려 주세요." />
+        <EmptyState
+          kind="loading"
+          title="제출 링크를 확인하고 있습니다"
+          body="잠시만 기다려 주세요."
+        />
       </MobileShell>
     )
   }
@@ -131,7 +143,9 @@ export function LinkUploadPage() {
         <EmptyState
           kind="error"
           title="제출 링크를 확인하지 못했습니다"
-          body={error instanceof ApiError ? getErrorMessage(error) : '네트워크 상태를 확인해 주세요.'}
+          body={
+            error instanceof ApiError ? getErrorMessage(error) : '네트워크 상태를 확인해 주세요.'
+          }
           actionLabel="다시 시도"
           onAction={refetch}
         />
@@ -155,18 +169,28 @@ export function LinkUploadPage() {
   const canSubmitDocument = data.allowed_responses.includes('DOCUMENT_SUBMITTED')
   const helpResponses: Array<{ label: string; type: WorkerResponseType; message: string }> = [
     { label: HELP_LINKS[0], type: 'QUESTION', message: '담당자에게 질문 의사를 전했습니다.' },
-    { label: HELP_LINKS[1], type: 'NOT_UNDERSTOOD', message: '담당자에게 추가 설명을 요청했습니다.' },
-    { label: HELP_LINKS[2], type: 'DIFFICULT', message: '담당자에게 처리 어려움 상태를 전했습니다.' },
+    {
+      label: HELP_LINKS[1],
+      type: 'NOT_UNDERSTOOD',
+      message: '담당자에게 추가 설명을 요청했습니다.',
+    },
+    {
+      label: HELP_LINKS[2],
+      type: 'DIFFICULT',
+      message: '담당자에게 처리 어려움 상태를 전했습니다.',
+    },
   ]
 
   return (
-    <MobileShell title="요청 서류 제출" onBack={() => navigate(-1)} right={<span>보안 링크</span>}>
+    <MobileShell title="요청 서류 제출" onBack={() => navigate(-1)} right={<span>1 / 1</span>}>
       <h1 className={styles.headline}>
         사진 또는 파일을
         <br />
         추가해 주세요
       </h1>
-      <p className={styles.subtext}>여권 사진면 전체가 보이고 글자가 흐리지 않은지 확인해 주세요.</p>
+      <p className={styles.subtext}>
+        여권 사진면 전체가 보이고 글자가 흐리지 않은지 확인해 주세요.
+      </p>
 
       <button
         type="button"
@@ -187,16 +211,18 @@ export function LinkUploadPage() {
         onChange={handleFileChange}
       />
 
-      {fileError && <p className={styles.fileError} role="alert">{fileError}</p>}
+      {fileError && (
+        <p className={styles.fileError} role="alert">
+          {fileError}
+        </p>
+      )}
       {responseMessage && <p className={styles.responseNotice}>{responseMessage}</p>}
 
       {file && (
         <div className={styles.selectedFile}>
           <div>
             <p className={styles.fileName}>{file.name}</p>
-            <p className={styles.fileMeta}>
-              {formatFileSize(file.size)} · 제출 전
-            </p>
+            <p className={styles.fileMeta}>{formatFileSize(file.size)} · 제출 전 확인</p>
           </div>
           <button type="button" className={styles.removeFile} onClick={handleRemoveFile}>
             삭제
@@ -229,9 +255,7 @@ export function LinkUploadPage() {
         {submitting ? '제출 중…' : '서류 제출'}
       </button>
 
-      <p className={styles.footnote}>
-        업로드가 끝난 뒤 제출 응답까지 접수되어야 담당자 화면에 반영됩니다.
-      </p>
+      <p className={styles.footnote}>제출한 파일은 회사 인사팀 담당자가 확인합니다.</p>
     </MobileShell>
   )
 }

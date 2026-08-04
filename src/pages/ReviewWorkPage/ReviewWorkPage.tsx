@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import type { AiRunResponse } from '../../api/aiRuns'
 import { Button } from '../../components/ui/Button/Button'
 import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
 import { Dropdown } from '../../components/ui/Dropdown/Dropdown'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import { useToastStore } from '../../store/toastStore'
 import styles from './ReviewWorkPage.module.css'
+import { AiRunReview } from './AiRunReview'
 import {
   CURRENT_STEP_INDEX,
   DRAFT_REASONS,
@@ -23,9 +25,15 @@ const INSTITUTION_OPTIONS = [
 
 export function ReviewWorkPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [institution, setInstitution] = useState('')
   const canCreate = institution !== ''
   const showToast = useToastStore((state) => state.showToast)
+  const aiRun = (location.state as { aiRun?: AiRunResponse } | null)?.aiRun
+
+  if (aiRun) {
+    return <AiRunReview initialRun={aiRun} />
+  }
 
   function handleCreate() {
     // TODO(backend): POST /api/work-items { ...UNDERSTOOD_REQUEST, institution } -> 생성 후 WORK-001로 이동

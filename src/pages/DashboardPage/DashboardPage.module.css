@@ -186,6 +186,8 @@
   gap: 10px;
   margin: 16px 0 0;
   padding: 0;
+  max-height: 220px;
+  overflow-y: auto;
   list-style: none;
 }
 
@@ -233,6 +235,8 @@
   flex-direction: column;
   gap: 16px;
   margin-top: 16px;
+  max-height: 480px;
+  overflow-y: auto;
 }
 
 .timeline {

@@ -56,6 +56,7 @@ const AI_RUN = {
 
 beforeEach(() => {
   useToastStore.setState({ toasts: [] })
+  window.sessionStorage.clear()
   vi.stubGlobal('fetch', vi.fn())
   vi.mocked(fetch).mockImplementation((input) => {
     const url = String(input)
@@ -111,7 +112,7 @@ describe('CreateWorkPage', () => {
     expect(screen.getByLabelText('업무 요청 내용')).toHaveValue('체류연장 준비')
   })
 
-  it('sends the natural-language request with an intent hint and opens the review page', async () => {
+  it('sends the exact natural-language request and opens the review page', async () => {
     const user = userEvent.setup()
     renderPage()
 
@@ -122,7 +123,7 @@ describe('CreateWorkPage', () => {
     const analyzeCall = vi.mocked(fetch).mock.calls.find(([url]) => String(url).endsWith('/ai-runs'))
     expect(analyzeCall).toBeDefined()
     expect(JSON.parse((analyzeCall![1] as RequestInit).body as string)).toEqual({
-      instruction: '체류연장 준비, EXPIRY_RENEWAL',
+      instruction: '체류연장 준비',
     })
     expect(new Headers((analyzeCall![1] as RequestInit).headers).get('Idempotency-Key')).toBeTruthy()
   })
@@ -153,7 +154,18 @@ describe('CreateWorkPage', () => {
 
     await user.click(screen.getByRole('button', { name: '임시 저장' }))
 
-    expect(screen.getByText('초안을 저장했습니다.')).toBeInTheDocument()
+    expect(screen.getByText('이 브라우저 탭에 초안을 저장했습니다.')).toBeInTheDocument()
+    expect(JSON.parse(window.sessionStorage.getItem('fowoco:work-request-draft') ?? '{}')).toMatchObject({
+      request: '',
+      mode: 'nl',
+    })
+  })
+
+  it('marks unsupported input modes as unavailable', () => {
+    renderPage()
+
+    expect(screen.getByRole('button', { name: /처리 절차/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /이전 업무/ })).toBeDisabled()
   })
 
   it('disables the direct-create button until worker/type/workflow/title are filled', async () => {

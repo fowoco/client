@@ -1,37 +1,45 @@
+import { useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { fetchTasks } from '../../api/tasks'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
-import { WorkItemRow, type WorkItemStatusTone } from '../../components/ui/WorkItemRow/WorkItemRow'
-import { useAsyncDemoData } from '../../hooks/useAsyncDemoData'
+import { WorkItemRow } from '../../components/ui/WorkItemRow/WorkItemRow'
+import { useApiQuery } from '../../hooks/useApiQuery'
 import agentSparkIcon from './assets/agent-spark.svg'
 import commandSubmitIcon from './assets/command-submit.svg'
 import styles from './DashboardPage.module.css'
 import {
-  AGENT_PREPARED,
   AI_REQUEST_PROMPT_CHIPS,
-  APPROVAL_QUEUE,
-  METRIC_STRIP,
-  TODAY_WORK_ITEMS,
-  type DashboardWorkStatus,
+  buildAgentPrepared,
+  buildDashboardMetrics,
+  buildDashboardWorkItems,
+  buildPriorityApproval,
 } from './dashboardData'
-
-const STATUS_TONE: Record<DashboardWorkStatus, WorkItemStatusTone> = {
-  승인대기: 'warning',
-  요청전송: 'primary',
-  서류대기: 'neutral',
-}
 
 export function DashboardPage() {
   const navigate = useNavigate()
-  const status = useAsyncDemoData(TODAY_WORK_ITEMS.length === 0)
+  const taskFetcher = useCallback(() => fetchTasks({ size: 100 }), [])
+  const isEmpty = useCallback((page: { items: unknown[] }) => page.items.length === 0, [])
+  const { status, data: taskPage, error, refetch } = useApiQuery(taskFetcher, isEmpty)
+  const tasks = useMemo(() => taskPage?.items ?? [], [taskPage])
+  const metrics = useMemo(() => buildDashboardMetrics(tasks), [tasks])
+  const workItems = useMemo(() => buildDashboardWorkItems(tasks), [tasks])
+  const priorityApproval = useMemo(() => buildPriorityApproval(tasks), [tasks])
+  const agentPrepared = useMemo(() => buildAgentPrepared(tasks), [tasks])
+  const pendingApprovalCount = metrics.find((metric) => metric.id === 'pending-approval')?.value ?? 0
+
+  const headline =
+    status === 'success'
+      ? `지금 확인이 필요한 승인 ${pendingApprovalCount}건이 있습니다.`
+      : status === 'empty'
+        ? '현재 등록된 업무가 없습니다.'
+        : '업무 현황을 확인하고 있습니다.'
 
   return (
     <div className={styles.page}>
       <header className={styles.pageHeader}>
-        <h1 className={styles.headline}>
-          지금 확인이 필요한 승인 {APPROVAL_QUEUE.blockingCount}건이 있습니다.
-        </h1>
+        <h1 className={styles.headline}>{headline}</h1>
         <p className={styles.description}>
-          Agent가 필요한 자료와 다음 행동을 먼저 준비했습니다. 검토와 최종 결정은 담당자가 수행합니다.
+          Task API의 최신 상태와 기한을 기준으로 지금 확인할 업무를 정리합니다.
         </p>
       </header>
 
@@ -67,7 +75,7 @@ export function DashboardPage() {
           <EmptyState
             kind="loading"
             title="업무 현황을 불러오는 중입니다"
-            body="기한·필수정보·응답 상태를 확인하고 있습니다."
+            body="Task API에서 최신 업무 상태를 확인하고 있습니다."
             note="처리 중 · 중복 실행 차단"
           />
         </div>
@@ -78,9 +86,9 @@ export function DashboardPage() {
           <EmptyState
             kind="error"
             title="업무 현황을 불러오지 못했습니다"
-            body="네트워크 상태를 확인한 뒤 다시 시도해 주세요."
+            body={error?.message ?? '네트워크 상태를 확인한 뒤 다시 시도해 주세요.'}
             actionLabel="다시 시도"
-            onAction={() => navigate('/dashboard', { replace: true })}
+            onAction={refetch}
           />
         </div>
       )}
@@ -89,7 +97,7 @@ export function DashboardPage() {
         <div className={styles.stateWrap}>
           <EmptyState
             kind="empty"
-            title="오늘 처리할 업무가 없습니다"
+            title="등록된 업무가 없습니다"
             body="새 요청을 입력하거나 파일을 가져와 업무를 만들어 보세요."
             actionLabel="업무 만들기"
             onAction={() => navigate('/tasks/new')}
@@ -101,12 +109,12 @@ export function DashboardPage() {
         <div className={styles.dashboardGrid}>
           <div className={styles.primaryColumn}>
             <div className={styles.metricStrip} aria-label="오늘의 업무 지표">
-              {METRIC_STRIP.map((metric) => (
+              {metrics.map((metric) => (
                 <button
                   key={metric.id}
                   type="button"
                   className={styles.metricCard}
-                  onClick={() => navigate(`/tasks?view=${metric.id}`)}
+                  onClick={() => navigate('/tasks')}
                 >
                   <span className={styles.metricText}>
                     <span className={styles.metricLabel}>{metric.label}</span>
@@ -122,49 +130,68 @@ export function DashboardPage() {
             <section className={styles.priorityApproval} aria-labelledby="priority-approval-title">
               <div className={styles.priorityHeader}>
                 <h2 id="priority-approval-title">먼저 검토할 승인 업무</h2>
-                <span>요청 · {APPROVAL_QUEUE.oldestValue}</span>
+                <span>
+                  {priorityApproval ? `요청 · ${priorityApproval.requestedLabel}` : '승인 대기 0건'}
+                </span>
               </div>
-              <div className={styles.priorityBody}>
-                <div className={styles.priorityContent}>
-                  <div className={styles.priorityCopy}>
-                    <strong>{APPROVAL_QUEUE.title}</strong>
-                    <span>{APPROVAL_QUEUE.meta}</span>
-                    <span>{APPROVAL_QUEUE.note}</span>
+              {priorityApproval ? (
+                <div className={styles.priorityBody}>
+                  <div className={styles.priorityContent}>
+                    <div className={styles.priorityCopy}>
+                      <strong>{priorityApproval.title}</strong>
+                      <span>{priorityApproval.meta}</span>
+                      <span>{priorityApproval.note}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/tasks/${priorityApproval.id}`)}
+                    >
+                      승인 검토
+                    </button>
                   </div>
-                  <button type="button" onClick={() => navigate('/tasks')}>
-                    승인 검토
+                  <button
+                    type="button"
+                    className={styles.priorityNext}
+                    aria-label="승인 업무 상세 열기"
+                    onClick={() => navigate(`/tasks/${priorityApproval.id}`)}
+                  >
+                    ›
                   </button>
                 </div>
-                <button
-                  type="button"
-                  className={styles.priorityNext}
-                  aria-label="다음 승인 업무"
-                  onClick={() => navigate('/tasks')}
-                >
-                  ›
-                </button>
-              </div>
+              ) : (
+                <div className={styles.priorityEmpty}>
+                  <p>현재 담당자 승인을 기다리는 업무가 없습니다.</p>
+                  <button type="button" onClick={() => navigate('/tasks')}>
+                    업무함 보기
+                  </button>
+                </div>
+              )}
             </section>
 
             <section className={styles.todayTasks} aria-labelledby="today-tasks-title">
               <div className={styles.sectionHeader}>
                 <h2 id="today-tasks-title">오늘의 우선 업무</h2>
-                <p>지금 할 일 · {TODAY_WORK_ITEMS.length}건</p>
+                <p>지금 할 일 · {workItems.length}건</p>
               </div>
               <div className={styles.workItemList}>
-                {TODAY_WORK_ITEMS.map((item) => (
+                {workItems.map((item) => (
                   <WorkItemRow
                     key={item.id}
                     title={item.title}
                     statusLabel={item.status}
-                    statusTone={STATUS_TONE[item.status]}
-                    detailItems={[item.schedule, ...(item.assignee ? [item.assignee] : [])]}
+                    statusTone={item.statusTone}
+                    detailItems={[item.schedule]}
                     nextAction={item.nextAction}
                     urgency={item.urgency}
                     onClick={() => navigate(`/tasks/${item.id}`)}
                   />
                 ))}
               </div>
+              {taskPage && taskPage.total_elements > 100 && (
+                <p className={styles.capNotice}>
+                  최근 100건 기준입니다. 전체 업무는 업무함에서 확인해 주세요.
+                </p>
+              )}
             </section>
           </div>
 
@@ -174,47 +201,62 @@ export function DashboardPage() {
               <h2 id="agent-prepared-title">Agent가 준비한 내용</h2>
             </div>
             <div className={styles.preparedIntro}>
-              <strong>준비 완료 4건 · HR 확인 필요 2건</strong>
-              <p>Agent는 초안까지만 준비하며, 검토와 승인은 담당자가 수행합니다.</p>
+              <strong>
+                연결된 업무 {agentPrepared.connectedCount}건 · 담당자 확인 필요{' '}
+                {agentPrepared.review.length}건
+              </strong>
+              <p>Task 상태만 표시하며, 문서 준비와 승인 결과는 각 API 응답을 따릅니다.</p>
             </div>
 
             <div className={styles.preparedSections}>
               <section className={styles.preparedSection}>
-                <h3>준비 완료 · 4건</h3>
-                <ul>
-                  {AGENT_PREPARED.prepared.map((item) => (
-                    <li key={item.id}>
-                      <span className={styles.doneMark}>✓</span>
-                      <strong>{item.label}</strong>
-                    </li>
-                  ))}
-                </ul>
+                <h3>Agent 생성 초안 · {agentPrepared.prepared.length}건</h3>
+                {agentPrepared.prepared.length > 0 ? (
+                  <ul>
+                    {agentPrepared.prepared.map((item) => (
+                      <li key={item.id}>
+                        <span className={styles.doneMark}>✓</span>
+                        <strong>{item.label}</strong>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className={styles.preparedEmpty}>현재 표시할 Agent 초안이 없습니다.</p>
+                )}
               </section>
 
               <section className={`${styles.preparedSection} ${styles.reviewSection}`}>
-                <h3>HR 확인 필요 · 2건</h3>
-                <ul>
-                  {AGENT_PREPARED.review.map((item) => (
-                    <li key={item.id} className={styles.describedItem}>
-                      <span className={styles.reviewMark}>!</span>
-                      <strong>{item.label}</strong>
-                      <p>{item.description}</p>
-                    </li>
-                  ))}
-                </ul>
+                <h3>담당자 확인 필요 · {agentPrepared.review.length}건</h3>
+                {agentPrepared.review.length > 0 ? (
+                  <ul>
+                    {agentPrepared.review.map((item) => (
+                      <li key={item.id} className={styles.describedItem}>
+                        <span className={styles.reviewMark}>!</span>
+                        <strong>{item.label}</strong>
+                        <p>{item.description}</p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className={styles.preparedEmpty}>현재 확인이 필요한 업무가 없습니다.</p>
+                )}
               </section>
 
               <section className={styles.preparedSection}>
-                <h3>승인 후 진행 · 2건</h3>
-                <ul>
-                  {AGENT_PREPARED.afterApproval.map((item) => (
-                    <li key={item.id} className={styles.describedItem}>
-                      <span className={styles.nextMark}>→</span>
-                      <strong>{item.label}</strong>
-                      <p>{item.description}</p>
-                    </li>
-                  ))}
-                </ul>
+                <h3>응답·기관 대기 · {agentPrepared.afterApproval.length}건</h3>
+                {agentPrepared.afterApproval.length > 0 ? (
+                  <ul>
+                    {agentPrepared.afterApproval.map((item) => (
+                      <li key={item.id} className={styles.describedItem}>
+                        <span className={styles.nextMark}>→</span>
+                        <strong>{item.label}</strong>
+                        <p>{item.description}</p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className={styles.preparedEmpty}>현재 대기 중인 업무가 없습니다.</p>
+                )}
               </section>
             </div>
           </aside>

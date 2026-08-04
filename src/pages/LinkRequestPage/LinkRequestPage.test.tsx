@@ -12,7 +12,8 @@ describe('LinkRequestPage', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText('마감 · 7월 24일 수요일')).toBeInTheDocument()
+    expect(screen.getByText('데모 화면입니다.')).toBeInTheDocument()
+    expect(screen.getByText('마감 · 링크 API 연결 후 표시')).toBeInTheDocument()
   })
 
   it('navigates to the upload page on confirmation', async () => {
@@ -26,7 +27,7 @@ describe('LinkRequestPage', () => {
       </MemoryRouter>,
     )
 
-    await user.click(screen.getByRole('button', { name: '안내를 확인했습니다' }))
+    await user.click(screen.getByRole('button', { name: '파일 선택 화면 보기' }))
 
     expect(screen.getByText('upload screen')).toBeInTheDocument()
   })

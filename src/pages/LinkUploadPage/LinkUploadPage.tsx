@@ -1,15 +1,46 @@
-import { useState } from 'react'
+import { useRef, useState, type ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MobileShell } from '../../components/mobile/MobileShell'
 import styles from './LinkUploadPage.module.css'
-import { DEMO_FILE, HELP_LINKS } from './linkUploadData'
+import { HELP_LINKS } from './linkUploadData'
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024
+const ACCEPTED_FILE_TYPES = ['image/jpeg', 'image/png', 'application/pdf']
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))}KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`
+}
 
 export function LinkUploadPage() {
   const navigate = useNavigate()
-  const [fileSelected, setFileSelected] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [file, setFile] = useState<File | null>(null)
+  const [fileError, setFileError] = useState<string | null>(null)
 
-  function handleSubmit() {
-    // TODO(backend): POST /api/links/:token/submit (multipart) -> 제출 완료 처리
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const selected = event.target.files?.[0] ?? null
+    setFileError(null)
+    if (!selected) return
+    if (!ACCEPTED_FILE_TYPES.includes(selected.type)) {
+      setFile(null)
+      setFileError('JPG, PNG, PDF 파일만 선택할 수 있습니다.')
+      event.target.value = ''
+      return
+    }
+    if (selected.size > MAX_FILE_SIZE) {
+      setFile(null)
+      setFileError('파일 크기는 10MB 이하여야 합니다.')
+      event.target.value = ''
+      return
+    }
+    setFile(selected)
+  }
+
+  function handleRemoveFile() {
+    setFile(null)
+    setFileError(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   return (
@@ -25,22 +56,32 @@ export function LinkUploadPage() {
         type="button"
         className={styles.dropzone}
         aria-label="파일 또는 사진 선택"
-        onClick={() => setFileSelected(true)}
+        onClick={() => fileInputRef.current?.click()}
       >
         <p className={styles.dropzonePlus}>＋</p>
         <p className={styles.dropzoneLabel}>파일 또는 사진 선택</p>
         <p className={styles.dropzoneHint}>JPG, PNG, PDF · 최대 10MB</p>
       </button>
+      <input
+        ref={fileInputRef}
+        className={styles.fileInput}
+        type="file"
+        accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+        aria-label="제출할 파일 선택"
+        onChange={handleFileChange}
+      />
 
-      {fileSelected && (
+      {fileError && <p className={styles.fileError} role="alert">{fileError}</p>}
+
+      {file && (
         <div className={styles.selectedFile}>
           <div>
-            <p className={styles.fileName}>{DEMO_FILE.name}</p>
+            <p className={styles.fileName}>{file.name}</p>
             <p className={styles.fileMeta}>
-              {DEMO_FILE.size} · {DEMO_FILE.status}
+              {formatFileSize(file.size)} · 제출 전
             </p>
           </div>
-          <button type="button" className={styles.removeFile} onClick={() => setFileSelected(false)}>
+          <button type="button" className={styles.removeFile} onClick={handleRemoveFile}>
             삭제
           </button>
         </div>
@@ -53,6 +94,8 @@ export function LinkUploadPage() {
             key={label}
             type="button"
             className={`${styles.helpLink} ${index === 0 ? styles.helpLinkPrimary : ''}`}
+            disabled
+            title="문의 API 연결 필요"
           >
             <span>{label}</span>
             <span>→</span>
@@ -60,11 +103,13 @@ export function LinkUploadPage() {
         ))}
       </div>
 
-      <button type="button" className={styles.submit} disabled={!fileSelected} onClick={handleSubmit}>
-        제출하기
+      <button type="button" className={styles.submit} disabled>
+        제출 API 연결 필요
       </button>
 
-      <p className={styles.footnote}>제출 후 HR 담당자가 확인하면 기존 업무에 기록됩니다.</p>
+      <p className={styles.footnote}>
+        파일 선택과 형식 검증만 가능합니다. 보안 링크 토큰·업로드·제출 API 연결 후 실제 기록됩니다.
+      </p>
     </MobileShell>
   )
 }

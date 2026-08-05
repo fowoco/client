@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { OnboardingTour } from '../onboarding/OnboardingTour'
 import { hasCompletedOnboarding, markOnboardingCompleted } from '../onboarding/onboardingStorage'
 import { useAuthStore } from '../../store/authStore'
@@ -12,10 +12,12 @@ import { RouteTransition } from './RouteTransition'
 
 export function AppLayout() {
   const navigate = useNavigate()
+  const location = useLocation()
   const user = useAuthStore((state) => state.user)
   const logout = useAuthStore((state) => state.logout)
   const [helpOpen, setHelpOpen] = useState(false)
   const [tourOpen, setTourOpen] = useState(false)
+  const isTaskDetail = /^\/tasks\/[^/]+$/.test(location.pathname)
 
   useEffect(() => {
     if (!hasCompletedOnboarding()) setTourOpen(true)
@@ -51,7 +53,8 @@ export function AppLayout() {
                 `${styles.navLink} ${isActive ? styles.navLinkActive : ''}`
               }
             >
-              {item.label}
+              <img src={item.iconSrc} alt="" className={styles.navIcon} aria-hidden="true" />
+              <span>{item.label}</span>
             </NavLink>
           ))}
         </nav>
@@ -60,14 +63,16 @@ export function AppLayout() {
           <button type="button" className={styles.help} onClick={() => setHelpOpen(true)}>
             ? 도움말
           </button>
-          <button type="button" className={styles.logout} onClick={handleLogout}>
-            로그아웃
-          </button>
         </div>
       </aside>
 
       <div className={styles.main}>
         <header className={styles.topBar}>
+          {isTaskDetail && (
+            <Link to="/tasks" className={styles.topBarBack}>
+              ← 업무함
+            </Link>
+          )}
           <div className={styles.topBarActions}>
             <HeaderActions user={user} onLogout={handleLogout} />
           </div>
@@ -78,7 +83,11 @@ export function AppLayout() {
         </main>
       </div>
 
-      <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} onReplayTour={handleReplayTour} />
+      <HelpModal
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        onReplayTour={handleReplayTour}
+      />
       <OnboardingTour open={tourOpen} onFinish={handleFinishTour} />
       <ToastViewport />
     </div>

@@ -19,12 +19,12 @@ export function MobileShell({ children, onBack, title, right, expired }: MobileS
               ←
             </button>
           )}
-          {title ? (
-            <p className={styles.title}>{title}</p>
-          ) : (
-            <p className={styles.brand}>FOWOCO</p>
-          )}
-          {expired ? <span className={styles.expiredBadge}>만료</span> : right}
+          {title ? <p className={styles.title}>{title}</p> : <p className={styles.brand}>FOWOCO</p>}
+          {expired ? (
+            <span className={styles.expiredBadge}>만료</span>
+          ) : right ? (
+            <span className={styles.right}>{right}</span>
+          ) : null}
         </header>
         <main className={styles.content}>{children}</main>
       </div>

@@ -3,7 +3,11 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AuditEventResponse } from '../../api/audit'
-import type { DocumentItemResponse, DocumentPageResponse, DocumentReadinessResponse } from '../../api/documents'
+import type {
+  DocumentItemResponse,
+  DocumentPageResponse,
+  DocumentReadinessResponse,
+} from '../../api/documents'
 import type { TaskDetailResponse } from '../../api/tasks'
 import { ToastViewport } from '../../components/ui/ToastViewport/ToastViewport'
 import { useToastStore } from '../../store/toastStore'
@@ -11,12 +15,24 @@ import { CaseDetailPage } from './CaseDetailPage'
 import { CASE_COMMUNICATION, CASE_TABS, CONTEXT_DRAWER } from './caseDetailData'
 
 function jsonResponse(body: unknown, init: ResponseInit = {}) {
-  return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' }, ...init })
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+    ...init,
+  })
 }
 
 function errorResponse(status: number, code: string, message: string) {
   return jsonResponse(
-    { timestamp: '2026-07-27T01:23:45Z', status, code, message, path: '/api/v1/tasks/T-1', request_id: 'req-1', field_errors: [] },
+    {
+      timestamp: '2026-07-27T01:23:45Z',
+      status,
+      code,
+      message,
+      path: '/api/v1/tasks/T-1',
+      request_id: 'req-1',
+      field_errors: [],
+    },
     { status },
   )
 }
@@ -39,8 +55,26 @@ function task(overrides: Partial<TaskDetailResponse> = {}): TaskDetailResponse {
     version: 1,
     missing_required_slots: [],
     checklist_items: [
-      { checklist_item_id: 'chk-1', item_code: 'passport', label: '여권 사본 확인', required: true, completed: true, completed_by: null, completed_at: null, version: 1 },
-      { checklist_item_id: 'chk-2', item_code: 'signature', label: '근로자 서명 확인', required: true, completed: false, completed_by: null, completed_at: null, version: 1 },
+      {
+        checklist_item_id: 'chk-1',
+        item_code: 'passport',
+        label: '여권 사본 확인',
+        required: true,
+        completed: true,
+        completed_by: null,
+        completed_at: null,
+        version: 1,
+      },
+      {
+        checklist_item_id: 'chk-2',
+        item_code: 'signature',
+        label: '근로자 서명 확인',
+        required: true,
+        completed: false,
+        completed_by: null,
+        completed_at: null,
+        version: 1,
+      },
     ],
     created_by: 'u-1',
     updated_by: 'u-1',
@@ -68,8 +102,17 @@ function activity(overrides: Partial<AuditEventResponse> = {}): AuditEventRespon
   }
 }
 
-function readinessResponse(overrides: Partial<DocumentReadinessResponse> = {}): DocumentReadinessResponse {
-  return { required: [], available: [], missing: [], expired: [], completion_blocked: false, ...overrides }
+function readinessResponse(
+  overrides: Partial<DocumentReadinessResponse> = {},
+): DocumentReadinessResponse {
+  return {
+    required: [],
+    available: [],
+    missing: [],
+    expired: [],
+    completion_blocked: false,
+    ...overrides,
+  }
 }
 
 function documentsResponse(items: DocumentItemResponse[] = []): DocumentPageResponse {
@@ -85,28 +128,58 @@ function mockTaskAndActivities(
   vi.mocked(fetch).mockImplementation((input) => {
     const url = String(input)
     if (url.includes('/activities')) return Promise.resolve(jsonResponse(activities))
-    if (url.includes('/document-readiness')) return Promise.resolve(jsonResponse(readinessResponse(readinessOverrides)))
+    if (url.includes('/document-readiness'))
+      return Promise.resolve(jsonResponse(readinessResponse(readinessOverrides)))
     if (url.includes('/document-request-draft')) {
-      return Promise.resolve(jsonResponse({ draft_id: 'draft-1', version: 1, review_status: 'PENDING' }))
+      return Promise.resolve(
+        jsonResponse({ draft_id: 'draft-1', version: 1, review_status: 'PENDING' }),
+      )
     }
-    if (url.includes('/documents?')) return Promise.resolve(jsonResponse(documentsResponse(documents)))
+    if (url.includes('/documents?'))
+      return Promise.resolve(jsonResponse(documentsResponse(documents)))
     if (url.includes('/approval-requests')) {
-      return Promise.resolve(jsonResponse({ task_id: 'T-1', task_status: 'READY_FOR_REVIEW', task_version: 2 }, { status: 201 }))
+      return Promise.resolve(
+        jsonResponse(
+          { task_id: 'T-1', task_status: 'READY_FOR_REVIEW', task_version: 2 },
+          { status: 201 },
+        ),
+      )
     }
     if (url.endsWith('/approve')) {
-      return Promise.resolve(jsonResponse({ task_id: 'T-1', task_status: 'APPROVED', task_version: 2 }))
+      return Promise.resolve(
+        jsonResponse({ task_id: 'T-1', task_status: 'APPROVED', task_version: 2 }),
+      )
     }
     if (url.endsWith('/reject')) {
-      return Promise.resolve(jsonResponse({ task_id: 'T-1', task_status: 'DRAFT', task_version: 2 }))
+      return Promise.resolve(
+        jsonResponse({ task_id: 'T-1', task_status: 'DRAFT', task_version: 2 }),
+      )
     }
     if (url.endsWith('/evidence')) {
-      return Promise.resolve(jsonResponse({ resource_id: 'E-1', task_id: 'T-1', task_status: 'APPROVED', task_version: 1 }, { status: 201 }))
+      return Promise.resolve(
+        jsonResponse(
+          { resource_id: 'E-1', task_id: 'T-1', task_status: 'APPROVED', task_version: 1 },
+          { status: 201 },
+        ),
+      )
     }
     if (url.endsWith('/complete')) {
-      return Promise.resolve(jsonResponse({ resource_id: 'T-1', task_id: 'T-1', task_status: 'COMPLETED', task_version: 2 }))
+      return Promise.resolve(
+        jsonResponse({
+          resource_id: 'T-1',
+          task_id: 'T-1',
+          task_status: 'COMPLETED',
+          task_version: 2,
+        }),
+      )
     }
     if (url.endsWith('/worker-link')) {
-      return Promise.resolve(jsonResponse({ worker_url: 'worker-token-1', expires_at: '2026-08-07T00:00:00Z' }, { status: 201 }))
+      return Promise.resolve(
+        jsonResponse(
+          { worker_url: 'worker-token-1', expires_at: '2026-08-07T00:00:00Z' },
+          { status: 201 },
+        ),
+      )
     }
     return Promise.resolve(jsonResponse(task(taskOverrides)))
   })
@@ -116,7 +189,8 @@ function mockTaskError(status: number, code: string, message: string) {
   vi.mocked(fetch).mockImplementation((input) => {
     const url = String(input)
     if (url.includes('/activities')) return Promise.resolve(jsonResponse([]))
-    if (url.includes('/document-readiness')) return Promise.resolve(jsonResponse(readinessResponse()))
+    if (url.includes('/document-readiness'))
+      return Promise.resolve(jsonResponse(readinessResponse()))
     if (url.includes('/documents?')) return Promise.resolve(jsonResponse(documentsResponse()))
     return Promise.resolve(errorResponse(status, code, message))
   })
@@ -170,7 +244,7 @@ describe('CaseDetailPage', () => {
 
     expect(await screen.findByText('응웬반A 체류연장 준비')).toBeInTheDocument()
     expect(screen.getAllByText('검토 필요').length).toBeGreaterThan(0)
-    expect(screen.getByText('현재 업무 상태')).toBeInTheDocument()
+    expect(screen.getByText('업무 진행')).toBeInTheDocument()
     expect(screen.getAllByText('1 / 2').length).toBeGreaterThan(0)
     expect(screen.queryByText('보안 링크 전달')).not.toBeInTheDocument()
   })
@@ -192,8 +266,26 @@ describe('CaseDetailPage', () => {
       jsonResponse(
         task({
           checklist_items: [
-            { checklist_item_id: 'chk-1', item_code: 'passport', label: '여권 사본 확인', required: true, completed: false, completed_by: null, completed_at: null, version: 2 },
-            { checklist_item_id: 'chk-2', item_code: 'signature', label: '근로자 서명 확인', required: true, completed: false, completed_by: null, completed_at: null, version: 1 },
+            {
+              checklist_item_id: 'chk-1',
+              item_code: 'passport',
+              label: '여권 사본 확인',
+              required: true,
+              completed: false,
+              completed_by: null,
+              completed_at: null,
+              version: 2,
+            },
+            {
+              checklist_item_id: 'chk-2',
+              item_code: 'signature',
+              label: '근로자 서명 확인',
+              required: true,
+              completed: false,
+              completed_by: null,
+              completed_at: null,
+              version: 1,
+            },
           ],
         }),
       ),
@@ -201,7 +293,9 @@ describe('CaseDetailPage', () => {
     await user.click(screen.getByText('여권 사본 확인'))
 
     const checklistPatchCall = await waitFor(() => {
-      const call = vi.mocked(fetch).mock.calls.find(([url]) => String(url).includes('/checklist-items/chk-1'))
+      const call = vi
+        .mocked(fetch)
+        .mock.calls.find(([url]) => String(url).includes('/checklist-items/chk-1'))
       expect(call).toBeDefined()
       return call!
     })
@@ -237,12 +331,7 @@ describe('CaseDetailPage', () => {
 
   it('shows the document-readiness gate and saves a document request draft when documents are missing', async () => {
     const user = userEvent.setup()
-    mockTaskAndActivities(
-      {},
-      [],
-      { missing: ['ARC'], expired: [], completion_blocked: true },
-      [],
-    )
+    mockTaskAndActivities({}, [], { missing: ['ARC'], expired: [], completion_blocked: true }, [])
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
@@ -289,7 +378,16 @@ describe('CaseDetailPage', () => {
     mockTaskAndActivities({
       status: 'DRAFT',
       checklist_items: [
-        { checklist_item_id: 'chk-1', item_code: 'passport', label: '여권 사본 확인', required: true, completed: true, completed_by: null, completed_at: null, version: 1 },
+        {
+          checklist_item_id: 'chk-1',
+          item_code: 'passport',
+          label: '여권 사본 확인',
+          required: true,
+          completed: true,
+          completed_by: null,
+          completed_at: null,
+          version: 1,
+        },
       ],
     })
     renderPage()
@@ -302,7 +400,9 @@ describe('CaseDetailPage', () => {
 
     expect(screen.getByText('승인을 요청했습니다.')).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    const call = vi.mocked(fetch).mock.calls.find(([url]) => String(url).includes('/approval-requests'))
+    const call = vi
+      .mocked(fetch)
+      .mock.calls.find(([url]) => String(url).includes('/approval-requests'))
     expect(call?.[1]?.method).toBe('POST')
   })
 
@@ -373,7 +473,9 @@ describe('CaseDetailPage', () => {
 
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
     await waitFor(() => {
-      const cancelCall = vi.mocked(fetch).mock.calls.find(([url]) => String(url).includes('/tasks/T-1/cancel'))
+      const cancelCall = vi
+        .mocked(fetch)
+        .mock.calls.find(([url]) => String(url).includes('/tasks/T-1/cancel'))
       expect(cancelCall).toBeDefined()
     })
     expect(await screen.findByText('업무를 취소했습니다.')).toBeInTheDocument()
@@ -437,7 +539,16 @@ describe('CaseDetailPage', () => {
     mockTaskAndActivities({
       status: 'APPROVED',
       checklist_items: [
-        { checklist_item_id: 'chk-1', item_code: 'passport', label: '여권 사본 확인', required: true, completed: true, completed_by: null, completed_at: null, version: 1 },
+        {
+          checklist_item_id: 'chk-1',
+          item_code: 'passport',
+          label: '여권 사본 확인',
+          required: true,
+          completed: true,
+          completed_by: null,
+          completed_at: null,
+          version: 1,
+        },
       ],
     })
     renderPage()
@@ -449,11 +560,19 @@ describe('CaseDetailPage', () => {
     await user.click(screen.getByRole('button', { name: '접수번호' }))
     await user.type(screen.getByPlaceholderText('접수번호를 입력하세요'), 'HI-2026-0718-032')
     await user.click(screen.getByLabelText('실제 제출은 담당자가 직접 수행했습니다.'))
-    await user.click(within(screen.getByRole('dialog', { name: '외부기관 업무 완료' })).getByRole('button', { name: '완료 처리' }))
+    await user.click(
+      within(screen.getByRole('dialog', { name: '외부기관 업무 완료' })).getByRole('button', {
+        name: '완료 처리',
+      }),
+    )
 
     expect(screen.getByText('업무를 완료했습니다.')).toBeInTheDocument()
-    expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/evidence'))).toBe(true)
-    expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/complete'))).toBe(true)
+    expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/evidence'))).toBe(
+      true,
+    )
+    expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/complete'))).toBe(
+      true,
+    )
   })
 
   it('issues the security link through the API and shows the real URL', async () => {
@@ -469,7 +588,11 @@ describe('CaseDetailPage', () => {
     await user.click(screen.getByRole('button', { name: '새 링크 생성' }))
 
     expect(screen.getByRole('dialog', { name: '새 링크가 준비되었습니다' })).toBeInTheDocument()
-    expect(screen.getByText('http://localhost:3000/worker-portal/worker-token-1')).toBeInTheDocument()
-    expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/worker-link'))).toBe(true)
+    expect(
+      screen.getByText('http://localhost:3000/worker-portal/worker-token-1'),
+    ).toBeInTheDocument()
+    expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/worker-link'))).toBe(
+      true,
+    )
   })
 })

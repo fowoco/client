@@ -33,7 +33,8 @@ export function WorkInboxDetail({ group, onOpenTask }: WorkInboxDetailProps) {
   const progress = getWorkInboxCaseProgress(activeCase)
   const due = getDuePresentation(activeTask.task.due_date)
   const activeStatus = getTaskStatusPresentation(activeTask.task.status)
-  const headerStatus = due.tone === 'critical' ? { label: '긴급', tone: 'critical' as const } : activeStatus
+  const headerStatus =
+    due.tone === 'critical' ? { label: '긴급', tone: 'critical' as const } : activeStatus
   const reviewTasks = group.tasks.filter((item) => isReviewTask(item.task.status))
   const detailTitleId = `work-inbox-detail-${group.worker.worker_id}`
 
@@ -60,8 +61,12 @@ export function WorkInboxDetail({ group, onOpenTask }: WorkInboxDetailProps) {
         <StatusLabel tone={headerStatus.tone}>{headerStatus.label}</StatusLabel>
       </header>
 
+      <p className={styles.agentSuggestion}>
+        Agent 제안 · {due.label}, {getWorkflowLabel(activeTask)} 확인 필요
+      </p>
+
       <div className={styles.priorityCase}>
-        <div className={styles.sectionHeadingRow}>
+        <div className={styles.priorityCaseHeader}>
           <p className={styles.caseEyebrow}>
             우선 Case {Math.max(activeCaseIndex, 0) + 1}/{group.cases.length}
           </p>
@@ -73,27 +78,29 @@ export function WorkInboxDetail({ group, onOpenTask }: WorkInboxDetailProps) {
             Case 열기 →
           </button>
         </div>
-        {activeCase.caseId && <p className={styles.caseIdentifier}>Case {activeCase.caseId}</p>}
-        <h3 className={styles.caseTitle}>{activeTask.task.title}</h3>
-        <p className={styles.caseMeta}>
-          {getWorkflowLabel(activeTask)} · {due.label} · {activeStatus.label}
-        </p>
-        <div className={styles.progressRow}>
-          <span>
-            진행 {progress.completed}/{progress.total}
-          </span>
-          <progress
-            className={styles.progress}
-            value={progress.completed}
-            max={Math.max(progress.total, 1)}
-            aria-label={`${activeTask.task.title} Case 진행률`}
-          />
+        <div className={styles.priorityCaseBody}>
+          {activeCase.caseId && <p className={styles.caseIdentifier}>Case {activeCase.caseId}</p>}
+          <h3 className={styles.caseTitle}>{activeTask.task.title}</h3>
+          <p className={styles.caseMeta}>
+            {getWorkflowLabel(activeTask)} · {due.label} · {activeStatus.label}
+          </p>
+          <div className={styles.progressRow}>
+            <span>
+              진행 {progress.completed}/{progress.total}
+            </span>
+            <progress
+              className={styles.progress}
+              value={progress.completed}
+              max={Math.max(progress.total, 1)}
+              aria-label={`${activeTask.task.title} Case 진행률`}
+            />
+          </div>
+          {group.cases.length > 1 && (
+            <button type="button" className={styles.textLink} onClick={handleOpenOtherCase}>
+              다른 Case 열기 →
+            </button>
+          )}
         </div>
-        {group.cases.length > 1 && (
-          <button type="button" className={styles.textLink} onClick={handleOpenOtherCase}>
-            다른 Case 열기 →
-          </button>
-        )}
       </div>
 
       <section className={styles.detailSection} aria-labelledby="review-task-title">
@@ -135,22 +142,24 @@ export function WorkInboxDetail({ group, onOpenTask }: WorkInboxDetailProps) {
       </section>
 
       <section className={styles.decisionSection} aria-labelledby="current-decision-title">
-        <div className={styles.sectionHeadingRow}>
+        <div className={styles.decisionHeader}>
           <h3 id="current-decision-title" className={styles.sectionTitle}>
             현재 결정
           </h3>
-          <StatusLabel tone={activeStatus.tone}>{activeStatus.label}</StatusLabel>
+          <button type="button" className={styles.textLink} onClick={handleViewEvidence}>
+            근거 보기 →
+          </button>
         </div>
-        <p className={styles.decisionSummary}>{getDecisionSummary(activeTask.task.status)}</p>
-        <p className={styles.decisionMeta}>
-          진행 Case {group.cases.length}개 · 확인할 업무 {reviewTasks.length}개
-        </p>
-        <button type="button" className={styles.textLink} onClick={handleViewEvidence}>
-          근거 보기 →
-        </button>
-        <p className={styles.dataGapNote}>
-          판단 근거와 문서 연결 정보는 현재 API에서 제공되지 않습니다.
-        </p>
+        <div className={styles.decisionBody}>
+          <div className={styles.decisionStatusRow}>
+            <p className={styles.decisionSummary}>{getDecisionSummary(activeTask.task.status)}</p>
+            <StatusLabel tone={activeStatus.tone}>{activeStatus.label}</StatusLabel>
+          </div>
+          <p className={styles.decisionMeta}>
+            진행 업무 건 {group.cases.length}개 · 확인할 업무 {reviewTasks.length}개 · 자동 확정되지
+            않음
+          </p>
+        </div>
       </section>
     </section>
   )

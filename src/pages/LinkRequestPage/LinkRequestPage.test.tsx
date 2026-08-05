@@ -49,7 +49,7 @@ describe('LinkRequestPage', () => {
 
     await user.click(await screen.findByRole('button', { name: '안내를 확인했습니다' }))
 
-    expect(screen.getByText('upload screen')).toBeInTheDocument()
+    expect(await screen.findByText('upload screen')).toBeInTheDocument()
     const responseCall = vi
       .mocked(fetch)
       .mock.calls.find(([url]) => String(url).endsWith('/responses'))

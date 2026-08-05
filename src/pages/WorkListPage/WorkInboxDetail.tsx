@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button/Button'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import { useToastStore } from '../../store/toastStore'
@@ -8,11 +7,9 @@ import {
   getDecisionSummary,
   getDuePresentation,
   getReviewActionLabel,
-  getReviewStageLink,
   getTaskStatusPresentation,
   getWorkflowLabel,
   isReviewTask,
-  REVIEW_STAGE_LINKS,
 } from './workInboxPresentation'
 import styles from './WorkListPage.module.css'
 
@@ -53,7 +50,6 @@ export function WorkInboxDetail({ group, onOpenTask }: WorkInboxDetailProps) {
   const progress = getWorkInboxCaseProgress(activeCase)
   const due = getDuePresentation(activeTask.task.due_date)
   const activeStatus = getTaskStatusPresentation(activeTask.task.status)
-  const reviewStage = getReviewStageLink(activeTask.task.status)
   const reviewTasks = group.tasks.filter((item) => isReviewTask(item.task.status))
   const detailTitleId = `work-inbox-detail-${group.worker.worker_id}`
 
@@ -90,20 +86,6 @@ export function WorkInboxDetail({ group, onOpenTask }: WorkInboxDetailProps) {
           </button>
         </div>
       </header>
-
-      <nav className={styles.reviewStageNav} aria-label={`${group.worker.display_name} REVIEW-001 단계 바로가기`}>
-        {REVIEW_STAGE_LINKS.map((stage) => (
-          <Link
-            key={stage.href}
-            to={stage.href}
-            className={`${styles.reviewStageLink} ${
-              stage.href === reviewStage.href ? styles.reviewStageLinkActive : ''
-            }`}
-          >
-            {stage.label}
-          </Link>
-        ))}
-      </nav>
 
       <div className={styles.caseSummaryScroll}>
         <p className={styles.agentSuggestion}>

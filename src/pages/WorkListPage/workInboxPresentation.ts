@@ -68,3 +68,20 @@ export function getWorkflowLabel(item: WorkInboxTask): string {
 export function isReviewTask(status: TaskStatus): boolean {
   return status !== 'COMPLETED' && status !== 'CANCELLED'
 }
+
+export interface ReviewStageLink {
+  label: string
+  href: string
+}
+
+// TaskStatus를 REVIEW-001 4단계(요청 확인/정보 보완/초안 작성/최종 검토) 중 매칭되는
+// 단계로 연결한다. 업무함에서 근로자를 열었을 때 바로 해당 화면으로 진입시키기 위함.
+const REVIEW_STAGE_LINK: Partial<Record<TaskStatus, ReviewStageLink>> = {
+  NEEDS_INFO: { label: '정보 보완', href: '/tasks/new/review?step=1' },
+  DRAFT: { label: '초안 작성', href: '/tasks/new/review?step=2' },
+  READY_FOR_REVIEW: { label: '최종 검토', href: '/tasks/new/review?step=3' },
+}
+
+export function getReviewStageLink(status: TaskStatus): ReviewStageLink {
+  return REVIEW_STAGE_LINK[status] ?? { label: '요청 확인', href: '/tasks/new' }
+}

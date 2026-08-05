@@ -8,6 +8,7 @@ import {
   getDecisionSummary,
   getDuePresentation,
   getReviewActionLabel,
+  getReviewStageLink,
   getTaskStatusPresentation,
   getWorkflowLabel,
   isReviewTask,
@@ -51,6 +52,7 @@ export function WorkInboxDetail({ group, onOpenTask }: WorkInboxDetailProps) {
   const progress = getWorkInboxCaseProgress(activeCase)
   const due = getDuePresentation(activeTask.task.due_date)
   const activeStatus = getTaskStatusPresentation(activeTask.task.status)
+  const reviewStage = getReviewStageLink(activeTask.task.status)
   const reviewTasks = group.tasks.filter((item) => isReviewTask(item.task.status))
   const detailTitleId = `work-inbox-detail-${group.worker.worker_id}`
 
@@ -77,8 +79,8 @@ export function WorkInboxDetail({ group, onOpenTask }: WorkInboxDetailProps) {
           <p className={styles.detailMeta}>{getWorkerMeta(group)}</p>
         </div>
         <div className={styles.detailHeaderActions}>
-          <Link to="/tasks/new/review" className={styles.textLink}>
-            업무 검토 보기
+          <Link to={reviewStage.href} className={styles.textLink}>
+            {reviewStage.label} 보기
           </Link>
           <button
             type="button"

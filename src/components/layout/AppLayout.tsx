@@ -18,6 +18,8 @@ export function AppLayout() {
   const [helpOpen, setHelpOpen] = useState(false)
   const [tourOpen, setTourOpen] = useState(false)
   const isTaskDetail = /^\/tasks\/[^/]+$/.test(location.pathname)
+  const isWorkInbox = location.pathname === '/tasks'
+  const isDashboard = location.pathname === '/dashboard'
 
   useEffect(() => {
     if (!hasCompletedOnboarding()) setTourOpen(true)
@@ -78,7 +80,11 @@ export function AppLayout() {
           </div>
         </header>
 
-        <main className={styles.content}>
+        <main
+          className={`${styles.content} ${isWorkInbox ? styles.contentWorkInbox : ''} ${
+            isDashboard ? styles.contentDashboard : ''
+          }`}
+        >
           <RouteTransition />
         </main>
       </div>

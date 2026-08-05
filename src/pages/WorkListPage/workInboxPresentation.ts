@@ -7,7 +7,7 @@ import type { WorkInboxTask } from './workInboxModel'
 const REVIEW_ACTION_LABEL: Record<TaskStatus, string> = {
   DRAFT: '초안 검토',
   NEEDS_INFO: '정보 확인',
-  READY_FOR_REVIEW: '검토하기',
+  READY_FOR_REVIEW: '초안 검토',
   APPROVED: '실행 확인',
   WAITING_WORKER: '대기 확인',
   WAITING_EXTERNAL: '진행 확인',
@@ -40,8 +40,15 @@ export function getTaskStatusPresentation(status: TaskStatus): {
   label: string
   tone: StatusTone
 } {
+  const workInboxLabel: Partial<Record<TaskStatus, string>> = {
+    DRAFT: '서류 대기',
+    NEEDS_INFO: '처리 필요',
+    READY_FOR_REVIEW: '승인 대기',
+    WAITING_WORKER: '요청 전송',
+  }
+
   return {
-    label: TASK_STATUS_LABEL[status],
+    label: workInboxLabel[status] ?? TASK_STATUS_LABEL[status],
     tone: TASK_STATUS_TONE[status],
   }
 }

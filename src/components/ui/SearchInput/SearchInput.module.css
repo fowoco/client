@@ -1,15 +1,42 @@
-.search {
+.field {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   flex: 1 1 240px;
   max-width: 520px;
   height: 48px;
   padding: 0 var(--fowoco-spacing-16);
-  font-size: 14px;
-  font-family: inherit;
+  overflow: hidden;
+  background: var(--surface-default);
   border: 1px solid var(--border-default);
   border-radius: var(--fowoco-radius-6);
 }
 
-.search:focus-visible {
+.field:focus-within {
   outline: 2px solid var(--brand-primary);
   outline-offset: 2px;
+}
+
+.icon {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.search {
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.search::placeholder {
+  color: var(--text-secondary);
+  opacity: 1;
 }

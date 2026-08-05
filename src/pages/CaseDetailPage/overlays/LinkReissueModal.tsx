@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Modal } from '../../../components/ui/Modal/Modal'
 import styles from './overlays.module.css'
 
-const EXPIRIES = ['24시간', '72시간', '7일', '업무 마감일까지']
+const EXPIRIES = ['24시간', '72시간', '7일']
 
 export interface ReissueSubmission {
   reason: string
@@ -17,8 +17,7 @@ export interface LinkReissueModalProps {
 }
 
 // Figma 08_Prototype Flow · Flow E(보안 링크 만료·재발급) 기준.
-// 서버 워커 링크 재발급 API는 아직 main에 병합되지 않아 (feat/7-worker-link 브랜치,
-// POST /api/v1/tasks/{taskId}/worker-link { rotateExisting: true }) 데모로만 동작한다.
+// POST /api/v1/tasks/{taskId}/worker-link의 rotate_existing 계약을 사용한다.
 export function LinkReissueModal({ open, taskTitle, onClose, onSubmit }: LinkReissueModalProps) {
   const [reason, setReason] = useState('기존 링크 만료')
   const [expiry, setExpiry] = useState(EXPIRIES[1])

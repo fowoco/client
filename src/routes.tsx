@@ -62,7 +62,9 @@ export const router = createBrowserRouter([
     ],
   },
   { path: '/worker-portal', element: <LinkRequestPage /> },
-  { path: '/worker-portal/upload', element: <LinkUploadPage /> },
   { path: '/worker-portal/expired', element: <LinkExpiredPage /> },
+  { path: '/worker-portal/:token/upload', element: <LinkUploadPage /> },
+  { path: '/worker-portal/:token/expired', element: <LinkExpiredPage /> },
+  { path: '/worker-portal/:token', element: <LinkRequestPage /> },
   { path: '*', element: <NotFoundPage /> },
 ])

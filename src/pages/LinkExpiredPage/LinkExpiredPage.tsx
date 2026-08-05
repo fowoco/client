@@ -1,9 +1,19 @@
+import { useState } from 'react'
+import { useParams } from 'react-router-dom'
 import { MobileShell } from '../../components/mobile/MobileShell'
 import styles from './LinkExpiredPage.module.css'
 
 export function LinkExpiredPage() {
-  function handleCopyRequest() {
-    // TODO(backend): POST /api/links/:token/reissue-request -> 재발급 요청 문구 생성 후 클립보드 복사
+  const { token } = useParams()
+  const [copied, setCopied] = useState(false)
+
+  async function handleCopyRequest() {
+    try {
+      await navigator.clipboard.writeText('기존 FOWOCO 제출 링크를 사용할 수 없습니다. 새 링크를 보내 주세요.')
+      setCopied(true)
+    } catch {
+      setCopied(false)
+    }
   }
 
   return (
@@ -18,9 +28,8 @@ export function LinkExpiredPage() {
       <div className={styles.reasonCard}>
         <p className={styles.reasonTitle}>링크 상태 · 만료</p>
         <p className={styles.reasonBody}>
-          만료시각 2026.07.20 14:30
-          <br />
-          기존 링크로는 제출할 수 없습니다.
+          이 링크는 만료됐거나 새 링크 발급으로 폐기되었습니다.
+          {token ? <><br />기존 링크로는 제출할 수 없습니다.</> : null}
         </p>
       </div>
 
@@ -31,7 +40,7 @@ export function LinkExpiredPage() {
       </div>
 
       <button type="button" className={styles.copyButton} onClick={handleCopyRequest}>
-        재발급 요청 문구 복사
+        {copied ? '요청 문구 복사됨' : '재발급 요청 문구 복사'}
       </button>
 
       <p className={styles.footnote}>

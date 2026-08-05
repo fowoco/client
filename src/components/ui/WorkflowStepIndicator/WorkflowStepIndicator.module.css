@@ -2,7 +2,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: var(--fowoco-spacing-8);
   margin: 20px 0 0;
   padding: 0;
   list-style: none;
@@ -11,38 +11,37 @@
 .stepItem {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--fowoco-spacing-8);
+}
+
+.stepPill {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 var(--fowoco-spacing-12);
+  border: none;
+  border-radius: var(--fowoco-radius-6);
+  background: none;
+  font: inherit;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 400;
   color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
 }
 
-.stepItemDone {
-  color: var(--text-primary);
-}
-
-.stepItemCurrent {
-  font-weight: 700;
+.stepPillDone {
   color: var(--brand-primary);
 }
 
-.stepButton {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-}
-
-.stepButton:hover {
-  text-decoration: underline;
+.stepPillCurrent {
+  background: var(--surface-subtle);
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: default;
 }
 
 .stepArrow {
-  margin-left: 6px;
-  color: var(--border-default);
+  color: var(--text-secondary);
+  font-size: 13px;
 }

@@ -1,20 +1,29 @@
 import { useState } from 'react'
 import { Button } from '../../../components/ui/Button/Button'
-import { DetailRow } from '../../../components/ui/DetailRow/DetailRow'
-import { Dropdown } from '../../../components/ui/Dropdown/Dropdown'
-import { StatusLabel } from '../../../components/ui/StatusLabel/StatusLabel'
 import { useToastStore } from '../../../store/toastStore'
 import styles from '../ReviewWorkPage.module.css'
 import {
-  DRAFT_REASONS,
+  GENERATION_GATE,
   HR_VERIFICATION_FIELDS,
-  PREPARED_CHECKLIST,
-  PREPARED_DRAFT,
-  TARGET_OPTIONS,
-  UNDERSTOOD_REQUEST,
+  RESOLUTION_MATRIX_FOOTNOTE,
+  RESOLUTION_MATRIX_META,
+  RESOLUTION_ROWS,
+  SECURE_LINK,
+  WORKER_CANDIDATE,
 } from '../reviewWorkData'
 
-const TARGET_DROPDOWN_OPTIONS = TARGET_OPTIONS.map((option) => ({ value: option, label: option }))
+const OWNER_TONE_CLASS: Record<string, string> = {
+  brand: styles.tableOwner,
+  neutral: `${styles.tableOwner} ${styles.tableOwnerNeutral}`,
+}
+
+const STATE_TONE_CLASS: Record<string, string> = {
+  brand: styles.pillBrand,
+  neutral: styles.pillNeutral,
+  green: styles.pillGreen,
+  amber: styles.pillAmber,
+  red: styles.pillRed,
+}
 
 export interface InformationPendingStepProps {
   onComplete: () => void
@@ -22,7 +31,6 @@ export interface InformationPendingStepProps {
 
 export function InformationPendingStep({ onComplete }: InformationPendingStepProps) {
   const showToast = useToastStore((state) => state.showToast)
-  const [target, setTarget] = useState(PREPARED_DRAFT.target)
   const [verification, setVerification] = useState<Record<string, string>>(() =>
     Object.fromEntries(HR_VERIFICATION_FIELDS.map((field) => [field.key, ''])),
   )
@@ -38,161 +46,133 @@ export function InformationPendingStep({ onComplete }: InformationPendingStepPro
     showToast('임시 저장했습니다.')
   }
 
-  function handleViewOriginal() {
-    // TODO(backend): GET /api/work-items/draft/original -> 원문 텍스트 표시
-  }
-
-  function handleViewEvidence() {
-    // TODO(backend): GET /api/work-items/draft/evidence -> 분석 근거 표시
-    showToast('분석 근거 보기는 준비 중입니다.')
-  }
-
-  function handleEditDraft() {
-    // TODO(backend): PATCH /api/work-items/draft/content -> 초안 내용 직접 수정
-  }
-
   return (
     <div>
       <div className={styles.headerRow}>
         <div>
-          <h1 className={styles.headline}>Agent가 요청을 1개의 업무로 정리했습니다.</h1>
-          <p className={styles.description}>HR이 확인할 정보를 입력하면 실행 가능한 업무 초안이 완성됩니다.</p>
+          <h1 className={styles.headline}>누락정보를 해결 주체별로 확인해 주세요</h1>
+          <p className={styles.description}>
+            필수정보의 담당자·수집 방법·차단 여부를 확인한 뒤 생성 가능한 초안만 준비합니다.
+          </p>
         </div>
-        <StatusLabel tone="warning">정보 보완 필요 · {HR_VERIFICATION_FIELDS.length}</StatusLabel>
+        <span className={styles.scenarioPill}>생성 가능</span>
       </div>
 
       <div className={styles.workspace}>
-        <div className={styles.draftPanel}>
-          <div className={styles.draftPanelHeader}>
-            <h2 className={styles.draftTitle}>AI가 준비한 업무 초안</h2>
-            <span className={styles.draftBadge}>Agent 초안</span>
-          </div>
+        <div className={styles.panel}>
+          <h2 className={styles.panelTitle}>해결할 정보</h2>
+          <p className={styles.panelSubtitle}>{RESOLUTION_MATRIX_META}</p>
 
-          <p className={styles.draftHeadline}>
-            {PREPARED_DRAFT.title.map((line) => (
-              <span key={line}>
-                {line}
-                <br />
-              </span>
-            ))}
-          </p>
-
-          <div className={styles.checklist}>
-            <p className={styles.checklistTitle}>Agent가 확인하고 준비한 내용</p>
-            <div className={styles.checklistGrid}>
-              {PREPARED_CHECKLIST.map((item) => (
-                <p key={item} className={styles.checklistItem}>
-                  <span aria-hidden="true">✓</span> {item}
-                </p>
-              ))}
-            </div>
-          </div>
-
-          {target ? (
-            <DetailRow label="대상" value={target} />
-          ) : (
-            <div className={styles.targetDropdownRow}>
-              <span className={styles.fieldLabel}>대상</span>
-              <Dropdown
-                options={TARGET_DROPDOWN_OPTIONS}
-                value={target ?? ''}
-                onChange={setTarget}
-                ariaLabel="대상 선택"
-              />
-            </div>
-          )}
-          <DetailRow label="담당자" value={PREPARED_DRAFT.assignee} />
-          <DetailRow label="나라" value={PREPARED_DRAFT.country} />
-          <DetailRow label="승인상태" value={PREPARED_DRAFT.approvalStatus} tone="warning" />
-          <DetailRow label="필수 단계" value={`${PREPARED_DRAFT.requiredStepCount}개`} />
-          <DetailRow label="완료 증빙" value={PREPARED_DRAFT.completionEvidence} />
-
-          <div className={styles.reasonBox}>
-            <p className={styles.reasonTitle}>이 초안을 준비한 이유</p>
-            <div className={styles.reasonGrid}>
-              {DRAFT_REASONS.map((reason) => (
-                <p key={reason} className={styles.reasonItem}>
-                  · {reason}
-                </p>
-              ))}
-            </div>
-          </div>
-
-          <div className={styles.dueBadgeRow}>
-            <span className={styles.dueBadge}>기한 · {PREPARED_DRAFT.dueLabel}</span>
-          </div>
-
-          <button type="button" className={styles.draftLink} onClick={handleEditDraft}>
-            초안 내용 수정
-          </button>
-        </div>
-
-        <div className={styles.left}>
-          <div className={styles.card}>
-            <div className={styles.draftPanelHeader}>
-              <h2 className={styles.cardTitle}>Agent가 확인한 내용</h2>
-              <span className={styles.draftBadge}>보유 데이터</span>
+          <div className={styles.table}>
+            <div className={styles.tableHeader}>
+              <span>해결 주체 · 정보</span>
+              <span>차단 여부</span>
+              <span>담당 · 수집 방법</span>
+              <span>현재 상태</span>
             </div>
 
-            <div className={styles.fieldGrid}>
-              <div>
-                <p className={styles.fieldLabel}>요청 목적</p>
-                <p className={styles.fieldValue}>{UNDERSTOOD_REQUEST.purpose}</p>
-              </div>
-              <div>
-                <p className={styles.fieldLabel}>업무 영역</p>
-                <p className={styles.fieldValue}>{UNDERSTOOD_REQUEST.domain}</p>
-              </div>
-              <div>
-                <p className={styles.fieldLabel}>추천 처리 절차</p>
-                <p className={styles.fieldValue}>{UNDERSTOOD_REQUEST.procedure}</p>
-              </div>
-            </div>
-
-            <div className={styles.cardLinks}>
-              <button type="button" className={styles.cardLink} onClick={handleViewOriginal}>
-                원문 보기 ▾
-              </button>
-              <button type="button" className={styles.cardLink} onClick={handleViewEvidence}>
-                근거 보기 ▾
-              </button>
-            </div>
-          </div>
-
-          <div className={styles.missingCard}>
-            <h2 className={styles.missingTitle}>HR이 확인할 정보</h2>
-            <p className={styles.missingQuestion}>근로자 서류 상태를 HR이 직접 확인해 입력해 주세요.</p>
-            <div className={styles.verificationGrid}>
-              {HR_VERIFICATION_FIELDS.map((field) => (
-                <div key={field.key}>
-                  <p className={styles.fieldLabel}>{field.label}</p>
+            {HR_VERIFICATION_FIELDS.map((field) => {
+              const filled = verification[field.key]?.trim() !== ''
+              return (
+                <div key={field.key} className={styles.tableRow}>
+                  <div className={styles.tableRowField}>
+                    <span className={styles.tableOwner}>HR 직접 입력</span>
+                    <span className={styles.tableFieldName}>{field.label}</span>
+                  </div>
+                  <span className={styles.tableBlocked}>비차단</span>
                   <input
                     type="date"
-                    className={styles.verificationInput}
+                    className={styles.tableVerificationInput}
                     aria-label={field.label}
                     value={verification[field.key] ?? ''}
                     onChange={(event) => handleVerificationChange(field.key, event.target.value)}
                   />
+                  <span className={`${styles.pill} ${filled ? styles.pillGreen : styles.pillAmber}`}>
+                    {filled ? '선택 완료' : '입력 필요'}
+                  </span>
                 </div>
-              ))}
+              )
+            })}
+
+            {RESOLUTION_ROWS.map((row) => (
+              <div key={row.field} className={styles.tableRow}>
+                <div className={styles.tableRowField}>
+                  <span className={OWNER_TONE_CLASS[row.ownerTone] ?? styles.tableOwner}>{row.owner}</span>
+                  <span className={styles.tableFieldName}>{row.field}</span>
+                </div>
+                <span className={styles.tableBlocked}>{row.blocked}</span>
+                <span className={styles.tableMethod}>{row.method}</span>
+                <span className={`${styles.pill} ${STATE_TONE_CLASS[row.stateTone]}`}>{row.state}</span>
+              </div>
+            ))}
+          </div>
+
+          <p className={styles.footnote}>{RESOLUTION_MATRIX_FOOTNOTE}</p>
+        </div>
+
+        <div className={styles.railStack}>
+          <div className={styles.railCard}>
+            <div className={styles.railCardTitleRow}>
+              <p className={styles.railCardTitle}>근로자 보안 링크</p>
+              <span className={`${styles.pill} ${styles.pillGreen}`}>{SECURE_LINK.status}</span>
             </div>
-            <p className={styles.missingWarning}>이 정보가 확인되기 전에는 승인 요청과 외부 전달이 차단됩니다.</p>
+            <p className={styles.railCardMeta}>{SECURE_LINK.title}</p>
+            <p className={styles.railCardMeta}>{SECURE_LINK.meta}</p>
+            <p className={styles.railCardMeta}>{SECURE_LINK.note}</p>
+            <div className={styles.railCardLinkRow}>
+              <button type="button" className={styles.railLink}>
+                요청문 보기
+              </button>
+              <button type="button" className={styles.railLinkMuted}>
+                링크 재발급
+              </button>
+            </div>
+          </div>
+
+          <div className={styles.railCardSubtle}>
+            <div className={styles.railCardTitleRow}>
+              <p className={styles.railCardTitle}>근로자 응답 후보</p>
+              <span className={`${styles.pill} ${styles.pillBrand}`}>{WORKER_CANDIDATE.sourceLabel}</span>
+            </div>
+            <div className={styles.infoRow}>
+              <span className={styles.infoRowLabel}>{WORKER_CANDIDATE.fieldLabel}</span>
+              <span className={styles.railCardValue}>{WORKER_CANDIDATE.value}</span>
+            </div>
+            <p className={styles.railCardMeta}>{WORKER_CANDIDATE.note}</p>
+            <p className={styles.railCardTitleBrand}>{WORKER_CANDIDATE.reflectedBy}</p>
+          </div>
+
+          <div className={styles.railCard}>
+            <p className={styles.railCardTitle}>생성 가능 범위</p>
+            <div className={styles.infoRow}>
+              <span className={styles.infoRowLabel}>초안 대기</span>
+              <span className={styles.railCardCountGreen}>{GENERATION_GATE.readyCount}건</span>
+            </div>
+            <div className={styles.infoRow}>
+              <span className={styles.infoRowLabel}>선행 단계가 필요한 문서</span>
+              <span className={styles.railCardValueCompact}>{GENERATION_GATE.blockedCount}건</span>
+            </div>
+            <p className={styles.railCardMeta}>{GENERATION_GATE.note}</p>
           </div>
         </div>
       </div>
 
-      <div className={styles.actions}>
-        <button type="button" className={styles.editRequest} onClick={handleSaveTemp}>
-          임시 저장
-        </button>
-        <Button onClick={onComplete} disabled={!canComplete}>
-          완료
-        </Button>
+      <div className={styles.actionDock}>
+        <div>
+          <p className={styles.dockTitle}>현재 생성 가능한 문서의 필수정보를 모두 확인했습니다.</p>
+          <p className={styles.dockSubtitle}>
+            선행 단계가 남으면 검토 가능한 초안과 ‘선행 단계 필요’ 상태를 분리합니다.
+          </p>
+        </div>
+        <div className={styles.dockActions}>
+          <Button variant="secondary" onClick={handleSaveTemp}>
+            임시 저장
+          </Button>
+          <Button onClick={onComplete} disabled={!canComplete}>
+            초안 생성
+          </Button>
+        </div>
       </div>
-
-      <p className={styles.footnote}>
-        분석 근거는 근거 보기를 눌렀을 때만 표시됩니다. 근거 없는 확률 점수는 사용하지 않습니다.
-      </p>
     </div>
   )
 }

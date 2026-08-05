@@ -247,6 +247,13 @@
   min-height: 72px;
 }
 
+.detailHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: var(--fowoco-spacing-16);
+  flex: 0 0 auto;
+}
+
 .moreButton {
   display: inline-flex;
   flex: 0 0 40px;

@@ -221,6 +221,7 @@ function renderPage(initialEntry = '/tasks', { withToasts = false } = {}) {
         />
         <Route path="/tasks/:taskId" element={<TaskDetailProbe />} />
         <Route path="/tasks/new" element={<p>업무 생성</p>} />
+        <Route path="/tasks/new/review" element={<p>업무 검토 화면</p>} />
       </Routes>
     </MemoryRouter>,
   )
@@ -442,6 +443,16 @@ describe('WorkListPage', () => {
     expect(
       screen.getByRole('heading', { level: 3, name: '근로자 안내문 초안' }),
     ).toBeInTheDocument()
+  })
+
+  it('links to the review wizard from a selected worker', async () => {
+    mockApi()
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(await screen.findByRole('link', { name: '업무 검토 보기' }))
+
+    expect(await screen.findByText('업무 검토 화면')).toBeInTheDocument()
   })
 
   it('shows a placeholder toast for "근거 보기"', async () => {

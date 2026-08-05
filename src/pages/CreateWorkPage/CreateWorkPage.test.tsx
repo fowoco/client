@@ -79,7 +79,7 @@ describe('CreateWorkPage', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(screen.getByRole('button', { name: '초안 검토' }))
+    await user.click(screen.getByRole('button', { name: '초안 준비' }))
 
     expect(await screen.findByText('검토 화면?step=2')).toBeInTheDocument()
   })

@@ -6,7 +6,6 @@ import { ToastViewport } from '../../components/ui/ToastViewport/ToastViewport'
 import { useToastStore } from '../../store/toastStore'
 import { ReviewWorkPage } from './ReviewWorkPage'
 import {
-  ANALYSIS_STAGES,
   APPROVAL_SUMMARY,
   DRAFT_REASONS,
   HR_VERIFICATION_FIELDS,
@@ -38,14 +37,6 @@ function renderPage(path = '/tasks/new/review') {
   )
 }
 
-async function advanceToDraftReview(user: ReturnType<typeof userEvent.setup>) {
-  vi.useFakeTimers({ shouldAdvanceTime: true })
-  renderPage()
-  await vi.advanceTimersByTimeAsync(3000)
-  expect(await screen.findByText('Agent가 요청을 1개의 업무로 정리했습니다.')).toBeInTheDocument()
-  return user
-}
-
 async function fillVerificationFields(user: ReturnType<typeof userEvent.setup>) {
   for (const field of HR_VERIFICATION_FIELDS) {
     await user.type(screen.getByLabelText(field.label), '2027-01-01')
@@ -62,23 +53,10 @@ describe('ReviewWorkPage', () => {
     }
   })
 
-  it('walks through the analysis stages and lands on the draft review step', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true })
+  it('renders the understood request, prepared draft, and checklist/reasoning on the information pending step', () => {
     renderPage()
 
-    expect(screen.getByText('Agent가 요청을 분석하고 있습니다.')).toBeInTheDocument()
-    for (const stage of ANALYSIS_STAGES) {
-      expect(screen.getByText(stage)).toBeInTheDocument()
-    }
-
-    await vi.advanceTimersByTimeAsync(3000)
-
-    expect(await screen.findByText('Agent가 요청을 1개의 업무로 정리했습니다.')).toBeInTheDocument()
-  })
-
-  it('renders the understood request, prepared draft, and checklist/reasoning on the draft step', async () => {
-    const user = await advanceToDraftReview(userEvent.setup())
-
+    expect(screen.getByText('Agent가 요청을 1개의 업무로 정리했습니다.')).toBeInTheDocument()
     expect(screen.getByText(UNDERSTOOD_REQUEST.purpose)).toBeInTheDocument()
     expect(screen.getAllByText(PREPARED_DRAFT.target as string).length).toBeGreaterThan(0)
     expect(screen.getByText(`기한 · ${PREPARED_DRAFT.dueLabel}`)).toBeInTheDocument()
@@ -89,16 +67,14 @@ describe('ReviewWorkPage', () => {
     for (const reason of DRAFT_REASONS) {
       expect(screen.getByText(`· ${reason}`)).toBeInTheDocument()
     }
-    expect(screen.queryByRole('button', { name: '체크리스트 미리보기 ▾' })).not.toBeInTheDocument()
-
-    void user
   })
 
   it('shows a target dropdown instead of static text when the target is not yet determined', async () => {
     const originalTarget = PREPARED_DRAFT.target
     PREPARED_DRAFT.target = null
     try {
-      const user = await advanceToDraftReview(userEvent.setup())
+      const user = userEvent.setup()
+      renderPage()
       await user.click(screen.getByRole('button', { name: '대상 선택' }))
       await user.click(screen.getByRole('option', { name: '응웬반A' }))
 
@@ -110,7 +86,8 @@ describe('ReviewWorkPage', () => {
   })
 
   it('shows a toast when saving a temporary draft', async () => {
-    const user = await advanceToDraftReview(userEvent.setup())
+    const user = userEvent.setup()
+    renderPage()
 
     await user.click(screen.getByRole('button', { name: '임시 저장' }))
 
@@ -118,7 +95,8 @@ describe('ReviewWorkPage', () => {
   })
 
   it('shows a toast when viewing evidence', async () => {
-    const user = await advanceToDraftReview(userEvent.setup())
+    const user = userEvent.setup()
+    renderPage()
 
     await user.click(screen.getByRole('button', { name: '근거 보기 ▾' }))
 
@@ -126,7 +104,8 @@ describe('ReviewWorkPage', () => {
   })
 
   it('disables the complete button until every HR verification field is filled', async () => {
-    const user = await advanceToDraftReview(userEvent.setup())
+    const user = userEvent.setup()
+    renderPage()
 
     const complete = screen.getByRole('button', { name: '완료' })
     expect(complete).toBeDisabled()
@@ -136,15 +115,20 @@ describe('ReviewWorkPage', () => {
     expect(complete).toBeEnabled()
   })
 
-  it('advances through task creation to the approval step and can navigate to the task list', async () => {
-    const user = await advanceToDraftReview(userEvent.setup())
+  it('advances through draft preparation to final review and can navigate to the task list', async () => {
+    const user = userEvent.setup()
+    renderPage()
     await fillVerificationFields(user)
     await user.click(screen.getByRole('button', { name: '완료' }))
 
     expect(await screen.findByText(TASK_CREATION_SUMMARY.title)).toBeInTheDocument()
-    expect(screen.getByText('업무를 생성했습니다.')).toBeInTheDocument()
+    expect(screen.getByText('초안 준비가 완료됐습니다.')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: '승인 요청으로 이동 →' }))
+    await user.click(screen.getByRole('button', { name: '초안 검토 →' }))
+
+    expect(await screen.findByRole('heading', { name: '최종 승인이 필요합니다.' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '지금 승인' }))
 
     expect(await screen.findByRole('heading', { name: '승인이 완료됐습니다.' })).toBeInTheDocument()
     expect(screen.getByText(APPROVAL_SUMMARY.approver)).toBeInTheDocument()
@@ -155,19 +139,19 @@ describe('ReviewWorkPage', () => {
   })
 
   it('opens directly on a given step via the ?step= query param', () => {
-    renderPage('/tasks/new/review?step=4')
+    renderPage('/tasks/new/review?step=3')
 
-    expect(screen.getByRole('heading', { name: '승인이 완료됐습니다.' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '최종 승인이 필요합니다.' })).toBeInTheDocument()
   })
 
   it('jumps freely between steps by clicking the shared indicator', async () => {
     const user = userEvent.setup()
-    renderPage('/tasks/new/review?step=4')
+    renderPage('/tasks/new/review?step=3')
 
-    await user.click(screen.getByRole('button', { name: '초안 검토' }))
+    await user.click(screen.getByRole('button', { name: '정보 보완' }))
     expect(screen.getByText('Agent가 요청을 1개의 업무로 정리했습니다.')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: '요청 입력' }))
+    await user.click(screen.getByRole('button', { name: '요청 확인' }))
     expect(await screen.findByText('업무 생성 페이지')).toBeInTheDocument()
   })
 })

@@ -4,26 +4,26 @@ import { StatusLabel } from '../../../components/ui/StatusLabel/StatusLabel'
 import styles from '../ReviewWorkPage.module.css'
 import { PREPARED_DRAFT, TASK_CREATION_SUMMARY } from '../reviewWorkData'
 
-export interface TaskCreationStepProps {
+export interface DraftPreparationStepProps {
   onDone: () => void
 }
 
-export function TaskCreationStep({ onDone }: TaskCreationStepProps) {
+export function DraftPreparationStep({ onDone }: DraftPreparationStepProps) {
   return (
     <div>
       <div className={styles.headerRow}>
         <div>
-          <h1 className={styles.headline}>업무를 생성했습니다.</h1>
-          <p className={styles.description}>승인 단계로 넘어가면 담당자가 최종 확인합니다.</p>
+          <h1 className={styles.headline}>초안 준비가 완료됐습니다.</h1>
+          <p className={styles.description}>초안을 검토하면 최종 검토 단계로 넘어갑니다.</p>
         </div>
-        <StatusLabel tone="success">생성 완료</StatusLabel>
+        <StatusLabel tone="success">초안 준비 완료</StatusLabel>
       </div>
 
       <div className={styles.workspace}>
         <div className={styles.draftPanel}>
           <div className={styles.draftPanelHeader}>
-            <h2 className={styles.draftTitle}>생성된 업무</h2>
-            <span className={styles.draftBadge}>업무 생성</span>
+            <h2 className={styles.draftTitle}>준비된 초안</h2>
+            <span className={styles.draftBadge}>초안 준비</span>
           </div>
 
           <p className={styles.draftHeadline}>{TASK_CREATION_SUMMARY.title}</p>
@@ -37,17 +37,17 @@ export function TaskCreationStep({ onDone }: TaskCreationStepProps) {
           <div className={styles.card}>
             <div className={styles.draftPanelHeader}>
               <h2 className={styles.cardTitle}>다음 단계 안내</h2>
-              <span className={styles.draftBadge}>승인 대기</span>
+              <span className={styles.draftBadge}>최종 검토 대기</span>
             </div>
             <p className={styles.missingQuestion}>
-              생성된 업무는 담당자 승인을 거쳐야 근로자 전달·외부 제출 단계로 이어집니다.
+              초안을 검토하고 승인을 요청해야 근로자 전달·외부 제출 단계로 이어집니다.
             </p>
           </div>
         </div>
       </div>
 
       <div className={styles.actions}>
-        <Button onClick={onDone}>승인 요청으로 이동 →</Button>
+        <Button onClick={onDone}>초안 검토 →</Button>
       </div>
     </div>
   )

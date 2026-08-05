@@ -16,11 +16,11 @@ import {
 
 const TARGET_DROPDOWN_OPTIONS = TARGET_OPTIONS.map((option) => ({ value: option, label: option }))
 
-export interface DraftReviewStepProps {
+export interface InformationPendingStepProps {
   onComplete: () => void
 }
 
-export function DraftReviewStep({ onComplete }: DraftReviewStepProps) {
+export function InformationPendingStep({ onComplete }: InformationPendingStepProps) {
   const showToast = useToastStore((state) => state.showToast)
   const [target, setTarget] = useState(PREPARED_DRAFT.target)
   const [verification, setVerification] = useState<Record<string, string>>(() =>
@@ -58,7 +58,7 @@ export function DraftReviewStep({ onComplete }: DraftReviewStepProps) {
           <h1 className={styles.headline}>Agent가 요청을 1개의 업무로 정리했습니다.</h1>
           <p className={styles.description}>HR이 확인할 정보를 입력하면 실행 가능한 업무 초안이 완성됩니다.</p>
         </div>
-        <StatusLabel tone="warning">확인 필요 · {HR_VERIFICATION_FIELDS.length}</StatusLabel>
+        <StatusLabel tone="warning">정보 보완 필요 · {HR_VERIFICATION_FIELDS.length}</StatusLabel>
       </div>
 
       <div className={styles.workspace}>

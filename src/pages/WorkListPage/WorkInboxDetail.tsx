@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button/Button'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import { useToastStore } from '../../store/toastStore'
@@ -75,14 +76,19 @@ export function WorkInboxDetail({ group, onOpenTask }: WorkInboxDetailProps) {
           </h2>
           <p className={styles.detailMeta}>{getWorkerMeta(group)}</p>
         </div>
-        <button
-          type="button"
-          className={styles.moreButton}
-          aria-label={`${group.worker.display_name} 업무 메뉴`}
-          onClick={handleOpenWorkerMenu}
-        >
-          <span aria-hidden="true">···</span>
-        </button>
+        <div className={styles.detailHeaderActions}>
+          <Link to="/tasks/new/review" className={styles.textLink}>
+            업무 검토 보기
+          </Link>
+          <button
+            type="button"
+            className={styles.moreButton}
+            aria-label={`${group.worker.display_name} 업무 메뉴`}
+            onClick={handleOpenWorkerMenu}
+          >
+            <span aria-hidden="true">···</span>
+          </button>
+        </div>
       </header>
 
       <div className={styles.caseSummaryScroll}>

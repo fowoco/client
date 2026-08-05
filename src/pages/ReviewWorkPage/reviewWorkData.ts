@@ -5,18 +5,15 @@ export interface ReviewStep {
   label: string
 }
 
-// Figma REVIEW-001(node 1291:492) 5단계 진행 표시기. 1.요청입력은 CreateWorkPage(/tasks/new)에서
-// 보여주고, 2~5단계는 ReviewWorkPage 내부 위저드에서 보여준다 — 두 페이지가 이 배열을 함께 쓴다.
+// Figma REVIEW-001(Docs/Screen Block/REVIEW-001/01~04) 4단계 진행 표시기. 01 요청 확인은
+// CreateWorkPage(/tasks/new)에서 보여주고, 02~04는 ReviewWorkPage 내부 위저드에서 보여준다
+// — 두 페이지가 이 배열을 함께 쓴다.
 export const REVIEW_STEPS: ReviewStep[] = [
-  { no: '1', label: '요청 입력' },
-  { no: '2', label: 'AI 분석' },
-  { no: '3', label: '초안 검토' },
-  { no: '4', label: '업무 생성' },
-  { no: '5', label: '승인' },
+  { no: '1', label: '요청 확인' },
+  { no: '2', label: '정보 보완' },
+  { no: '3', label: '초안 준비' },
+  { no: '4', label: '최종 검토' },
 ]
-
-// 2.AI분석 단계에서 순서대로 진행되는 것처럼 보여주는 분석 단계 목록.
-export const ANALYSIS_STAGES = ['요청 유형 분류 중', '처리 절차 매칭 중', '필요 정보 확인 중', '업무 초안 준비 중']
 
 export const PREPARED_CHECKLIST = [
   '근로자 3명 정보 확인 완료',
@@ -43,7 +40,7 @@ export interface HrVerificationField {
   label: string
 }
 
-// 3.초안검토에서 HR이 직접 채워야 하는 정보 — Agent가 대신 판단하지 않는다.
+// 02 정보 보완에서 HR이 직접 채워야 하는 정보 — Agent가 대신 판단하지 않는다.
 export const HR_VERIFICATION_FIELDS: HrVerificationField[] = [
   { key: 'passportExpiry', label: '여권 유효기간' },
   { key: 'permitPeriod', label: '고용허가기간' },
@@ -71,5 +68,6 @@ export const TASK_CREATION_SUMMARY = {
 
 export const APPROVAL_SUMMARY = {
   approver: '김경민',
+  pendingNote: '작성자 승인 요청 후 승인권자가 최종 승인합니다.',
   approvedNote: '업무함에서 진행 상황을 확인할 수 있습니다.',
 }

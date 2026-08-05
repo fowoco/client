@@ -172,6 +172,10 @@
   color: var(--text-secondary);
 }
 
+.currentStateRows {
+  margin-bottom: var(--fowoco-spacing-20);
+}
+
 .stepList {
   margin-top: 20px;
   display: flex;

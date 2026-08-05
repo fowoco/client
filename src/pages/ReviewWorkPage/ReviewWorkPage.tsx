@@ -3,18 +3,17 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { WorkflowStepIndicator } from '../../components/ui/WorkflowStepIndicator/WorkflowStepIndicator'
 import styles from './ReviewWorkPage.module.css'
 import { REVIEW_STEPS } from './reviewWorkData'
-import { AnalysisStep } from './steps/AnalysisStep'
-import { ApprovalStep } from './steps/ApprovalStep'
-import { DraftReviewStep } from './steps/DraftReviewStep'
-import { TaskCreationStep } from './steps/TaskCreationStep'
+import { DraftPreparationStep } from './steps/DraftPreparationStep'
+import { FinalReviewStep } from './steps/FinalReviewStep'
+import { InformationPendingStep } from './steps/InformationPendingStep'
 
-// REVIEW_STEPS 인덱스 기준 2~5단계(AI분석/초안검토/업무생성/승인) 내부 위저드.
-// 1.요청입력은 CreateWorkPage(/tasks/new)에서 진행되고, 같은 WorkflowStepIndicator를 공유한다.
-type WizardStepIndex = 1 | 2 | 3 | 4
+// REVIEW_STEPS 인덱스 기준 2~4단계(정보 보완/초안 준비/최종 검토) 내부 위저드.
+// 1.요청 확인은 CreateWorkPage(/tasks/new)에서 진행되고, 같은 WorkflowStepIndicator를 공유한다.
+type WizardStepIndex = 1 | 2 | 3
 
 function parseStepIndex(value: string | null): WizardStepIndex {
   const parsed = Number(value)
-  return parsed === 2 || parsed === 3 || parsed === 4 ? parsed : 1
+  return parsed === 2 || parsed === 3 ? parsed : 1
 }
 
 export function ReviewWorkPage() {
@@ -40,10 +39,9 @@ export function ReviewWorkPage() {
 
       <WorkflowStepIndicator steps={REVIEW_STEPS} currentIndex={stepIndex} onStepClick={handleStepClick} />
 
-      {stepIndex === 1 && <AnalysisStep onDone={() => setStepIndex(2)} />}
-      {stepIndex === 2 && <DraftReviewStep onComplete={() => setStepIndex(3)} />}
-      {stepIndex === 3 && <TaskCreationStep onDone={() => setStepIndex(4)} />}
-      {stepIndex === 4 && <ApprovalStep />}
+      {stepIndex === 1 && <InformationPendingStep onComplete={() => setStepIndex(2)} />}
+      {stepIndex === 2 && <DraftPreparationStep onDone={() => setStepIndex(3)} />}
+      {stepIndex === 3 && <FinalReviewStep />}
     </div>
   )
 }

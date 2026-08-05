@@ -12,6 +12,7 @@ import {
   getTaskStatusPresentation,
   getWorkflowLabel,
   isReviewTask,
+  REVIEW_STAGE_LINKS,
 } from './workInboxPresentation'
 import styles from './WorkListPage.module.css'
 
@@ -79,9 +80,6 @@ export function WorkInboxDetail({ group, onOpenTask }: WorkInboxDetailProps) {
           <p className={styles.detailMeta}>{getWorkerMeta(group)}</p>
         </div>
         <div className={styles.detailHeaderActions}>
-          <Link to={reviewStage.href} className={styles.textLink}>
-            {reviewStage.label} 보기
-          </Link>
           <button
             type="button"
             className={styles.moreButton}
@@ -92,6 +90,20 @@ export function WorkInboxDetail({ group, onOpenTask }: WorkInboxDetailProps) {
           </button>
         </div>
       </header>
+
+      <nav className={styles.reviewStageNav} aria-label={`${group.worker.display_name} REVIEW-001 단계 바로가기`}>
+        {REVIEW_STAGE_LINKS.map((stage) => (
+          <Link
+            key={stage.href}
+            to={stage.href}
+            className={`${styles.reviewStageLink} ${
+              stage.href === reviewStage.href ? styles.reviewStageLinkActive : ''
+            }`}
+          >
+            {stage.label}
+          </Link>
+        ))}
+      </nav>
 
       <div className={styles.caseSummaryScroll}>
         <p className={styles.agentSuggestion}>

@@ -445,16 +445,27 @@ describe('WorkListPage', () => {
     ).toBeInTheDocument()
   })
 
-  it('links to the matching review stage based on the active task status', async () => {
+  it('exposes all four REVIEW-001 stages and highlights the one matching the active task', async () => {
     mockApi()
     const user = userEvent.setup()
     renderPage()
 
-    // T-1 (응우옌 안의 우선 업무 건)는 READY_FOR_REVIEW 상태 -> 04 최종 검토로 연결된다.
-    const link = await screen.findByRole('link', { name: '최종 검토 보기' })
-    expect(link).toHaveAttribute('href', '/tasks/new/review?step=3')
+    const nav = await screen.findByRole('navigation', { name: /REVIEW-001 단계 바로가기/ })
+    expect(within(nav).getByRole('link', { name: '요청 확인' })).toHaveAttribute('href', '/tasks/new')
+    expect(within(nav).getByRole('link', { name: '정보 보완' })).toHaveAttribute(
+      'href',
+      '/tasks/new/review?step=1',
+    )
+    expect(within(nav).getByRole('link', { name: '초안 작성' })).toHaveAttribute(
+      'href',
+      '/tasks/new/review?step=2',
+    )
+    // T-1 (응우옌 안의 우선 업무 건)는 READY_FOR_REVIEW 상태 -> 04 최종 검토가 강조 표시된다.
+    const activeLink = within(nav).getByRole('link', { name: '최종 검토' })
+    expect(activeLink).toHaveAttribute('href', '/tasks/new/review?step=3')
+    expect(activeLink.className).toMatch(/reviewStageLinkActive/)
 
-    await user.click(link)
+    await user.click(activeLink)
 
     expect(await screen.findByText('업무 검토 화면')).toBeInTheDocument()
   })

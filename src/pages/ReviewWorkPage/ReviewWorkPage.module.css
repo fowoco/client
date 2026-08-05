@@ -592,6 +592,8 @@
 
 .pdfPage {
   width: 320px;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: var(--fowoco-spacing-20);
   background: var(--fowoco-white);
   border: 1px solid var(--border-default);

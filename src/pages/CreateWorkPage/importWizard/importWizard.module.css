@@ -107,8 +107,14 @@
   color: var(--text-secondary);
 }
 
+.previewTableScroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
 .previewTable {
   width: 100%;
+  min-width: 480px;
   border-collapse: collapse;
   font-size: 12px;
 }
@@ -219,6 +225,12 @@
   margin-bottom: 16px;
 }
 
+@media (max-width: 480px) {
+  .resultGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .resultCard {
   padding: var(--fowoco-spacing-16);
   background: var(--surface-subtle);
@@ -245,6 +257,12 @@
   grid-template-columns: 1fr 1fr;
   gap: 12px;
   margin: 12px 0 20px;
+}
+
+@media (max-width: 480px) {
+  .compareGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .compareCard {

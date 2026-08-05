@@ -64,11 +64,14 @@
 }
 
 .title {
+  min-width: 0;
+  overflow: hidden;
   font-family: var(--font-sans);
   font-size: 14px;
   font-weight: 500;
   color: var(--text-primary);
   white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .inlineMeta {

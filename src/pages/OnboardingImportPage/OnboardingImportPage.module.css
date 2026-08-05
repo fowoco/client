@@ -276,6 +276,12 @@
   gap: 12px;
 }
 
+@media (max-width: 560px) {
+  .resultGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .resultCard {
   padding: 16px;
   text-align: center;

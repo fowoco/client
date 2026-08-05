@@ -5,16 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ToastViewport } from '../../components/ui/ToastViewport/ToastViewport'
 import { useToastStore } from '../../store/toastStore'
 import { ReviewWorkPage } from './ReviewWorkPage'
-import {
-  APPROVAL_SUMMARY,
-  DRAFT_REASONS,
-  HR_VERIFICATION_FIELDS,
-  PREPARED_CHECKLIST,
-  PREPARED_DRAFT,
-  REVIEW_STEPS,
-  TASK_CREATION_SUMMARY,
-  UNDERSTOOD_REQUEST,
-} from './reviewWorkData'
+import { DRAFT_DOCUMENTS, HR_VERIFICATION_FIELDS, REVIEW_STEPS, STRUCTURED_FIELDS } from './reviewWorkData'
 
 beforeEach(() => {
   useToastStore.setState({ toasts: [] })
@@ -48,40 +39,14 @@ describe('ReviewWorkPage', () => {
     renderPage()
     const indicator = screen.getByRole('list', { name: '진행 단계' })
     expect(within(indicator).getAllByRole('listitem')).toHaveLength(REVIEW_STEPS.length)
-    for (const step of REVIEW_STEPS) {
-      expect(screen.getAllByText(step.label).length).toBeGreaterThan(0)
-    }
   })
 
-  it('renders the understood request, prepared draft, and checklist/reasoning on the information pending step', () => {
+  it('renders the information pending table with editable HR fields', () => {
     renderPage()
 
-    expect(screen.getByText('Agent가 요청을 1개의 업무로 정리했습니다.')).toBeInTheDocument()
-    expect(screen.getByText(UNDERSTOOD_REQUEST.purpose)).toBeInTheDocument()
-    expect(screen.getAllByText(PREPARED_DRAFT.target as string).length).toBeGreaterThan(0)
-    expect(screen.getByText(`기한 · ${PREPARED_DRAFT.dueLabel}`)).toBeInTheDocument()
-    expect(screen.getByText(`${PREPARED_DRAFT.requiredStepCount}개`)).toBeInTheDocument()
-    for (const item of PREPARED_CHECKLIST) {
-      expect(screen.getByText(item)).toBeInTheDocument()
-    }
-    for (const reason of DRAFT_REASONS) {
-      expect(screen.getByText(`· ${reason}`)).toBeInTheDocument()
-    }
-  })
-
-  it('shows a target dropdown instead of static text when the target is not yet determined', async () => {
-    const originalTarget = PREPARED_DRAFT.target
-    PREPARED_DRAFT.target = null
-    try {
-      const user = userEvent.setup()
-      renderPage()
-      await user.click(screen.getByRole('button', { name: '대상 선택' }))
-      await user.click(screen.getByRole('option', { name: '응웬반A' }))
-
-      expect(screen.queryByRole('button', { name: '대상 선택' })).not.toBeInTheDocument()
-      expect(screen.getByText('응웬반A')).toBeInTheDocument()
-    } finally {
-      PREPARED_DRAFT.target = originalTarget
+    expect(screen.getByText('누락정보를 해결 주체별로 확인해 주세요')).toBeInTheDocument()
+    for (const field of HR_VERIFICATION_FIELDS) {
+      expect(screen.getByLabelText(field.label)).toBeInTheDocument()
     }
   })
 
@@ -94,44 +59,40 @@ describe('ReviewWorkPage', () => {
     expect(screen.getByText('임시 저장했습니다.')).toBeInTheDocument()
   })
 
-  it('shows a toast when viewing evidence', async () => {
+  it('disables the draft generation button until every HR verification field is filled', async () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(screen.getByRole('button', { name: '근거 보기 ▾' }))
-
-    expect(screen.getByText('분석 근거 보기는 준비 중입니다.')).toBeInTheDocument()
-  })
-
-  it('disables the complete button until every HR verification field is filled', async () => {
-    const user = userEvent.setup()
-    renderPage()
-
-    const complete = screen.getByRole('button', { name: '완료' })
-    expect(complete).toBeDisabled()
+    const generate = screen.getByRole('button', { name: '초안 생성' })
+    expect(generate).toBeDisabled()
 
     await fillVerificationFields(user)
 
-    expect(complete).toBeEnabled()
+    expect(generate).toBeEnabled()
   })
 
   it('advances through draft preparation to final review and can navigate to the task list', async () => {
     const user = userEvent.setup()
     renderPage()
     await fillVerificationFields(user)
-    await user.click(screen.getByRole('button', { name: '완료' }))
+    await user.click(screen.getByRole('button', { name: '초안 생성' }))
 
-    expect(await screen.findByText(TASK_CREATION_SUMMARY.title)).toBeInTheDocument()
-    expect(screen.getByText('초안 준비가 완료됐습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('생성된 문서와 대기 중인 문서를 확인해 주세요')).toBeInTheDocument()
+    for (const doc of DRAFT_DOCUMENTS) {
+      expect(screen.getByText(doc.title)).toBeInTheDocument()
+    }
 
-    await user.click(screen.getByRole('button', { name: '초안 검토 →' }))
+    const draftReviewButtons = screen.getAllByRole('button', { name: '초안 검토' })
+    await user.click(draftReviewButtons[draftReviewButtons.length - 1])
 
-    expect(await screen.findByRole('heading', { name: '최종 승인이 필요합니다.' })).toBeInTheDocument()
+    expect(await screen.findByText('문서 검토본과 입력값을 최종 확인해 주세요')).toBeInTheDocument()
+    for (const field of STRUCTURED_FIELDS) {
+      expect(screen.getAllByText(field.label).length).toBeGreaterThan(0)
+    }
 
-    await user.click(screen.getByRole('button', { name: '지금 승인' }))
+    await user.click(screen.getByRole('button', { name: '승인 요청' }))
 
-    expect(await screen.findByRole('heading', { name: '승인이 완료됐습니다.' })).toBeInTheDocument()
-    expect(screen.getByText(APPROVAL_SUMMARY.approver)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /승인이 완료됐습니다./ })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '업무함으로 이동 →' }))
 
@@ -141,17 +102,17 @@ describe('ReviewWorkPage', () => {
   it('opens directly on a given step via the ?step= query param', () => {
     renderPage('/tasks/new/review?step=3')
 
-    expect(screen.getByRole('heading', { name: '최종 승인이 필요합니다.' })).toBeInTheDocument()
+    expect(screen.getByText('문서 검토본과 입력값을 최종 확인해 주세요')).toBeInTheDocument()
   })
 
   it('jumps freely between steps by clicking the shared indicator', async () => {
     const user = userEvent.setup()
     renderPage('/tasks/new/review?step=3')
 
-    await user.click(screen.getByRole('button', { name: '정보 보완' }))
-    expect(screen.getByText('Agent가 요청을 1개의 업무로 정리했습니다.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '✓ 정보 보완' }))
+    expect(screen.getByText('누락정보를 해결 주체별로 확인해 주세요')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: '요청 확인' }))
+    await user.click(screen.getByRole('button', { name: '✓ 요청 확인' }))
     expect(await screen.findByText('업무 생성 페이지')).toBeInTheDocument()
   })
 })

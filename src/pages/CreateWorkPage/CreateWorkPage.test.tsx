@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { ToastViewport } from '../../components/ui/ToastViewport/ToastViewport'
 import { useToastStore } from '../../store/toastStore'
 import { CreateWorkPage } from './CreateWorkPage'
+import { DEFAULT_ORIGINAL_REQUEST, WORKFLOW_TASKS } from './createWorkData'
 
 function ReviewStub() {
   const location = useLocation()
@@ -39,38 +40,31 @@ function renderPage(initialEntry: string | { pathname: string; state?: unknown }
 }
 
 describe('CreateWorkPage', () => {
-  it('uses a request forwarded from the dashboard as the initial input', () => {
+  it('shows the request forwarded from the dashboard as the original request', () => {
     renderPage({ pathname: '/tasks/new', state: { prefill: '응웬반A 체류기간 연장 준비' } })
 
-    expect(screen.getByLabelText('업무 요청 내용')).toHaveValue('응웬반A 체류기간 연장 준비')
+    expect(screen.getByText('응웬반A 체류기간 연장 준비')).toBeInTheDocument()
   })
 
-  it('disables the analyze button until a request is entered', async () => {
+  it('falls back to a default original request when nothing was forwarded', () => {
+    renderPage()
+
+    expect(screen.getByText(DEFAULT_ORIGINAL_REQUEST.split('\n')[0])).toBeInTheDocument()
+  })
+
+  it('renders every candidate task in the work item', () => {
+    renderPage()
+
+    for (const task of WORKFLOW_TASKS) {
+      expect(screen.getByText(task.title)).toBeInTheDocument()
+    }
+  })
+
+  it('navigates to the review flow when moving to information review', async () => {
     const user = userEvent.setup()
     renderPage()
 
-    const analyze = screen.getByRole('button', { name: '요청 분석하기 →' })
-    expect(analyze).toBeDisabled()
-
-    await user.type(screen.getByLabelText('업무 요청 내용'), '체류연장 서류 준비')
-    expect(analyze).toBeEnabled()
-  })
-
-  it('fills the textarea when an example chip is clicked', async () => {
-    const user = userEvent.setup()
-    renderPage()
-
-    await user.click(screen.getByRole('button', { name: '체류연장 준비' }))
-
-    expect(screen.getByLabelText('업무 요청 내용')).toHaveValue('체류연장 준비')
-  })
-
-  it('navigates to the review flow when analyzing a request', async () => {
-    const user = userEvent.setup()
-    renderPage()
-
-    await user.type(screen.getByLabelText('업무 요청 내용'), '체류연장 서류 준비')
-    await user.click(screen.getByRole('button', { name: '요청 분석하기 →' }))
+    await user.click(screen.getByRole('button', { name: '정보 보완' }))
 
     expect(await screen.findByText('검토 화면')).toBeInTheDocument()
   })
@@ -79,37 +73,26 @@ describe('CreateWorkPage', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(screen.getByRole('button', { name: '초안 준비' }))
+    await user.click(screen.getByRole('button', { name: '3 초안 작성' }))
 
     expect(await screen.findByText('검토 화면?step=2')).toBeInTheDocument()
   })
 
-  it('switches the active input mode', async () => {
+  it('opens the file import wizard from the work item panel', async () => {
     const user = userEvent.setup()
     renderPage()
 
-    const fileMode = screen.getByRole('button', { name: /파일 가져오기/ })
-    await user.click(fileMode)
-
-    expect(fileMode.className).toMatch(/modeCardActive/)
-  })
-
-  it('opens the file import wizard from 파일 가져오기 mode', async () => {
-    const user = userEvent.setup()
-    renderPage()
-
-    await user.click(screen.getByRole('button', { name: /파일 가져오기/ }))
-    await user.click(screen.getByRole('button', { name: '파일 선택하기 →' }))
+    await user.click(screen.getByRole('button', { name: '파일로 근로자 명단 가져오기 →' }))
 
     expect(screen.getByRole('dialog', { name: '파일 가져오기 · 파일 확인' })).toBeInTheDocument()
   })
 
-  it('shows a toast when a draft is saved', async () => {
+  it('shows a toast when editing the original request', async () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(screen.getByRole('button', { name: '임시 저장' }))
+    await user.click(screen.getByRole('button', { name: '원문 수정' }))
 
-    expect(screen.getByText('초안을 저장했습니다.')).toBeInTheDocument()
+    expect(screen.getByText('원문 수정은 준비 중입니다.')).toBeInTheDocument()
   })
 })

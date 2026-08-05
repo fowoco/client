@@ -146,6 +146,7 @@
 .dashboardGrid {
   display: grid;
   grid-template-columns: minmax(0, 767px) minmax(0, 359px);
+  align-items: stretch;
   gap: 26px;
   margin-top: 16px;
 }
@@ -424,8 +425,9 @@
 
 .agentPrepared {
   display: flex;
-  height: 539px;
+  height: 100%;
   min-width: 0;
+  min-height: 0;
   flex-direction: column;
   gap: 15px;
   padding: 16px;

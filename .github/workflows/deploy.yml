@@ -50,3 +50,19 @@ jobs:
             client=ghcr.io/fowoco/client:${{ github.sha }} \
             --record=false
           kubectl -n fowoco rollout status deployment/client --timeout=180s
+
+      - name: Rollout diagnostics
+        if: failure()
+        run: |
+          echo "::group::pods"
+          kubectl -n fowoco get pods -o wide
+          echo "::endgroup::"
+          echo "::group::describe deployment"
+          kubectl -n fowoco describe deployment/client
+          echo "::endgroup::"
+          echo "::group::logs"
+          kubectl -n fowoco logs deployment/client --tail=100 --all-containers
+          echo "::endgroup::"
+          echo "::group::events"
+          kubectl -n fowoco get events --sort-by=.lastTimestamp
+          echo "::endgroup::"

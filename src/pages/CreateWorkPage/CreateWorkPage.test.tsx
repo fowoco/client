@@ -41,7 +41,7 @@ const CATALOG = {
 const AI_RUN = {
   ai_run_id: 'A-1',
   request_id: 'R-1',
-  instruction: '체류연장 준비, EXPIRY_RENEWAL',
+  instruction: '체류연장 준비',
   status: 'SUCCEEDED',
   analysis_outcome: 'NEEDS_INFO',
   detected_intent: 'EXPIRY_RENEWAL',
@@ -111,7 +111,7 @@ describe('CreateWorkPage', () => {
     expect(screen.getByLabelText('업무 요청 내용')).toHaveValue('체류연장 준비')
   })
 
-  it('sends the natural-language request with an intent hint and opens the review page', async () => {
+  it('sends the selected example as written and opens the review page', async () => {
     const user = userEvent.setup()
     renderPage()
 
@@ -122,9 +122,26 @@ describe('CreateWorkPage', () => {
     const analyzeCall = vi.mocked(fetch).mock.calls.find(([url]) => String(url).endsWith('/ai-runs'))
     expect(analyzeCall).toBeDefined()
     expect(JSON.parse((analyzeCall![1] as RequestInit).body as string)).toEqual({
-      instruction: '체류연장 준비, EXPIRY_RENEWAL',
+      instruction: '체류연장 준비',
     })
     expect(new Headers((analyzeCall![1] as RequestInit).headers).get('Idempotency-Key')).toBeTruthy()
+  })
+
+  it('sends an edited request without retaining the previously selected intent', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByRole('button', { name: '체류연장 준비' }))
+    const request = screen.getByLabelText('업무 요청 내용')
+    await user.clear(request)
+    await user.type(request, '이번 주 근태자료 차이를 설명해 주세요')
+    await user.click(screen.getByRole('button', { name: '요청 분석하기 →' }))
+
+    const analyzeCall = vi.mocked(fetch).mock.calls.find(([url]) => String(url).endsWith('/ai-runs'))
+    expect(analyzeCall).toBeDefined()
+    expect(JSON.parse((analyzeCall![1] as RequestInit).body as string)).toEqual({
+      instruction: '이번 주 근태자료 차이를 설명해 주세요',
+    })
   })
 
   it('switches the active input mode', async () => {

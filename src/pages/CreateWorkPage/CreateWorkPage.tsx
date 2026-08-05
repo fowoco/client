@@ -13,11 +13,9 @@ import { TASK_TYPE_LABEL } from '../../utils/taskStatus'
 import styles from './CreateWorkPage.module.css'
 import {
   AGENT_TRACE_PREVIEW,
-  EXAMPLE_PROMPT_INTENTS,
   EXAMPLE_PROMPTS,
   INPUT_MODES,
   MAX_LENGTH,
-  instructionWithHint,
   type InputModeId,
 } from './createWorkData'
 import { ImportWizardModal } from './importWizard/ImportWizardModal'
@@ -37,7 +35,6 @@ export function CreateWorkPage() {
   const prefill = (location.state as { prefill?: string } | null)?.prefill
   const [mode, setMode] = useState<InputModeId>('nl')
   const [request, setRequest] = useState(prefill ?? '')
-  const [intentHint, setIntentHint] = useState<string | null>(null)
   const [importWizardOpen, setImportWizardOpen] = useState(false)
   const showToast = useToastStore((state) => state.showToast)
 
@@ -117,7 +114,6 @@ export function CreateWorkPage() {
 
   function handleExampleClick(example: (typeof EXAMPLE_PROMPTS)[number]) {
     setRequest(example)
-    setIntentHint(EXAMPLE_PROMPT_INTENTS[example])
   }
 
   async function handleAnalyze() {
@@ -125,7 +121,7 @@ export function CreateWorkPage() {
     setAnalyzing(true)
     setAnalysisError(null)
     try {
-      const instruction = instructionWithHint(request, intentHint)
+      const instruction = request.trim()
       const idempotencyKey = globalThis.crypto.randomUUID()
       const aiRun = await createAiRun(instruction, idempotencyKey)
       navigate(`/tasks/new/review?aiRunId=${encodeURIComponent(aiRun.ai_run_id)}`, { state: { aiRun } })

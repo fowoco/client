@@ -12,18 +12,6 @@ export type InputModeId = (typeof INPUT_MODES)[number]['id']
 
 export const EXAMPLE_PROMPTS = ['체류연장 준비', '입사자료 취합', '외부기관 제출', '근태자료 설명'] as const
 
-export const EXAMPLE_PROMPT_INTENTS: Record<(typeof EXAMPLE_PROMPTS)[number], string> = {
-  '체류연장 준비': 'EXPIRY_RENEWAL',
-  '입사자료 취합': 'WORKER_ONBOARDING',
-  '외부기관 제출': 'DOCUMENT_REQUEST',
-  '근태자료 설명': 'WORK_INSTRUCTION',
-}
-
-export function instructionWithHint(instruction: string, intentHint: string | null) {
-  const normalized = instruction.trim()
-  return intentHint ? `${normalized}, ${intentHint}` : normalized
-}
-
 export const MAX_LENGTH = 2000
 
 export const AGENT_TRACE_PREVIEW = {

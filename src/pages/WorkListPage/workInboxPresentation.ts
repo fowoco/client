@@ -74,14 +74,24 @@ export interface ReviewStageLink {
   href: string
 }
 
-// TaskStatus를 REVIEW-001 4단계(요청 확인/정보 보완/초안 작성/최종 검토) 중 매칭되는
-// 단계로 연결한다. 업무함에서 근로자를 열었을 때 바로 해당 화면으로 진입시키기 위함.
+// REVIEW-001 4단계(요청 확인/정보 보완/초안 작성/최종 검토) 전체 진입 경로. 지금은
+// Dashboard 입력을 거쳐야만 볼 수 있던 02~04 화면을 업무함 근로자 옆에서도 자유롭게
+// 넘나들 수 있게 이 배열을 그대로 노출한다.
+export const REVIEW_STAGE_LINKS: ReviewStageLink[] = [
+  { label: '요청 확인', href: '/tasks/new' },
+  { label: '정보 보완', href: '/tasks/new/review?step=1' },
+  { label: '초안 작성', href: '/tasks/new/review?step=2' },
+  { label: '최종 검토', href: '/tasks/new/review?step=3' },
+]
+
+// TaskStatus를 REVIEW_STAGE_LINKS 중 매칭되는 단계로 연결한다. 근로자를 열었을 때
+// 현재 어느 단계가 활성 업무 건과 일치하는지 강조 표시하는 데 쓴다.
 const REVIEW_STAGE_LINK: Partial<Record<TaskStatus, ReviewStageLink>> = {
-  NEEDS_INFO: { label: '정보 보완', href: '/tasks/new/review?step=1' },
-  DRAFT: { label: '초안 작성', href: '/tasks/new/review?step=2' },
-  READY_FOR_REVIEW: { label: '최종 검토', href: '/tasks/new/review?step=3' },
+  NEEDS_INFO: REVIEW_STAGE_LINKS[1],
+  DRAFT: REVIEW_STAGE_LINKS[2],
+  READY_FOR_REVIEW: REVIEW_STAGE_LINKS[3],
 }
 
 export function getReviewStageLink(status: TaskStatus): ReviewStageLink {
-  return REVIEW_STAGE_LINK[status] ?? { label: '요청 확인', href: '/tasks/new' }
+  return REVIEW_STAGE_LINK[status] ?? REVIEW_STAGE_LINKS[0]
 }

@@ -254,6 +254,33 @@
   flex: 0 0 auto;
 }
 
+.reviewStageNav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fowoco-spacing-8);
+  margin-bottom: var(--fowoco-spacing-16);
+}
+
+.reviewStageLink {
+  padding: 6px var(--fowoco-spacing-12);
+  border-radius: var(--fowoco-radius-999);
+  background: var(--surface-subtle);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.reviewStageLink:hover {
+  color: var(--brand-primary);
+}
+
+.reviewStageLinkActive {
+  background: var(--fowoco-teal-100);
+  font-weight: 700;
+  color: var(--brand-primary);
+}
+
 .moreButton {
   display: inline-flex;
   flex: 0 0 40px;

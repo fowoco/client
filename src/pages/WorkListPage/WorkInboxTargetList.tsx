@@ -1,11 +1,8 @@
 import { useRef, type KeyboardEvent } from 'react'
-import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
+import { Link } from 'react-router-dom'
+import statusLabelStyles from '../../components/ui/StatusLabel/StatusLabel.module.css'
 import type { WorkInboxWorkerGroup } from './workInboxModel'
-import {
-  getDuePresentation,
-  getTaskStatusPresentation,
-  getWorkflowLabel,
-} from './workInboxPresentation'
+import { getDuePresentation, getReviewStageLink, getWorkflowLabel } from './workInboxPresentation'
 import styles from './WorkListPage.module.css'
 
 interface WorkInboxTargetListProps {
@@ -23,9 +20,15 @@ export function WorkInboxTargetList({
   capNotice,
   onSelect,
 }: WorkInboxTargetListProps) {
-  const optionRefs = useRef(new Map<string, HTMLButtonElement>())
+  const optionRefs = useRef(new Map<string, HTMLDivElement>())
 
-  function moveSelection(event: KeyboardEvent<HTMLButtonElement>, currentIndex: number) {
+  function moveSelection(event: KeyboardEvent<HTMLDivElement>, currentIndex: number) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      onSelect(groups[currentIndex].worker.worker_id)
+      return
+    }
+
     let nextIndex = currentIndex
     if (event.key === 'ArrowDown') nextIndex = Math.min(currentIndex + 1, groups.length - 1)
     else if (event.key === 'ArrowUp') nextIndex = Math.max(currentIndex - 1, 0)
@@ -54,17 +57,16 @@ export function WorkInboxTargetList({
         {groups.map((group, index) => {
           const task = group.primaryTask
           const due = getDuePresentation(task.task.due_date)
-          const status = getTaskStatusPresentation(task.task.status)
+          const reviewStage = getReviewStageLink(task.task.status)
           const selected = group.worker.worker_id === selectedWorkerId
 
           return (
-            <button
+            <div
               key={group.worker.worker_id}
               ref={(node) => {
                 if (node) optionRefs.current.set(group.worker.worker_id, node)
                 else optionRefs.current.delete(group.worker.worker_id)
               }}
-              type="button"
               role="option"
               aria-selected={selected}
               tabIndex={selected ? 0 : -1}
@@ -74,12 +76,18 @@ export function WorkInboxTargetList({
             >
               <span className={styles.targetOptionTop}>
                 <span className={styles.targetName}>{group.worker.display_name}</span>
-                <StatusLabel tone={status.tone}>{status.label}</StatusLabel>
+                <Link
+                  to={reviewStage.href}
+                  className={`${statusLabelStyles.label} ${statusLabelStyles[reviewStage.tone]}`}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  {reviewStage.label}
+                </Link>
               </span>
               <span className={styles.targetMeta}>
                 {getWorkflowLabel(task)} · {due.label}
               </span>
-            </button>
+            </div>
           )
         })}
       </div>

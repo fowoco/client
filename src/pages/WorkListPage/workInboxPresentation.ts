@@ -72,20 +72,21 @@ export function isReviewTask(status: TaskStatus): boolean {
 export interface ReviewStageLink {
   label: string
   href: string
+  // 같은 단계 라벨은 화면 어디에 나오든 같은 색으로 보이도록 고정한다.
+  tone: StatusTone
 }
 
-// REVIEW-001 4단계(요청 확인/정보 보완/초안 작성/최종 검토) 전체 진입 경로. 지금은
-// Dashboard 입력을 거쳐야만 볼 수 있던 02~04 화면을 업무함 근로자 옆에서도 자유롭게
-// 넘나들 수 있게 이 배열을 그대로 노출한다.
-export const REVIEW_STAGE_LINKS: ReviewStageLink[] = [
-  { label: '요청 확인', href: '/tasks/new' },
-  { label: '정보 보완', href: '/tasks/new/review?step=1' },
-  { label: '초안 작성', href: '/tasks/new/review?step=2' },
-  { label: '최종 검토', href: '/tasks/new/review?step=3' },
+// REVIEW-001 4단계(요청 확인/정보 보완/초안 작성/최종 검토) 전체 진입 경로 · 색상.
+const REVIEW_STAGE_LINKS: ReviewStageLink[] = [
+  { label: '요청 확인', href: '/tasks/new', tone: 'neutral' },
+  { label: '정보 보완', href: '/tasks/new/review?step=1', tone: 'warning' },
+  { label: '초안 작성', href: '/tasks/new/review?step=2', tone: 'info' },
+  { label: '최종 검토', href: '/tasks/new/review?step=3', tone: 'agent' },
 ]
 
-// TaskStatus를 REVIEW_STAGE_LINKS 중 매칭되는 단계로 연결한다. 근로자를 열었을 때
-// 현재 어느 단계가 활성 업무 건과 일치하는지 강조 표시하는 데 쓴다.
+// TaskStatus를 REVIEW-001 4단계 중 매칭되는 단계로 연결한다. 업무함의 근로자 배지
+// 라벨을 요청 확인/정보 보완/초안 작성/최종 검토로 바꿔 보여주고, 그 배지를 클릭하면
+// 바로 해당 화면으로 이동시키는 데 쓴다.
 const REVIEW_STAGE_LINK: Partial<Record<TaskStatus, ReviewStageLink>> = {
   NEEDS_INFO: REVIEW_STAGE_LINKS[1],
   DRAFT: REVIEW_STAGE_LINKS[2],

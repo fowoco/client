@@ -445,12 +445,16 @@ describe('WorkListPage', () => {
     ).toBeInTheDocument()
   })
 
-  it('links to the review wizard from a selected worker', async () => {
+  it('links to the matching review stage based on the active task status', async () => {
     mockApi()
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('link', { name: '업무 검토 보기' }))
+    // T-1 (응우옌 안의 우선 업무 건)는 READY_FOR_REVIEW 상태 -> 04 최종 검토로 연결된다.
+    const link = await screen.findByRole('link', { name: '최종 검토 보기' })
+    expect(link).toHaveAttribute('href', '/tasks/new/review?step=3')
+
+    await user.click(link)
 
     expect(await screen.findByText('업무 검토 화면')).toBeInTheDocument()
   })

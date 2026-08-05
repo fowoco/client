@@ -47,7 +47,7 @@ function document(overrides: Partial<DocumentItemResponse> = {}): DocumentItemRe
     document_type: 'CONTRACT',
     submission_status: 'SUBMITTED',
     expiry_date: '2027-07-18',
-    file_id: null,
+    file_id: 'F-1',
     ...overrides,
   }
 }
@@ -123,7 +123,7 @@ describe('WorkerDetailPage', () => {
     renderPage('W-018')
 
     expect(await screen.findByText('근로계약서')).toBeInTheDocument()
-    expect(screen.getByText('확인 대기')).toBeInTheDocument()
+    expect(screen.getByText('승인 대기')).toBeInTheDocument()
   })
 
   it('shows an empty state when the worker has no documents', async () => {

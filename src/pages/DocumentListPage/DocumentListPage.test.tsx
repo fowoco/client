@@ -35,6 +35,7 @@ const DOCUMENTS: DocumentItemResponse[] = [
     document_type: 'CONTRACT',
     submission_status: 'SUBMITTED',
     expiry_date: '2027-07-18',
+    file_id: 'F-2',
   }),
   document({
     worker_document_id: 'D-3',
@@ -42,6 +43,7 @@ const DOCUMENTS: DocumentItemResponse[] = [
     document_type: 'PERMIT',
     submission_status: 'VERIFIED',
     expiry_date: '2027-07-10',
+    file_id: 'F-3',
   }),
   document({
     worker_document_id: 'D-4',
@@ -49,6 +51,7 @@ const DOCUMENTS: DocumentItemResponse[] = [
     document_type: 'PASSPORT_COPY',
     submission_status: 'VERIFIED',
     expiry_date: isoDateOffset(12),
+    file_id: 'F-4',
   }),
 ]
 
@@ -98,8 +101,8 @@ describe('DocumentListPage', () => {
     expect(screen.getByRole('tab', { name: '검토 필요 1' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: '만료 예정 1' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: '누락 문서 1' })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: '요청 중 1' })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: '최근 업로드 1' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '완료 2' })).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: /요청 중/ })).not.toBeInTheDocument()
   })
 
   it('shows the metric strip computed from document status and expiry', async () => {
@@ -154,7 +157,7 @@ describe('DocumentListPage', () => {
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(pageResponse(DOCUMENTS)))
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '확인하기 →' }))
+    await user.click(await screen.findByRole('button', { name: '검토하기 →' }))
 
     expect(await screen.findByText('서류 상세')).toBeInTheDocument()
   })
@@ -164,8 +167,8 @@ describe('DocumentListPage', () => {
     renderPage()
 
     await screen.findByText('수라즈C')
-    expect(screen.getByRole('button', { name: '요청 초안' })).toBeInTheDocument() // MISSING
-    expect(screen.getByRole('button', { name: '확인하기 →' })).toBeInTheDocument() // SUBMITTED
+    expect(screen.getByRole('button', { name: '상세 확인' })).toBeInTheDocument() // MISSING
+    expect(screen.getByRole('button', { name: '검토하기 →' })).toBeInTheDocument() // SUBMITTED
     expect(screen.getAllByRole('button', { name: '보기' })).toHaveLength(2) // VERIFIED
   })
 

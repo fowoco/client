@@ -1,7 +1,7 @@
 import type { TaskStatus } from '../../api/tasks'
 import type { StatusTone } from '../../components/ui/StatusLabel/StatusLabel'
 import { TASK_STATUS_LABEL, TASK_STATUS_TONE, TASK_TYPE_LABEL } from '../../utils/taskStatus'
-import { daysUntil } from '../../utils/urgency'
+import { getOperationalDateViewModel } from '../../view-models/dateViewModel'
 import type { WorkInboxTask } from './workInboxModel'
 
 const REVIEW_ACTION_LABEL: Record<TaskStatus, string> = {
@@ -32,13 +32,8 @@ export interface DuePresentation {
 }
 
 export function getDuePresentation(dueDate: string | null): DuePresentation {
-  const dueDays = daysUntil(dueDate)
-  if (dueDays === null) return { label: '기한 미정', tone: 'neutral' }
-  if (dueDays < 0) return { label: `D+${Math.abs(dueDays)}`, tone: 'critical' }
-  if (dueDays === 0) return { label: '오늘', tone: 'critical' }
-  if (dueDays <= 7) return { label: `D-${dueDays}`, tone: 'critical' }
-  if (dueDays <= 30) return { label: `D-${dueDays}`, tone: 'warning' }
-  return { label: `D-${dueDays}`, tone: 'neutral' }
+  const due = getOperationalDateViewModel('TASK_DUE', dueDate)
+  return { label: due.relative ?? '기한 미정', tone: due.tone }
 }
 
 export function getTaskStatusPresentation(status: TaskStatus): {

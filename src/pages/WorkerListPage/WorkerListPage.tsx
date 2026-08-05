@@ -16,6 +16,7 @@ import { AUDIT_ACTION_LABEL } from '../../utils/auditLabels'
 import { formatEventTime } from '../../utils/datetime'
 import { TASK_STATUS_LABEL, TASK_STATUS_NEXT_ACTION } from '../../utils/taskStatus'
 import { daysUntil, getUrgencyTier, URGENCY_TONE } from '../../utils/urgency'
+import { getOperationalDateViewModel } from '../../view-models/dateViewModel'
 import styles from './WorkerListPage.module.css'
 
 const DEADLINE_TIER_CLASS = {
@@ -70,14 +71,11 @@ const PRIORITY_COUNT = 5
 // WorkerResponse에는 별도 visa_type 필드가 없다.
 const VISA_TYPE = 'E-9'
 
-function deadlineLabel(deadlineDays: number | null): string {
-  if (deadlineDays === null) return '정상'
-  return `D-${deadlineDays} 체류만료`
-}
-
 function toRow(worker: WorkerResponse) {
   const deadlineDays = daysUntil(worker.stay_expiry_date)
-  return { worker, deadlineDays, label: deadlineLabel(deadlineDays) }
+  const expiry = getOperationalDateViewModel('STAY_EXPIRY', worker.stay_expiry_date)
+  const label = expiry.missing ? expiry.display : `${expiry.relative} 체류만료`
+  return { worker, deadlineDays, label }
 }
 
 export function WorkerListPage() {

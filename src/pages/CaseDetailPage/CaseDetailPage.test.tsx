@@ -8,7 +8,7 @@ import type { TaskDetailResponse } from '../../api/tasks'
 import { ToastViewport } from '../../components/ui/ToastViewport/ToastViewport'
 import { useToastStore } from '../../store/toastStore'
 import { CaseDetailPage } from './CaseDetailPage'
-import { CASE_COMMUNICATION, CASE_STEPS, CASE_TABS, CONTEXT_DRAWER } from './caseDetailData'
+import { CASE_COMMUNICATION, CASE_TABS, CONTEXT_DRAWER } from './caseDetailData'
 
 function jsonResponse(body: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' }, ...init })
@@ -90,6 +90,21 @@ function mockTaskAndActivities(
       return Promise.resolve(jsonResponse({ draft_id: 'draft-1', version: 1, review_status: 'PENDING' }))
     }
     if (url.includes('/documents?')) return Promise.resolve(jsonResponse(documentsResponse(documents)))
+    if (url.includes('/approval-requests')) {
+      return Promise.resolve(jsonResponse({ task_id: 'T-1', task_status: 'READY_FOR_REVIEW', task_version: 2 }, { status: 201 }))
+    }
+    if (url.endsWith('/approve')) {
+      return Promise.resolve(jsonResponse({ task_id: 'T-1', task_status: 'APPROVED', task_version: 2 }))
+    }
+    if (url.endsWith('/reject')) {
+      return Promise.resolve(jsonResponse({ task_id: 'T-1', task_status: 'DRAFT', task_version: 2 }))
+    }
+    if (url.endsWith('/evidence')) {
+      return Promise.resolve(jsonResponse({ resource_id: 'E-1', task_id: 'T-1', task_status: 'APPROVED', task_version: 1 }, { status: 201 }))
+    }
+    if (url.endsWith('/complete')) {
+      return Promise.resolve(jsonResponse({ resource_id: 'T-1', task_id: 'T-1', task_status: 'COMPLETED', task_version: 2 }))
+    }
     return Promise.resolve(jsonResponse(task(taskOverrides)))
   })
 }
@@ -146,15 +161,15 @@ describe('CaseDetailPage', () => {
     expect(await screen.findByRole('button', { name: '다시 시도' })).toBeInTheDocument()
   })
 
-  it('renders the real task title/status and every demo agent step', async () => {
+  it('renders the real Task state without the static five-step demo', async () => {
     mockTaskAndActivities()
     renderPage()
 
     expect(await screen.findByText('응웬반A 체류연장 준비')).toBeInTheDocument()
-    expect(screen.getByText('검토 필요')).toBeInTheDocument()
-    for (const step of CASE_STEPS) {
-      expect(screen.getByText(step.title)).toBeInTheDocument()
-    }
+    expect(screen.getAllByText('검토 필요').length).toBeGreaterThan(0)
+    expect(screen.getByText('현재 업무 상태')).toBeInTheDocument()
+    expect(screen.getAllByText('1 / 2').length).toBeGreaterThan(0)
+    expect(screen.queryByText('보안 링크 전달')).not.toBeInTheDocument()
   })
 
   it('switches to the checklist tab and toggles a real checklist item', async () => {
@@ -214,7 +229,7 @@ describe('CaseDetailPage', () => {
     await user.click(screen.getByRole('tab', { name: CASE_TABS[2] }))
 
     expect(await screen.findByText('여권 사본')).toBeInTheDocument()
-    expect(screen.getByText('확인 완료')).toBeInTheDocument()
+    expect(screen.getByText('완료')).toBeInTheDocument()
   })
 
   it('shows the document-readiness gate and saves a document request draft when documents are missing', async () => {
@@ -263,23 +278,17 @@ describe('CaseDetailPage', () => {
     mockTaskAndActivities()
     renderPage()
 
-    expect(await screen.findByText('완료 처리 불가 · 승인과 증빙 필요')).toBeInTheDocument()
+    expect(await screen.findByText(/완료 처리 불가 · 승인 · 필수 체크리스트/)).toBeInTheDocument()
   })
 
-  it('shows a toast when a draft is saved', async () => {
+  it('requests approval through the API and refetches the Task', async () => {
     const user = userEvent.setup()
-    mockTaskAndActivities()
-    renderPage()
-    await screen.findByText('응웬반A 체류연장 준비')
-
-    await user.click(screen.getByRole('button', { name: '초안 저장' }))
-
-    expect(screen.getByText('초안을 저장했습니다.')).toBeInTheDocument()
-  })
-
-  it('opens the approval request modal and shows a toast on submit', async () => {
-    const user = userEvent.setup()
-    mockTaskAndActivities()
+    mockTaskAndActivities({
+      status: 'DRAFT',
+      checklist_items: [
+        { checklist_item_id: 'chk-1', item_code: 'passport', label: '여권 사본 확인', required: true, completed: true, completed_by: null, completed_at: null, version: 1 },
+      ],
+    })
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
@@ -290,30 +299,33 @@ describe('CaseDetailPage', () => {
 
     expect(screen.getByText('승인을 요청했습니다.')).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    const call = vi.mocked(fetch).mock.calls.find(([url]) => String(url).includes('/approval-requests'))
+    expect(call?.[1]?.method).toBe('POST')
   })
 
-  it('walks through the approve decision flow', async () => {
+  it('approves through the API instead of setting a local success state', async () => {
     const user = userEvent.setup()
     mockTaskAndActivities()
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
-    await user.click(screen.getByRole('button', { name: '데모: 승인자로 검토' }))
+    await user.click(screen.getByRole('button', { name: '승인 검토' }))
     expect(screen.getByRole('dialog', { name: '승인 요청을 검토하세요' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '승인' }))
 
     expect(screen.getByText('승인했습니다.')).toBeInTheDocument()
-    expect(screen.getAllByText('승인 완료').length).toBeGreaterThan(0)
+    expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/approve'))).toBe(true)
+    expect(screen.queryByText('승인 완료')).not.toBeInTheDocument()
   })
 
-  it('walks through the reject decision flow', async () => {
+  it('rejects through the API without fabricating a local rejected status', async () => {
     const user = userEvent.setup()
     mockTaskAndActivities()
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
-    await user.click(screen.getByRole('button', { name: '데모: 승인자로 검토' }))
+    await user.click(screen.getByRole('button', { name: '승인 검토' }))
     await user.click(screen.getByRole('button', { name: '반려' }))
     expect(screen.getByRole('dialog', { name: '반려 사유를 입력하세요' })).toBeInTheDocument()
 
@@ -321,36 +333,8 @@ describe('CaseDetailPage', () => {
     await user.click(screen.getByRole('button', { name: '반려 확정' }))
 
     expect(screen.getByText('반려했습니다.')).toBeInTheDocument()
-    expect(screen.getAllByText('반려됨').length).toBeGreaterThan(0)
-  })
-
-  it('shows the other-approver-handled overlay after a decision is already made', async () => {
-    const user = userEvent.setup()
-    mockTaskAndActivities()
-    renderPage()
-    await screen.findByText('응웬반A 체류연장 준비')
-
-    await user.click(screen.getByRole('button', { name: '데모: 승인자로 검토' }))
-    await user.click(screen.getByRole('button', { name: '승인' }))
-
-    await user.click(screen.getByRole('button', { name: '데모: 승인자로 검토' }))
-
-    expect(screen.getByRole('dialog', { name: '다른 승인자가 처리했습니다' })).toBeInTheDocument()
-  })
-
-  it('opens the snapshot diff overlay and re-requests approval', async () => {
-    const user = userEvent.setup()
-    mockTaskAndActivities()
-    renderPage()
-    await screen.findByText('응웬반A 체류연장 준비')
-
-    await user.click(screen.getByRole('button', { name: '데모: 재승인 필요 보기' }))
-    expect(screen.getByRole('dialog', { name: '승인본 V1 · 수정본 V2 변경 내용' })).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: '재승인 요청' }))
-
-    expect(screen.getByText('재승인을 요청했습니다.')).toBeInTheDocument()
-    expect(screen.getAllByText('승인 대기').length).toBeGreaterThan(0)
+    expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/reject'))).toBe(true)
+    expect(screen.queryByText('반려됨')).not.toBeInTheDocument()
   })
 
   it('opens and closes the more menu', async () => {
@@ -445,50 +429,37 @@ describe('CaseDetailPage', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  it('blocks completion until approved, then completes via the external completion overlay', async () => {
+  it('records evidence and completes through the API when the server Task is approved', async () => {
     const user = userEvent.setup()
-    mockTaskAndActivities()
+    mockTaskAndActivities({
+      status: 'APPROVED',
+      checklist_items: [
+        { checklist_item_id: 'chk-1', item_code: 'passport', label: '여권 사본 확인', required: true, completed: true, completed_by: null, completed_at: null, version: 1 },
+      ],
+    })
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
-    expect(screen.queryByRole('button', { name: '완료 처리 시작 →' })).not.toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: '데모: 승인자로 검토' }))
-    await user.click(screen.getByRole('button', { name: '승인' }))
-
-    await user.click(screen.getByRole('button', { name: '완료 처리 시작 →' }))
+    await user.click(await screen.findByRole('button', { name: '완료 처리 시작 →' }))
     expect(screen.getByRole('dialog', { name: '외부기관 업무 완료' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '접수번호' }))
     await user.type(screen.getByPlaceholderText('접수번호를 입력하세요'), 'HI-2026-0718-032')
     await user.click(screen.getByLabelText('실제 제출은 담당자가 직접 수행했습니다.'))
-    await user.click(screen.getByRole('button', { name: '완료 처리' }))
+    await user.click(within(screen.getByRole('dialog', { name: '외부기관 업무 완료' })).getByRole('button', { name: '완료 처리' }))
 
-    expect(screen.getByText('완료 처리했습니다.')).toBeInTheDocument()
-    expect(screen.getByText('완료 처리되었습니다.')).toBeInTheDocument()
-  })
-
-  it('opens the internal completion demo overlay independent of approval state', async () => {
-    const user = userEvent.setup()
-    mockTaskAndActivities()
-    renderPage()
-    await screen.findByText('응웬반A 체류연장 준비')
-
-    await user.click(screen.getByRole('button', { name: '데모: 내부업무 완료 보기' }))
-    expect(screen.getByRole('dialog', { name: '일반 내부업무 완료' })).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: '파일 없이 완료' }))
-
-    expect(screen.getByText('(데모) 내부업무를 완료 처리했습니다.')).toBeInTheDocument()
+    expect(screen.getByText('업무를 완료했습니다.')).toBeInTheDocument()
+    expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/evidence'))).toBe(true)
+    expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/complete'))).toBe(true)
   })
 
   it('reissues the security link and shows the new-link overlay', async () => {
     const user = userEvent.setup()
-    mockTaskAndActivities()
+    mockTaskAndActivities({ status: 'APPROVED' })
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
-    await user.click(screen.getByRole('button', { name: '보안 링크 재발급 →' }))
+    await user.click(screen.getByRole('button', { name: '근로자 보안 링크 발급·재발급 →' }))
     const reissueDialog = screen.getByRole('dialog', { name: '보안 링크 재발급' })
     expect(within(reissueDialog).getByText('응웬반A 체류연장 준비')).toBeInTheDocument()
 

@@ -399,6 +399,12 @@
   gap: 10px;
 }
 
+@media (max-width: 480px) {
+  .previewMetricRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 .previewMetric {
   padding: 14px 10px;
   background: var(--fowoco-teal-50);

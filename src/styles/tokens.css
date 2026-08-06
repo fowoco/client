@@ -1,34 +1,34 @@
 :root {
-  --brand-primary: #2dd4bf;
-  --brand-primary-hover: #5eead4;
-  --brand-dark: #0a0d0e;
-  --brand-dark-elevated: #12171a;
-  --brand-dark-border: rgba(255, 255, 255, 0.08);
+  --brand-primary: #4361ee;
+  --brand-primary-hover: #3651d4;
+  --brand-dark: #fafafb;
+  --brand-dark-elevated: #f1f2f5;
+  --brand-dark-border: #ebecef;
 
-  --surface-page: #0b0f11;
-  --surface-default: #14191c;
-  --surface-subtle: #1b2124;
-  --border-default: #262d30;
-  --border-strong: #384044;
+  --surface-page: #ffffff;
+  --surface-default: #ffffff;
+  --surface-subtle: #f5f6f8;
+  --border-default: #eceef1;
+  --border-strong: #d7dae0;
 
-  --text-primary: #f3f5f6;
-  --text-secondary: #8f9ba0;
+  --text-primary: #0a0a0a;
+  --text-secondary: #6b7280;
 
   --fowoco-white: #fff;
-  --fowoco-teal-50: rgba(45, 212, 191, 0.12);
-  --fowoco-teal-100: rgba(45, 212, 191, 0.22);
-  --fowoco-violet-50: rgba(167, 139, 250, 0.14);
-  --fowoco-violet-600: #a78bfa;
-  --fowoco-red-50: rgba(248, 113, 113, 0.14);
-  --fowoco-red-600: #f87171;
-  --fowoco-amber-50: rgba(251, 191, 36, 0.14);
-  --fowoco-amber-600: #fbbf24;
-  --fowoco-green-50: rgba(52, 211, 153, 0.14);
-  --fowoco-green-600: #34d399;
+  --fowoco-teal-50: #eaefff;
+  --fowoco-teal-100: #d7e0ff;
+  --fowoco-violet-50: #f2effe;
+  --fowoco-violet-600: #7a5cd6;
+  --fowoco-red-50: #fdedee;
+  --fowoco-red-600: #d8434a;
+  --fowoco-amber-50: #fdf3e3;
+  --fowoco-amber-600: #c9821c;
+  --fowoco-green-50: #e9f6ee;
+  --fowoco-green-600: #1f8a51;
 
-  --status-critical: #f87171;
-  --status-warning: #fbbf24;
-  --status-info: #60a5fa;
+  --status-critical: #d8434a;
+  --status-warning: #c9821c;
+  --status-info: #4361ee;
 
   --fowoco-spacing-4: 4px;
   --fowoco-spacing-8: 8px;
@@ -39,15 +39,15 @@
 
   --fowoco-radius-4: 4px;
   --fowoco-radius-6: 6px;
-  --fowoco-radius-8: 8px;
-  --fowoco-radius-10: 10px;
-  --fowoco-radius-14: 14px;
+  --fowoco-radius-8: 6px;
+  --fowoco-radius-10: 6px;
+  --fowoco-radius-14: 8px;
   --fowoco-radius-999: 999px;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.55);
-  --shadow-focus: 0 0 0 3px rgba(45, 212, 191, 0.28);
+  --shadow-sm: 0 1px 3px rgba(10, 10, 10, 0.06), 0 1px 2px rgba(10, 10, 10, 0.04);
+  --shadow-md: 0 8px 20px rgba(10, 10, 10, 0.08), 0 2px 6px rgba(10, 10, 10, 0.05);
+  --shadow-lg: 0 24px 56px rgba(10, 10, 10, 0.14), 0 8px 20px rgba(10, 10, 10, 0.08);
+  --shadow-focus: 0 0 0 3px rgba(67, 97, 238, 0.22);
 
   --fowoco-motion-fast: 120ms;
   --fowoco-motion-base: 200ms;

@@ -42,52 +42,46 @@ export function AppLayout() {
 
   return (
     <div className={styles.shell}>
-      <aside className={styles.sidebar}>
-        <p className={styles.brand}>FOWOCO</p>
-        <p className={styles.kicker}>OPERATIONS</p>
+      <header className={styles.topBar}>
+        <div className={styles.topBarBrandGroup}>
+          <span className={styles.brand}>FOWOCO</span>
+          <nav className={styles.nav} aria-label="주요 메뉴">
+            {NAV_ITEMS.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  `${styles.navLink} ${isActive ? styles.navLinkActive : ''}`
+                }
+              >
+                <img src={item.iconSrc} alt="" className={styles.navIcon} aria-hidden="true" />
+                <span>{item.label}</span>
+              </NavLink>
+            ))}
+          </nav>
+        </div>
 
-        <nav className={styles.nav} aria-label="주요 메뉴">
-          {NAV_ITEMS.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `${styles.navLink} ${isActive ? styles.navLinkActive : ''}`
-              }
-            >
-              <img src={item.iconSrc} alt="" className={styles.navIcon} aria-hidden="true" />
-              <span>{item.label}</span>
-            </NavLink>
-          ))}
-        </nav>
+        {isTaskDetail && (
+          <Link to="/tasks" className={styles.topBarBack}>
+            ← 업무함
+          </Link>
+        )}
 
-        <div className={styles.sidebarFooter}>
+        <div className={styles.topBarActions}>
           <button type="button" className={styles.help} onClick={() => setHelpOpen(true)}>
             ? 도움말
           </button>
+          <HeaderActions user={user} onLogout={handleLogout} />
         </div>
-      </aside>
+      </header>
 
-      <div className={styles.main}>
-        <header className={styles.topBar}>
-          {isTaskDetail && (
-            <Link to="/tasks" className={styles.topBarBack}>
-              ← 업무함
-            </Link>
-          )}
-          <div className={styles.topBarActions}>
-            <HeaderActions user={user} onLogout={handleLogout} />
-          </div>
-        </header>
-
-        <main
-          className={`${styles.content} ${isWorkInbox ? styles.contentWorkInbox : ''} ${
-            isDashboard ? styles.contentDashboard : ''
-          }`}
-        >
-          <RouteTransition />
-        </main>
-      </div>
+      <main
+        className={`${styles.content} ${isWorkInbox ? styles.contentWorkInbox : ''} ${
+          isDashboard ? styles.contentDashboard : ''
+        }`}
+      >
+        <RouteTransition />
+      </main>
 
       <HelpModal
         open={helpOpen}

@@ -1,8 +1,8 @@
+import type { CaseDisplayStatus, CaseTaskResponse } from '../../api/cases'
 import type { TaskStatus } from '../../api/tasks'
 import type { StatusTone } from '../../components/ui/StatusLabel/StatusLabel'
 import { TASK_STATUS_LABEL, TASK_STATUS_TONE, TASK_TYPE_LABEL } from '../../utils/taskStatus'
 import { getOperationalDateViewModel } from '../../view-models/dateViewModel'
-import type { WorkInboxTask } from './workInboxModel'
 
 const REVIEW_ACTION_LABEL: Record<TaskStatus, string> = {
   DRAFT: '초안 검토',
@@ -26,6 +26,23 @@ const DECISION_SUMMARY: Record<TaskStatus, string> = {
   CANCELLED: '취소된 업무입니다. 상세 화면에서 사유를 확인해 주세요.',
 }
 
+// fowoco/server CaseDisplayStatus(#88) -> 화면 표시 매핑.
+const CASE_DISPLAY_STATUS_LABEL: Record<CaseDisplayStatus, string> = {
+  DOCUMENT_PENDING: '서류 대기',
+  REQUEST_SENT: '요청 전송',
+  REVIEW_REQUIRED: '검토 필요',
+  COMPLETED: '완료',
+  CANCELLED: '취소',
+}
+
+const CASE_DISPLAY_STATUS_TONE: Record<CaseDisplayStatus, StatusTone> = {
+  DOCUMENT_PENDING: 'neutral',
+  REQUEST_SENT: 'warning',
+  REVIEW_REQUIRED: 'critical',
+  COMPLETED: 'success',
+  CANCELLED: 'neutral',
+}
+
 export interface DuePresentation {
   label: string
   tone: StatusTone
@@ -36,21 +53,18 @@ export function getDuePresentation(dueDate: string | null): DuePresentation {
   return { label: due.relative ?? '기한 미정', tone: due.tone }
 }
 
+export function getCaseDisplayStatusPresentation(status: CaseDisplayStatus): {
+  label: string
+  tone: StatusTone
+} {
+  return { label: CASE_DISPLAY_STATUS_LABEL[status], tone: CASE_DISPLAY_STATUS_TONE[status] }
+}
+
 export function getTaskStatusPresentation(status: TaskStatus): {
   label: string
   tone: StatusTone
 } {
-  const workInboxLabel: Partial<Record<TaskStatus, string>> = {
-    DRAFT: '서류 대기',
-    NEEDS_INFO: '처리 필요',
-    READY_FOR_REVIEW: '승인 대기',
-    WAITING_WORKER: '요청 전송',
-  }
-
-  return {
-    label: workInboxLabel[status] ?? TASK_STATUS_LABEL[status],
-    tone: TASK_STATUS_TONE[status],
-  }
+  return { label: TASK_STATUS_LABEL[status], tone: TASK_STATUS_TONE[status] }
 }
 
 export function getReviewActionLabel(status: TaskStatus): string {
@@ -61,11 +75,11 @@ export function getDecisionSummary(status: TaskStatus): string {
   return DECISION_SUMMARY[status]
 }
 
-export function getWorkflowLabel(item: WorkInboxTask): string {
-  return item.workflowName ?? TASK_TYPE_LABEL[item.task.task_type]
+export function getWorkflowLabel(task: CaseTaskResponse): string {
+  return TASK_TYPE_LABEL[task.task_type]
 }
 
-export function isReviewTask(status: TaskStatus): boolean {
+export function isReviewCase(status: CaseDisplayStatus): boolean {
   return status !== 'COMPLETED' && status !== 'CANCELLED'
 }
 

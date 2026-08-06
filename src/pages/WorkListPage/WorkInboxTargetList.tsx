@@ -25,7 +25,7 @@ export function WorkInboxTargetList({
   function moveSelection(event: KeyboardEvent<HTMLDivElement>, currentIndex: number) {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault()
-      onSelect(groups[currentIndex].worker.worker_id)
+      onSelect(groups[currentIndex].workerId)
       return
     }
 
@@ -39,8 +39,8 @@ export function WorkInboxTargetList({
     event.preventDefault()
     const nextGroup = groups[nextIndex]
     if (!nextGroup) return
-    onSelect(nextGroup.worker.worker_id)
-    optionRefs.current.get(nextGroup.worker.worker_id)?.focus()
+    onSelect(nextGroup.workerId)
+    optionRefs.current.get(nextGroup.workerId)?.focus()
   }
 
   return (
@@ -55,27 +55,27 @@ export function WorkInboxTargetList({
 
       <div className={styles.targetList} role="listbox" aria-label="업무 대상 근로자">
         {groups.map((group, index) => {
-          const task = group.primaryTask
-          const due = getDuePresentation(task.task.due_date)
-          const reviewStage = getReviewStageLink(task.task.status)
-          const selected = group.worker.worker_id === selectedWorkerId
+          const currentTask = group.primaryCase.current_task
+          const due = getDuePresentation(currentTask?.due_date ?? group.primaryCase.due_date)
+          const reviewStage = getReviewStageLink(currentTask?.status ?? 'DRAFT')
+          const selected = group.workerId === selectedWorkerId
 
           return (
             <div
-              key={group.worker.worker_id}
+              key={group.workerId}
               ref={(node) => {
-                if (node) optionRefs.current.set(group.worker.worker_id, node)
-                else optionRefs.current.delete(group.worker.worker_id)
+                if (node) optionRefs.current.set(group.workerId, node)
+                else optionRefs.current.delete(group.workerId)
               }}
               role="option"
               aria-selected={selected}
               tabIndex={selected ? 0 : -1}
               className={`${styles.targetOption} ${selected ? styles.targetOptionSelected : ''}`}
-              onClick={() => onSelect(group.worker.worker_id)}
+              onClick={() => onSelect(group.workerId)}
               onKeyDown={(event) => moveSelection(event, index)}
             >
               <span className={styles.targetOptionTop}>
-                <span className={styles.targetName}>{group.worker.display_name}</span>
+                <span className={styles.targetName}>{group.workerDisplayName}</span>
                 <Link
                   to={reviewStage.href}
                   className={`${statusLabelStyles.label} ${statusLabelStyles[reviewStage.tone]}`}
@@ -85,7 +85,7 @@ export function WorkInboxTargetList({
                 </Link>
               </span>
               <span className={styles.targetMeta}>
-                {getWorkflowLabel(task)} · {due.label}
+                {currentTask ? getWorkflowLabel(currentTask) : group.primaryCase.title} · {due.label}
               </span>
             </div>
           )

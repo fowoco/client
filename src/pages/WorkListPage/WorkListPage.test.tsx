@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { TaskPageResponse, TaskSummaryResponse } from '../../api/tasks'
+import type { CasePageResponse, CaseSummaryResponse, CaseTaskResponse } from '../../api/cases'
 import type { WorkerPageResponse, WorkerResponse } from '../../api/workers'
 import { ToastViewport } from '../../components/ui/ToastViewport/ToastViewport'
 import { useToastStore } from '../../store/toastStore'
@@ -39,25 +39,33 @@ function worker(
   }
 }
 
-function task(
-  taskId: string,
-  workerId: string,
-  overrides: Partial<TaskSummaryResponse> = {},
-): TaskSummaryResponse {
+function currentTask(overrides: Partial<CaseTaskResponse> & { task_id: string }): CaseTaskResponse {
   return {
-    task_id: taskId,
-    worker_id: workerId,
-    case_id: null,
     task_type: 'STAY_PERIOD_EXTENSION',
-    workflow_id: 'wf-stay-extension',
-    workflow_catalog_version: '1',
-    title: `업무 ${taskId}`,
-    source: 'MANUAL',
+    title: `업무 ${overrides.task_id}`,
     status: 'DRAFT',
     due_date: null,
-    content_revision: 1,
-    version: 1,
-    created_at: '2026-01-01T00:00:00Z',
+    ...overrides,
+  }
+}
+
+function caseSummary(
+  caseId: string,
+  workerId: string,
+  workerDisplayName: string,
+  overrides: Partial<CaseSummaryResponse> = {},
+): CaseSummaryResponse {
+  return {
+    case_id: caseId,
+    worker_id: workerId,
+    worker_display_name: workerDisplayName,
+    title: `Case ${caseId}`,
+    display_status: 'REVIEW_REQUIRED',
+    has_unread_response: false,
+    priority: 'NORMAL',
+    progress: { completed_steps: 0, total_steps: 1, percentage: 0 },
+    due_date: null,
+    current_task: null,
     updated_at: '2026-01-01T00:00:00Z',
     ...overrides,
   }
@@ -68,26 +76,33 @@ const WORKERS = [
   worker('W-2', '파티마 누르', { nationality_code: 'ID' }),
 ]
 
-const TASKS = [
-  task('T-1', 'W-1', {
-    case_id: 'CASE-1',
-    title: '체류연장 업무 초안',
-    status: 'READY_FOR_REVIEW',
+const CASES = [
+  caseSummary('CASE-1', 'W-1', '응우옌 안', {
+    title: '체류기간 연장',
+    display_status: 'REVIEW_REQUIRED',
+    priority: 'HIGH',
+    progress: { completed_steps: 1, total_steps: 2, percentage: 50 },
     due_date: isoDateOffset(5),
+    current_task: currentTask({
+      task_id: 'T-1',
+      title: '체류연장 업무 초안',
+      status: 'READY_FOR_REVIEW',
+      due_date: isoDateOffset(5),
+    }),
   }),
-  task('T-2', 'W-1', {
-    case_id: 'CASE-1',
-    title: '여권 만료일 확인',
-    status: 'COMPLETED',
-    due_date: isoDateOffset(12),
-  }),
-  task('T-3', 'W-2', {
-    case_id: 'CASE-2',
-    workflow_id: 'wf-contract',
-    task_type: 'RECONTRACT',
+  caseSummary('CASE-2', 'W-2', '파티마 누르', {
     title: '표준근로계약서 갱신',
-    status: 'DRAFT',
+    display_status: 'DOCUMENT_PENDING',
+    priority: 'NORMAL',
+    progress: { completed_steps: 0, total_steps: 1, percentage: 0 },
     due_date: isoDateOffset(1),
+    current_task: currentTask({
+      task_id: 'T-3',
+      task_type: 'RECONTRACT',
+      title: '표준근로계약서 갱신',
+      status: 'DRAFT',
+      due_date: isoDateOffset(1),
+    }),
   }),
 ]
 
@@ -126,10 +141,7 @@ function workerPageResponse(
   }
 }
 
-function taskPageResponse(
-  items: TaskSummaryResponse[],
-  totalElements = items.length,
-): TaskPageResponse {
+function casePageResponse(items: CaseSummaryResponse[], totalElements = items.length): CasePageResponse {
   return {
     items,
     page: 0,
@@ -139,44 +151,9 @@ function taskPageResponse(
   }
 }
 
-function catalogResponse() {
-  return {
-    bundle_id: 'b-1',
-    bundle_version: '1',
-    bundle_status: 'ACTIVE',
-    source_repository: 'fowoco/knowledge',
-    generated_at: '2026-07-01T00:00:00Z',
-    workflows: [
-      {
-        workflow_id: 'wf-stay-extension',
-        name: '체류기간 연장',
-        intent: '',
-        sensitivity: 'normal',
-        supported_task_types: ['STAY_PERIOD_EXTENSION'],
-        required_slots: [],
-        checklist_items: [],
-        completion_evidence: [],
-        source_ids: [],
-      },
-      {
-        workflow_id: 'wf-contract',
-        name: 'Contract Review',
-        intent: '',
-        sensitivity: 'normal',
-        supported_task_types: ['RECONTRACT'],
-        required_slots: [],
-        checklist_items: [],
-        completion_evidence: [],
-        source_ids: [],
-      },
-    ],
-  }
-}
-
 interface MockApiOptions {
   workers?: WorkerPageResponse | Response
-  tasks?: TaskPageResponse | Response
-  catalog?: ReturnType<typeof catalogResponse> | Response
+  cases?: CasePageResponse | Response
 }
 
 function mockApi(options: MockApiOptions = {}) {
@@ -186,11 +163,7 @@ function mockApi(options: MockApiOptions = {}) {
       const value = options.workers ?? workerPageResponse(WORKERS)
       return Promise.resolve(value instanceof Response ? value : jsonResponse(value))
     }
-    if (url.includes('/workflow-catalogs')) {
-      const value = options.catalog ?? catalogResponse()
-      return Promise.resolve(value instanceof Response ? value : jsonResponse(value))
-    }
-    const value = options.tasks ?? taskPageResponse(TASKS)
+    const value = options.cases ?? casePageResponse(CASES)
     return Promise.resolve(value instanceof Response ? value : jsonResponse(value))
   })
 }
@@ -237,7 +210,7 @@ afterEach(() => {
 })
 
 describe('WorkListPage', () => {
-  it('joins workers and tasks into a selected master-detail view without N+1 requests', async () => {
+  it('joins case and worker data into a selected master-detail view', async () => {
     mockApi()
     renderPage()
 
@@ -247,14 +220,13 @@ describe('WorkListPage', () => {
     ).toBeInTheDocument()
     expect(screen.getByText('1/2')).toBeInTheDocument()
     expect(
-      screen.getByRole('progressbar', { name: /체류연장 업무 초안 Case 진행률/ }),
+      screen.getByRole('progressbar', { name: /체류기간 연장 Case 진행률/ }),
     ).toHaveAttribute('value', '1')
 
     const calledUrls = vi.mocked(fetch).mock.calls.map(([url]) => String(url))
-    expect(calledUrls).toHaveLength(3)
+    expect(calledUrls).toHaveLength(2)
     expect(calledUrls.some((url) => url.includes('/workers?'))).toBe(true)
-    expect(calledUrls.some((url) => url.includes('/tasks?'))).toBe(true)
-    expect(calledUrls.some((url) => url.includes('/workflow-catalogs'))).toBe(true)
+    expect(calledUrls.some((url) => url.includes('/cases?'))).toBe(true)
     expect(calledUrls.some((url) => /\/tasks\/T-/.test(url))).toBe(false)
   })
 
@@ -284,29 +256,25 @@ describe('WorkListPage', () => {
     )
   })
 
-  it('searches worker, task, workflow, and case fields in the loaded data', async () => {
+  it('searches worker and case fields in the loaded data without re-fetching', async () => {
     mockApi()
     const user = userEvent.setup()
     renderPage()
 
     const search = await screen.findByLabelText('근로자·업무 건·지금 할 일 검색')
-    await user.type(search, 'Contract Review')
+    await user.type(search, '표준근로계약서')
 
     await waitFor(() => {
       expect(screen.getByRole('option', { name: /파티마 누르/ })).toBeInTheDocument()
       expect(screen.queryByRole('option', { name: /응우옌 안/ })).not.toBeInTheDocument()
     })
 
-    const taskUrls = vi
+    const caseUrls = vi
       .mocked(fetch)
       .mock.calls.map(([url]) => String(url))
-      .filter((url) => url.includes('/tasks?'))
-    expect(taskUrls).toHaveLength(1)
-    expect(taskUrls[0]).not.toContain('keyword=')
-
-    await user.clear(search)
-    await user.type(search, 'CASE-1')
-    expect(await screen.findByRole('option', { name: /응우옌 안/ })).toBeInTheDocument()
+      .filter((url) => url.includes('/cases?'))
+    expect(caseUrls).toHaveLength(1)
+    expect(caseUrls[0]).not.toContain('keyword=')
   })
 
   it('sorts workers by due date when requested', async () => {
@@ -333,36 +301,24 @@ describe('WorkListPage', () => {
     expect(screen.queryByText('업무 상세 CASE-1')).not.toBeInTheDocument()
   })
 
-  it('keeps the worker list visible when the Task API fails and retries only tasks', async () => {
-    mockApi({ tasks: errorResponse('/api/v1/tasks') })
-    const user = userEvent.setup()
+  it('shows a blocking error when the Case API fails', async () => {
+    mockApi({ cases: errorResponse('/api/v1/cases') })
     renderPage()
 
-    expect(await screen.findByRole('option', { name: /응우옌 안/ })).toBeInTheDocument()
-    expect(screen.getByText('연결된 업무를 불러오지 못했습니다')).toBeInTheDocument()
-
-    const beforeRetry = vi
-      .mocked(fetch)
-      .mock.calls.filter(([url]) => String(url).includes('/tasks?')).length
-    await user.click(screen.getByRole('button', { name: '다시 시도' }))
-    await waitFor(() => {
-      const afterRetry = vi
-        .mocked(fetch)
-        .mock.calls.filter(([url]) => String(url).includes('/tasks?')).length
-      expect(afterRetry).toBeGreaterThan(beforeRetry)
-    })
-  })
-
-  it('shows a blocking error when the Worker API fails', async () => {
-    mockApi({ workers: errorResponse('/api/v1/workers') })
-    renderPage()
-
-    expect(await screen.findByText('근로자 정보를 불러오지 못했습니다')).toBeInTheDocument()
+    expect(await screen.findByText('업무 정보를 불러오지 못했습니다')).toBeInTheDocument()
     expect(screen.queryByRole('listbox', { name: '업무 대상 근로자' })).not.toBeInTheDocument()
   })
 
-  it('shows the empty work state and create action when there are no tasks', async () => {
-    mockApi({ tasks: taskPageResponse([]) })
+  it('still shows the case list when the Worker API fails, with a fallback meta line', async () => {
+    mockApi({ workers: errorResponse('/api/v1/workers') })
+    renderPage()
+
+    expect(await screen.findByRole('heading', { name: '응우옌 안', level: 2 })).toBeInTheDocument()
+    expect(screen.getByText('근무 정보 확인 필요')).toBeInTheDocument()
+  })
+
+  it('shows the empty work state and create action when there are no cases', async () => {
+    mockApi({ cases: casePageResponse([]) })
     const user = userEvent.setup()
     renderPage()
 
@@ -371,24 +327,8 @@ describe('WorkListPage', () => {
     expect(await screen.findByText('업무 생성')).toBeInTheDocument()
   })
 
-  it('falls back to task type labels if the workflow catalog fails', async () => {
-    mockApi({ catalog: errorResponse('/api/v1/workflow-catalogs') })
-    renderPage()
-
-    expect(
-      await screen.findByText('업무 분류 이름을 불러오지 못해 업무 유형으로 표시합니다.'),
-    ).toBeInTheDocument()
-    expect(screen.getAllByText(/체류기간 연장/).length).toBeGreaterThan(0)
-  })
-
-  it('discloses pagination caps and hides unresolved worker references', async () => {
-    mockApi({
-      workers: workerPageResponse(WORKERS, 120),
-      tasks: taskPageResponse(
-        [...TASKS, task('T-orphan', 'W-missing', { title: '연결 오류 업무' })],
-        140,
-      ),
-    })
+  it('discloses pagination caps when only part of the case list has loaded', async () => {
+    mockApi({ cases: casePageResponse(CASES, 140) })
     renderPage()
 
     expect(
@@ -396,10 +336,6 @@ describe('WorkListPage', () => {
         '일부 데이터만 불러왔습니다. 검색·정렬·진행률은 현재 불러온 범위 기준입니다.',
       ),
     ).toBeInTheDocument()
-    expect(
-      screen.getByText('근로자 정보를 확인할 수 없는 업무 1건은 목록에서 제외했습니다.'),
-    ).toBeInTheDocument()
-    expect(screen.queryByText('연결 오류 업무')).not.toBeInTheDocument()
   })
 
   it('shows a dedicated empty state when unified search has no matches', async () => {
@@ -417,13 +353,18 @@ describe('WorkListPage', () => {
 
   it('switches between a worker\'s cases via "다른 Case 열기"', async () => {
     mockApi({
-      tasks: taskPageResponse([
-        ...TASKS,
-        task('T-4', 'W-1', {
-          case_id: 'CASE-3',
-          title: '근로자 안내문 초안',
-          status: 'DRAFT',
+      cases: casePageResponse([
+        ...CASES,
+        caseSummary('CASE-3', 'W-1', '응우옌 안', {
+          title: '근로자 안내문 준비',
+          priority: 'LOW',
           due_date: isoDateOffset(20),
+          current_task: currentTask({
+            task_id: 'T-4',
+            title: '근로자 안내문 초안',
+            status: 'DRAFT',
+            due_date: isoDateOffset(20),
+          }),
         }),
       ]),
     })
@@ -450,7 +391,7 @@ describe('WorkListPage', () => {
     const user = userEvent.setup()
     renderPage()
 
-    // T-1 (응우옌 안의 우선 업무 건)은 READY_FOR_REVIEW 상태 -> 04 최종 검토로 라벨링된다.
+    // CASE-1의 current_task는 READY_FOR_REVIEW 상태 -> 04 최종 검토로 라벨링된다.
     const option = await screen.findByRole('option', { name: /응우옌 안/ })
     const stageLink = within(option).getByRole('link', { name: '최종 검토' })
     expect(stageLink).toHaveAttribute('href', '/tasks/new/review?step=3')

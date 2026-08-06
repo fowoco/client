@@ -6,6 +6,7 @@ import { getErrorMessage } from '../../api/errors'
 import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
+import { WorkerFormModal } from '../../components/worker/WorkerFormModal'
 import { useApiQuery } from '../../hooks/useApiQuery'
 import { getDocumentViewModel } from '../../view-models/documentViewModel'
 import { getOperationalDateViewModel } from '../../view-models/dateViewModel'
@@ -28,6 +29,7 @@ export function WorkerDetailPage() {
   const workerDocuments = documentPage?.items ?? []
 
   const [registerModalOpen, setRegisterModalOpen] = useState(false)
+  const [editModalOpen, setEditModalOpen] = useState(false)
 
   if (status === 'loading') {
     return (
@@ -79,7 +81,12 @@ export function WorkerDetailPage() {
       </p>
 
       <div className={styles.sectionCard}>
-        <h2 className={styles.cardTitle}>기본정보</h2>
+        <div className={styles.cardHeaderRow}>
+          <h2 className={styles.cardTitle}>기본정보</h2>
+          <button type="button" className={styles.cardHeaderButton} onClick={() => setEditModalOpen(true)}>
+            정보 수정
+          </button>
+        </div>
         <DetailRow label="국적" value={worker.nationality_code} />
         <DetailRow label="비자 유형" value={VISA_TYPE} />
         {/* TODO(#48): worker_sensitive_data API 연동 후 사번·연락처 표시 */}
@@ -99,7 +106,7 @@ export function WorkerDetailPage() {
           <h2 className={styles.cardTitle}>서류</h2>
           <button
             type="button"
-            className={styles.registerDocumentButton}
+            className={styles.cardHeaderButton}
             onClick={() => setRegisterModalOpen(true)}
           >
             ＋ 서류 등록
@@ -140,6 +147,14 @@ export function WorkerDetailPage() {
         workerId={worker.worker_id}
         onClose={() => setRegisterModalOpen(false)}
         onRegistered={refetchDocuments}
+      />
+
+      <WorkerFormModal
+        open={editModalOpen}
+        mode="edit"
+        worker={worker}
+        onClose={() => setEditModalOpen(false)}
+        onSaved={refetch}
       />
     </div>
   )

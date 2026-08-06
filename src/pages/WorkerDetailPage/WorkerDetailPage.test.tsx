@@ -215,4 +215,40 @@ describe('WorkerDetailPage', () => {
     expect(calls.some((c) => c.url.includes('/workers/W-018/documents') && c.method === 'POST')).toBe(true)
     expect(calls.some((c) => c.url.includes('/documents/D-2') && c.method === 'PATCH')).toBe(true)
   })
+
+  it('edits worker info and refreshes the detail panel', async () => {
+    const user = userEvent.setup()
+    const calls: { url: string; method: string; body: string | undefined }[] = []
+    let workerGetCount = 0
+    vi.mocked(fetch).mockImplementation((input, init) => {
+      const url = String(input)
+      const method = init?.method ?? 'GET'
+      calls.push({ url, method, body: init?.body as string | undefined })
+      if (url.includes('/documents')) {
+        return Promise.resolve(jsonResponse({ items: [], page: 0, size: 100, total_elements: 0 }))
+      }
+      if (url.includes('/workers/W-018') && method === 'PATCH') {
+        return Promise.resolve(jsonResponse(worker({ display_name: '쩐티B(수정)', version: 2 })))
+      }
+      workerGetCount += 1
+      return Promise.resolve(
+        jsonResponse(worker(workerGetCount === 1 ? {} : { display_name: '쩐티B(수정)', version: 2 })),
+      )
+    })
+    renderPage('W-018')
+    await screen.findByRole('heading', { name: '쩐티B' })
+
+    await user.click(screen.getByRole('button', { name: '정보 수정' }))
+    expect(screen.getByRole('dialog', { name: '근로자 정보 수정' })).toBeInTheDocument()
+
+    const nameInput = screen.getByDisplayValue('쩐티B')
+    await user.clear(nameInput)
+    await user.type(nameInput, '쩐티B(수정)')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    expect(await screen.findByRole('heading', { name: '쩐티B(수정)' })).toBeInTheDocument()
+    const patchCall = calls.find((c) => c.url.includes('/workers/W-018') && c.method === 'PATCH')
+    expect(patchCall).toBeDefined()
+    expect(JSON.parse(patchCall!.body!)).toMatchObject({ display_name: '쩐티B(수정)', expected_version: 1 })
+  })
 })

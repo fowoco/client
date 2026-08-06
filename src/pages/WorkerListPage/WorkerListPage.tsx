@@ -5,6 +5,7 @@ import { getErrorMessage } from '../../api/errors'
 import { fetchTasks, type TaskSummaryResponse } from '../../api/tasks'
 import { fetchWorkers, type WorkerResponse } from '../../api/workers'
 import { Button } from '../../components/ui/Button/Button'
+import { WorkerFormModal } from '../../components/worker/WorkerFormModal'
 import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
 import { Dropdown } from '../../components/ui/Dropdown/Dropdown'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
@@ -86,6 +87,7 @@ export function WorkerListPage() {
   const [deadlineFilter, setDeadlineFilter] = useState('90')
   const [statusFilter, setStatusFilter] = useState<WorkerStatusFilter>('all')
   const [showAll, setShowAll] = useState(false)
+  const [registerModalOpen, setRegisterModalOpen] = useState(false)
   const debouncedQuery = useDebouncedValue(query)
 
   // 서버 GET /api/v1/workers에는 자유 텍스트 검색 파라미터가 없어, 한 페이지(최대 100건)를
@@ -161,6 +163,11 @@ export function WorkerListPage() {
     navigate(`/workers/${selectedRow.worker.worker_id}/detail`)
   }
 
+  function handleWorkerRegistered(worker: WorkerResponse) {
+    refetch()
+    navigate({ pathname: `/workers/${worker.worker_id}`, search: location.search })
+  }
+
   return (
     <div>
       <h1 className={styles.headline}>체류·서류 확인이 필요한 근로자 {visibleRows.length}명</h1>
@@ -182,6 +189,7 @@ export function WorkerListPage() {
           onChange={setDeadlineFilter}
           ariaLabel="기한 필터"
         />
+        <Button onClick={() => setRegisterModalOpen(true)}>＋ 근로자 등록</Button>
         <span className={styles.maskingNote}>개인정보 마스킹 켜짐</span>
       </div>
 
@@ -367,6 +375,13 @@ export function WorkerListPage() {
           </div>
         </div>
       )}
+
+      <WorkerFormModal
+        open={registerModalOpen}
+        mode="create"
+        onClose={() => setRegisterModalOpen(false)}
+        onSaved={handleWorkerRegistered}
+      />
     </div>
   )
 }

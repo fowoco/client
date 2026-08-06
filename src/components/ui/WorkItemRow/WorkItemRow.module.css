@@ -7,7 +7,8 @@
   padding: 8px var(--fowoco-spacing-20);
   background: var(--surface-default);
   border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-8);
+  border-radius: var(--fowoco-radius-10);
+  box-shadow: var(--shadow-sm);
   text-align: left;
   cursor: pointer;
   transition:
@@ -17,12 +18,12 @@
 
 .row:hover {
   border-color: var(--brand-primary);
-  box-shadow: 0 1px 2px rgba(7, 132, 127, 0.12);
+  box-shadow: var(--shadow-md);
 }
 
 .row:focus-visible {
-  outline: 2px solid var(--brand-primary);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--shadow-focus);
 }
 
 @media (max-width: 720px) {
@@ -48,7 +49,7 @@
 }
 
 .railInfo {
-  background: #3976d3;
+  background: var(--status-info);
 }
 
 .railNeutral {

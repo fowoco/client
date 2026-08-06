@@ -15,13 +15,14 @@
 }
 
 .sidebar {
-  flex: 0 0 208px;
+  flex: 0 0 224px;
   display: flex;
   flex-direction: column;
   padding: 28px 20px 22px;
   overflow-y: auto;
   background: var(--brand-dark);
   color: var(--fowoco-white);
+  border-right: 1px solid var(--brand-dark-border);
 }
 
 @media (max-width: 768px) {
@@ -73,7 +74,7 @@
   gap: 12px;
   height: 44px;
   padding: 0 16px;
-  border-radius: var(--fowoco-radius-6);
+  border-radius: var(--fowoco-radius-8);
   font-size: 14px;
   color: var(--fowoco-teal-100);
   text-decoration: none;
@@ -94,7 +95,7 @@
 }
 
 .navLinkActive {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--brand-dark-elevated);
   color: var(--fowoco-white);
   font-weight: 500;
 }
@@ -151,7 +152,9 @@
   min-height: 64px;
   padding: 12px 32px;
   background: var(--surface-default);
-  border-bottom: 1px solid var(--border-default);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  z-index: 1;
 }
 
 .topBarBack {
@@ -174,7 +177,7 @@
 .content {
   flex: 1;
   min-height: 0;
-  padding: 32px 40px;
+  padding: 36px 48px;
   overflow-y: auto;
 }
 

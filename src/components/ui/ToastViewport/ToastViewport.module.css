@@ -18,8 +18,8 @@
   padding: 12px 16px;
   background: var(--brand-dark);
   color: var(--fowoco-white);
-  border-radius: var(--fowoco-radius-8);
-  box-shadow: 0 8px 24px rgba(7, 132, 127, 0.24);
+  border-radius: var(--fowoco-radius-10);
+  box-shadow: var(--shadow-lg);
   font-size: 13px;
   font-weight: 500;
   animation: rise var(--fowoco-motion-base) var(--fowoco-easing-decelerate);

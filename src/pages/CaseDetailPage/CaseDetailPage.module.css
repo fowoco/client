@@ -27,8 +27,8 @@
   list-style: none;
   background: var(--surface-default);
   border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-8);
-  box-shadow: 0 4px 12px rgba(23, 43, 45, 0.12);
+  border-radius: var(--fowoco-radius-10);
+  box-shadow: var(--shadow-md);
   z-index: 10;
 }
 
@@ -102,7 +102,8 @@
   padding: var(--fowoco-spacing-20);
   background: var(--surface-default);
   border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-8);
+  border-radius: var(--fowoco-radius-10);
+  box-shadow: var(--shadow-sm);
 }
 
 .contextLabel {
@@ -146,7 +147,8 @@
   padding: var(--fowoco-spacing-16) var(--fowoco-spacing-24);
   background: var(--surface-default);
   border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-8);
+  border-radius: var(--fowoco-radius-10);
+  box-shadow: var(--shadow-sm);
 }
 
 .gatesCardBlocked {
@@ -326,7 +328,8 @@
   padding: var(--fowoco-spacing-16) var(--fowoco-spacing-24);
   background: var(--surface-default);
   border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-8);
+  border-radius: var(--fowoco-radius-10);
+  box-shadow: var(--shadow-sm);
 }
 
 .stateWrap {
@@ -391,7 +394,8 @@
   padding: var(--fowoco-spacing-16) var(--fowoco-spacing-24);
   background: var(--surface-default);
   border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-8);
+  border-radius: var(--fowoco-radius-10);
+  box-shadow: var(--shadow-sm);
 }
 
 .documentName {
@@ -419,7 +423,8 @@
   padding: var(--fowoco-spacing-16) var(--fowoco-spacing-24);
   background: var(--surface-default);
   border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-8);
+  border-radius: var(--fowoco-radius-10);
+  box-shadow: var(--shadow-sm);
 }
 
 .commTime {
@@ -453,7 +458,8 @@
   padding: var(--fowoco-spacing-16) var(--fowoco-spacing-24);
   background: var(--surface-default);
   border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-8);
+  border-radius: var(--fowoco-radius-10);
+  box-shadow: var(--shadow-sm);
 }
 
 .timelineRow {
@@ -497,7 +503,8 @@
   padding: var(--fowoco-spacing-12) var(--fowoco-spacing-20);
   background: var(--surface-default);
   border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-8);
+  border-radius: var(--fowoco-radius-10);
+  box-shadow: var(--shadow-sm);
 }
 
 .nextStep {

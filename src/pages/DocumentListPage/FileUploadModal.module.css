@@ -27,8 +27,8 @@
   padding: 8px 16px;
   background: var(--brand-primary);
   border: none;
-  border-radius: var(--fowoco-radius-6);
-  color: #fff;
+  border-radius: var(--fowoco-radius-8);
+  color: var(--fowoco-white);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;

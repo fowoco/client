@@ -264,7 +264,8 @@
   align-items: flex-start;
   background: var(--surface-default);
   border: 2px solid var(--brand-primary);
-  border-radius: var(--fowoco-radius-8);
+  border-radius: var(--fowoco-radius-10);
+  box-shadow: var(--shadow-sm);
 }
 
 .demoEyebrow {

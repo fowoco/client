@@ -30,6 +30,11 @@
   --status-warning: #c9821c;
   --status-info: #4361ee;
 
+  /* 로그인류 히어로 패널·토스트처럼 앱 테마와 무관하게 항상 어두워야 하는 곳 전용. */
+  --ink-panel-bg: #0b0e1a;
+  --ink-panel-text: #f5f6fa;
+  --ink-panel-text-secondary: #a7addc;
+
   --fowoco-spacing-4: 4px;
   --fowoco-spacing-8: 8px;
   --fowoco-spacing-12: 12px;

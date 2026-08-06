@@ -16,8 +16,8 @@
   gap: 12px;
   max-width: 320px;
   padding: 12px 16px;
-  background: var(--brand-dark);
-  color: var(--fowoco-white);
+  background: var(--ink-panel-bg);
+  color: var(--ink-panel-text);
   border-radius: var(--fowoco-radius-10);
   box-shadow: var(--shadow-lg);
   font-size: 13px;
@@ -40,7 +40,7 @@
   flex-shrink: 0;
   background: none;
   border: none;
-  color: var(--fowoco-teal-100);
+  color: var(--ink-panel-text-secondary);
   cursor: pointer;
   padding: 0;
   font-size: 12px;

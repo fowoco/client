@@ -14,8 +14,8 @@
 .promo {
   flex: 0 0 460px;
   padding: 52px 56px;
-  background: var(--brand-dark);
-  color: var(--fowoco-white);
+  background: var(--ink-panel-bg);
+  color: var(--ink-panel-text);
   display: flex;
   flex-direction: column;
 }
@@ -50,7 +50,7 @@
   margin: 208px 0 0;
   font-size: 12px;
   font-weight: 500;
-  color: var(--fowoco-teal-100);
+  color: var(--ink-panel-text-secondary);
 }
 
 .headline {
@@ -64,7 +64,7 @@
   margin: 24px 0 0;
   font-size: 15px;
   line-height: 25px;
-  color: var(--fowoco-teal-100);
+  color: var(--ink-panel-text-secondary);
 }
 
 .promiseList {
@@ -80,14 +80,14 @@
   margin: 0;
   font-size: 13px;
   font-weight: 500;
-  color: var(--fowoco-teal-100);
+  color: var(--ink-panel-text-secondary);
 }
 
 .disclaimer {
   margin-top: auto;
   padding-top: 40px;
   font-size: 12px;
-  color: var(--fowoco-teal-100);
+  color: var(--ink-panel-text-secondary);
 }
 
 .formSide {
@@ -264,7 +264,8 @@
   align-items: flex-start;
   background: var(--surface-default);
   border: 2px solid var(--brand-primary);
-  border-radius: var(--fowoco-radius-8);
+  border-radius: var(--fowoco-radius-10);
+  box-shadow: var(--shadow-sm);
 }
 
 .demoEyebrow {

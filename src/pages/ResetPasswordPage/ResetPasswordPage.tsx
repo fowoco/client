@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { apiFetch } from '../../api/client'
+import { ApiError, getErrorMessage } from '../../api/errors'
 import { Button } from '../../components/ui/Button/Button'
 import { EyeIcon, EyeOffIcon } from '../../components/ui/icons/EyeIcons'
 import { LockIcon } from '../../components/ui/icons/FieldIcons'
@@ -8,6 +10,8 @@ import styles from './ResetPasswordPage.module.css'
 
 export function ResetPasswordPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const token = searchParams.get('token')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -17,7 +21,7 @@ export function ResetPasswordPage() {
 
   const passwordStrength = getPasswordStrength(password)
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (password.length < 8) {
       setError('영문과 숫자를 포함해 8자 이상 입력해 주세요.')
@@ -27,9 +31,28 @@ export function ResetPasswordPage() {
       setError('비밀번호가 일치하지 않습니다.')
       return
     }
+    if (!token) {
+      setError('재설정 링크가 올바르지 않습니다. 새 링크를 요청해 주세요.')
+      return
+    }
     setError('')
     setSubmitting(true)
-    navigate('/reset-complete')
+    try {
+      await apiFetch('/auth/password-resets', {
+        method: 'POST',
+        body: JSON.stringify({ token, new_password: password }),
+        skipAuthRetry: true,
+      })
+      navigate('/reset-complete')
+    } catch (requestError) {
+      setError(
+        requestError instanceof ApiError
+          ? getErrorMessage(requestError)
+          : '비밀번호를 변경하지 못했습니다.',
+      )
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (

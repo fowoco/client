@@ -278,4 +278,33 @@ describe('WorkerListPage', () => {
 
     expect(screen.getByText('표시할 근로자가 없습니다')).toBeInTheDocument()
   })
+
+  it('registers a new worker and switches the detail panel to it', async () => {
+    const user = userEvent.setup()
+    const newWorker = worker({ worker_id: 'W-099', display_name: '신규근로자' })
+    let workersGetCount = 0
+    vi.mocked(fetch).mockImplementation((input, init) => {
+      const url = String(input)
+      const method = init?.method ?? 'GET'
+      if (url.includes('/activities')) return Promise.resolve(jsonResponse([]))
+      if (url.includes('/tasks')) {
+        return Promise.resolve(jsonResponse({ items: [], page: 0, size: 100, total_elements: 0, total_pages: 0 }))
+      }
+      if (url.includes('/workers') && method === 'POST') {
+        return Promise.resolve(jsonResponse(newWorker, { status: 201 }))
+      }
+      workersGetCount += 1
+      const items = workersGetCount === 1 ? WORKERS : [...WORKERS, newWorker]
+      return Promise.resolve(jsonResponse(pageResponse(items)))
+    })
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: '＋ 근로자 등록' }))
+    expect(screen.getByRole('dialog', { name: '근로자 등록' })).toBeInTheDocument()
+    await user.type(screen.getByPlaceholderText('응웬반A'), '신규근로자')
+    await user.click(screen.getByRole('button', { name: '등록' }))
+
+    expect(await screen.findByRole('heading', { name: '신규근로자' })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: '근로자 등록' })).not.toBeInTheDocument()
+  })
 })

@@ -101,6 +101,8 @@ function toApiErrorMessage(error: unknown, fallback: string): string {
   return error instanceof ApiError ? getErrorMessage(error) : fallback
 }
 
+let sessionRestorePromise: Promise<void> | null = null
+
 export const useAuthStore = create<AuthState>((set) => {
   // client.ts는 이 스토어를 모르는 채로 동작하므로(순환 참조 방지), refresh 재시도까지
   // 실패했을 때 로그아웃 처리를 여기서 콜백으로 연결해준다.
@@ -144,31 +146,42 @@ export const useAuthStore = create<AuthState>((set) => {
       set({ user: null, status: 'ready' })
     },
 
-    restoreSession: async () => {
-      set({ status: 'restoring' })
-      try {
-        const refreshBody = await apiFetch<RefreshResponseBody>('/auth/refresh', {
-          method: 'POST',
-          skipAuthRetry: true,
-        })
-        setAccessToken(refreshBody.access_token)
+    restoreSession: () => {
+      // React StrictMode는 개발 환경에서 mount effect를 두 번 실행할 수 있다. Refresh Token은
+      // 요청마다 회전하므로 같은 쿠키로 복원 요청을 동시에 보내면 한쪽이 실패해 정상 세션까지
+      // 로그아웃 처리될 수 있다. 동시에 호출되면 진행 중인 하나의 Promise를 공유한다.
+      if (sessionRestorePromise) return sessionRestorePromise
 
-        const me = await apiFetch<CurrentActorResponseBody>('/auth/me')
-        const persisted = readPersistedProfile()
-        set({
-          user: {
-            name: persisted?.name ?? '사용자',
-            workplace: persisted?.workplace ?? '',
-            role: me.roles[0] ?? '',
-          },
-          status: 'ready',
-        })
-      } catch {
-        // 쿠키가 없거나 만료됐으면 로그인 화면으로 보내는 게 정상 흐름이라 에러로 취급하지 않는다.
-        setAccessToken(null)
-        clearPersistedProfile()
-        set({ user: null, status: 'ready' })
-      }
+      sessionRestorePromise = (async () => {
+        set({ status: 'restoring' })
+        try {
+          const refreshBody = await apiFetch<RefreshResponseBody>('/auth/refresh', {
+            method: 'POST',
+            skipAuthRetry: true,
+          })
+          setAccessToken(refreshBody.access_token)
+
+          const me = await apiFetch<CurrentActorResponseBody>('/auth/me')
+          const persisted = readPersistedProfile()
+          set({
+            user: {
+              name: persisted?.name ?? '사용자',
+              workplace: persisted?.workplace ?? '',
+              role: me.roles[0] ?? '',
+            },
+            status: 'ready',
+          })
+        } catch {
+          // 쿠키가 없거나 만료됐으면 로그인 화면으로 보내는 게 정상 흐름이라 에러로 취급하지 않는다.
+          setAccessToken(null)
+          clearPersistedProfile()
+          set({ user: null, status: 'ready' })
+        } finally {
+          sessionRestorePromise = null
+        }
+      })()
+
+      return sessionRestorePromise
     },
   }
 })

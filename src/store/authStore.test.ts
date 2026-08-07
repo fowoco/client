@@ -111,6 +111,28 @@ describe('useAuthStore.logout', () => {
 })
 
 describe('useAuthStore.restoreSession', () => {
+  it('does not send duplicate refresh requests while restoration is in progress', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        jsonResponse({
+          access_token: 'refreshed-token',
+          token_type: 'Bearer',
+          expires_in_seconds: 900,
+          expires_at: '2026-07-22T01:15:00Z',
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ user_id: 'u-1', company_id: 'c-1', roles: ['HR'] }))
+
+    const firstRestore = useAuthStore.getState().restoreSession()
+    const secondRestore = useAuthStore.getState().restoreSession()
+
+    expect(secondRestore).toBe(firstRestore)
+    await Promise.all([firstRestore, secondRestore])
+
+    expect(fetch).toHaveBeenCalledTimes(2)
+    expect(useAuthStore.getState().user?.role).toBe('HR')
+  })
+
   it('restores the user from a valid refresh cookie plus /auth/me', async () => {
     // 이 프로젝트의 테스트 환경에서는 Node 내장 localStorage가 jsdom 것보다 먼저 잡혀
     // 저장이 조용히 실패할 수 있다 (구현도 이 상황을 try/catch로 감내하도록 설계했다).

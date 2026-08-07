@@ -2,7 +2,9 @@
   display: flex;
   align-items: center;
   gap: var(--fowoco-spacing-16);
-  padding: var(--fowoco-spacing-16) var(--fowoco-spacing-20);
+  width: 100%;
+  min-height: 56px;
+  padding: 8px var(--fowoco-spacing-20);
   background: var(--surface-default);
   border: 1px solid var(--border-default);
   border-radius: var(--fowoco-radius-8);
@@ -36,13 +38,17 @@
 .rail {
   flex-shrink: 0;
   width: 4px;
-  height: 44px;
+  height: 40px;
   border-radius: var(--fowoco-radius-4);
   background: var(--status-warning);
 }
 
 .railCritical {
   background: var(--status-critical);
+}
+
+.railInfo {
+  background: #3976d3;
 }
 
 .railNeutral {
@@ -53,15 +59,60 @@
   flex: 1;
   min-width: 0;
   display: flex;
-  flex-direction: column;
-  gap: var(--fowoco-spacing-4);
+  align-items: center;
+  gap: 12px;
 }
 
 .title {
+  min-width: 0;
+  overflow: hidden;
   font-family: var(--font-sans);
   font-size: 14px;
   font-weight: 500;
   color: var(--text-primary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.inlineMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 8px;
+  border-radius: var(--fowoco-radius-999);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.statusWarning {
+  color: var(--status-warning);
+  background: var(--fowoco-amber-50);
+}
+
+.statusPrimary {
+  color: var(--brand-primary);
+  background: var(--fowoco-teal-50);
+}
+
+.statusNeutral {
+  color: var(--text-secondary);
+  background: var(--surface-subtle);
+}
+
+.detailItem {
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 .meta {
@@ -72,8 +123,35 @@
 
 .next {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  height: 40px;
+  padding: 8px 16px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
-  color: var(--brand-primary);
+  color: var(--text-primary);
+  background: var(--surface-default);
+}
+
+@media (max-width: 720px) {
+  .content {
+    flex: 1 1 calc(100% - 20px);
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .inlineMeta {
+    flex-wrap: wrap;
+  }
+
+  .next {
+    flex-basis: auto;
+    width: 100%;
+  }
 }

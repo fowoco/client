@@ -1,13 +1,13 @@
+import type { CaseDisplayStatus, CaseTaskResponse } from '../../api/cases'
 import type { TaskStatus } from '../../api/tasks'
 import type { StatusTone } from '../../components/ui/StatusLabel/StatusLabel'
 import { TASK_STATUS_LABEL, TASK_STATUS_TONE, TASK_TYPE_LABEL } from '../../utils/taskStatus'
 import { getOperationalDateViewModel } from '../../view-models/dateViewModel'
-import type { WorkInboxTask } from './workInboxModel'
 
 const REVIEW_ACTION_LABEL: Record<TaskStatus, string> = {
   DRAFT: '초안 검토',
   NEEDS_INFO: '정보 확인',
-  READY_FOR_REVIEW: '검토하기',
+  READY_FOR_REVIEW: '초안 검토',
   APPROVED: '실행 확인',
   WAITING_WORKER: '대기 확인',
   WAITING_EXTERNAL: '진행 확인',
@@ -26,6 +26,23 @@ const DECISION_SUMMARY: Record<TaskStatus, string> = {
   CANCELLED: '취소된 업무입니다. 상세 화면에서 사유를 확인해 주세요.',
 }
 
+// fowoco/server CaseDisplayStatus(#88) -> 화면 표시 매핑.
+const CASE_DISPLAY_STATUS_LABEL: Record<CaseDisplayStatus, string> = {
+  DOCUMENT_PENDING: '서류 대기',
+  REQUEST_SENT: '요청 전송',
+  REVIEW_REQUIRED: '검토 필요',
+  COMPLETED: '완료',
+  CANCELLED: '취소',
+}
+
+const CASE_DISPLAY_STATUS_TONE: Record<CaseDisplayStatus, StatusTone> = {
+  DOCUMENT_PENDING: 'neutral',
+  REQUEST_SENT: 'warning',
+  REVIEW_REQUIRED: 'critical',
+  COMPLETED: 'success',
+  CANCELLED: 'neutral',
+}
+
 export interface DuePresentation {
   label: string
   tone: StatusTone
@@ -36,14 +53,18 @@ export function getDuePresentation(dueDate: string | null): DuePresentation {
   return { label: due.relative ?? '기한 미정', tone: due.tone }
 }
 
+export function getCaseDisplayStatusPresentation(status: CaseDisplayStatus): {
+  label: string
+  tone: StatusTone
+} {
+  return { label: CASE_DISPLAY_STATUS_LABEL[status], tone: CASE_DISPLAY_STATUS_TONE[status] }
+}
+
 export function getTaskStatusPresentation(status: TaskStatus): {
   label: string
   tone: StatusTone
 } {
-  return {
-    label: TASK_STATUS_LABEL[status],
-    tone: TASK_STATUS_TONE[status],
-  }
+  return { label: TASK_STATUS_LABEL[status], tone: TASK_STATUS_TONE[status] }
 }
 
 export function getReviewActionLabel(status: TaskStatus): string {
@@ -54,10 +75,38 @@ export function getDecisionSummary(status: TaskStatus): string {
   return DECISION_SUMMARY[status]
 }
 
-export function getWorkflowLabel(item: WorkInboxTask): string {
-  return item.workflowName ?? TASK_TYPE_LABEL[item.task.task_type]
+export function getWorkflowLabel(task: CaseTaskResponse): string {
+  return TASK_TYPE_LABEL[task.task_type]
 }
 
-export function isReviewTask(status: TaskStatus): boolean {
+export function isReviewCase(status: CaseDisplayStatus): boolean {
   return status !== 'COMPLETED' && status !== 'CANCELLED'
+}
+
+export interface ReviewStageLink {
+  label: string
+  href: string
+  // 같은 단계 라벨은 화면 어디에 나오든 같은 색으로 보이도록 고정한다.
+  tone: StatusTone
+}
+
+// REVIEW-001 4단계(요청 확인/정보 보완/초안 작성/최종 검토) 전체 진입 경로 · 색상.
+const REVIEW_STAGE_LINKS: ReviewStageLink[] = [
+  { label: '요청 확인', href: '/tasks/new', tone: 'neutral' },
+  { label: '정보 보완', href: '/tasks/new/review?step=1', tone: 'warning' },
+  { label: '초안 작성', href: '/tasks/new/review?step=2', tone: 'info' },
+  { label: '최종 검토', href: '/tasks/new/review?step=3', tone: 'agent' },
+]
+
+// TaskStatus를 REVIEW-001 4단계 중 매칭되는 단계로 연결한다. 업무함의 근로자 배지
+// 라벨을 요청 확인/정보 보완/초안 작성/최종 검토로 바꿔 보여주고, 그 배지를 클릭하면
+// 바로 해당 화면으로 이동시키는 데 쓴다.
+const REVIEW_STAGE_LINK: Partial<Record<TaskStatus, ReviewStageLink>> = {
+  NEEDS_INFO: REVIEW_STAGE_LINKS[1],
+  DRAFT: REVIEW_STAGE_LINKS[2],
+  READY_FOR_REVIEW: REVIEW_STAGE_LINKS[3],
+}
+
+export function getReviewStageLink(status: TaskStatus): ReviewStageLink {
+  return REVIEW_STAGE_LINK[status] ?? REVIEW_STAGE_LINKS[0]
 }

@@ -119,9 +119,12 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
     throw await parseErrorBody(response, path)
   }
 
-  if (response.status === 204) {
+  // 204는 물론이고, password-reset-requests처럼 body 없이 202만 내려주는 응답도 있어
+  // status 코드로만 분기하지 않고 실제 body가 비어있는지로 판단한다.
+  const text = await response.text()
+  if (!text) {
     return undefined as T
   }
 
-  return (await response.json()) as T
+  return JSON.parse(text) as T
 }

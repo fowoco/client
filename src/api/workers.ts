@@ -48,3 +48,35 @@ export function fetchWorkers(params: FetchWorkersParams = {}): Promise<WorkerPag
 export function fetchWorkerById(workerId: string): Promise<WorkerResponse> {
   return apiFetch<WorkerResponse>(`/workers/${encodeURIComponent(workerId)}`)
 }
+
+// 여권번호·외국인등록번호·전화번호·계좌번호는 WorkerController가 이 API로 수집하지 않는다.
+export interface WorkerCreateBody {
+  display_name: string
+  nationality_code?: string
+  preferred_language?: string
+  stay_expiry_date?: string
+  contract_start_date?: string
+  contract_end_date?: string
+}
+
+export function registerWorker(body: WorkerCreateBody): Promise<WorkerResponse> {
+  return apiFetch<WorkerResponse>('/workers', { method: 'POST', body: JSON.stringify(body) })
+}
+
+export interface WorkerPatchBody {
+  display_name?: string
+  nationality_code?: string
+  preferred_language?: string
+  work_status?: WorkStatus
+  stay_expiry_date?: string
+  contract_start_date?: string
+  contract_end_date?: string
+  expected_version: number
+}
+
+export function patchWorker(workerId: string, body: WorkerPatchBody): Promise<WorkerResponse> {
+  return apiFetch<WorkerResponse>(`/workers/${encodeURIComponent(workerId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  })
+}

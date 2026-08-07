@@ -129,25 +129,27 @@ export function ImportWizardModal({ open, onClose }: ImportWizardModalProps) {
                 <p className={styles.fileMeta}>{rows.length}행 감지됨</p>
               </div>
             </div>
-            <table className={styles.previewTable}>
-              <thead>
-                <tr>
-                  {DETECTED_COLUMNS.map((column) => (
-                    <th key={column}>{column}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.slice(0, 3).map((row) => (
-                  <tr key={row.id}>
-                    <td>{row.workerName}</td>
-                    <td>{row.nationality}</td>
-                    <td>{row.importedStayExpiry}</td>
-                    <td>{row.note || '-'}</td>
+            <div className={styles.previewTableScroll}>
+              <table className={styles.previewTable}>
+                <thead>
+                  <tr>
+                    {DETECTED_COLUMNS.map((column) => (
+                      <th key={column}>{column}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {rows.slice(0, 3).map((row) => (
+                    <tr key={row.id}>
+                      <td>{row.workerName}</td>
+                      <td>{row.nationality}</td>
+                      <td>{row.importedStayExpiry}</td>
+                      <td>{row.note || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             <div className={styles.actionRowEnd}>
               <button type="button" className={styles.primaryButton} onClick={() => setStep(2)}>
                 다음 →

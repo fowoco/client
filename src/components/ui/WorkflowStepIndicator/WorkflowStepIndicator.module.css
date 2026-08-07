@@ -1,0 +1,47 @@
+.stepIndicator {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fowoco-spacing-8);
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stepItem {
+  display: flex;
+  align-items: center;
+  gap: var(--fowoco-spacing-8);
+}
+
+.stepPill {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 var(--fowoco-spacing-12);
+  border: none;
+  border-radius: var(--fowoco-radius-6);
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.stepPillDone {
+  color: var(--brand-primary);
+}
+
+.stepPillCurrent {
+  background: var(--surface-subtle);
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: default;
+}
+
+.stepArrow {
+  color: var(--text-secondary);
+  font-size: 13px;
+}

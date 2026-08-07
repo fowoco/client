@@ -35,7 +35,7 @@ afterEach(() => {
 })
 
 describe('AppLayout', () => {
-  it('renders the FOWOCO logo and every nav item', () => {
+  it('renders the current global navigation without a workers tab', () => {
     localStorage.setItem('fowoco.onboarding.completed', 'true')
     renderLayout()
 
@@ -43,6 +43,7 @@ describe('AppLayout', () => {
     for (const item of NAV_ITEMS) {
       expect(screen.getByRole('link', { name: item.label })).toBeInTheDocument()
     }
+    expect(screen.queryByRole('link', { name: '근로자' })).not.toBeInTheDocument()
   })
 
   it('opens and closes the help modal', async () => {

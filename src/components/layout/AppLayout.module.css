@@ -178,6 +178,22 @@
   overflow-y: auto;
 }
 
+.contentDashboard {
+  padding-top: 18px;
+}
+
+.contentWorkInbox {
+  padding-bottom: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 1180px) {
+  .contentWorkInbox {
+    padding-bottom: 32px;
+    overflow-y: auto;
+  }
+}
+
 @media (max-width: 768px) {
   .topBar {
     padding: 12px 16px;
@@ -188,5 +204,13 @@
     min-height: auto;
     padding: 16px;
     overflow-y: visible;
+  }
+
+  .contentWorkInbox {
+    padding-bottom: 16px;
+  }
+
+  .contentDashboard {
+    padding-top: 16px;
   }
 }

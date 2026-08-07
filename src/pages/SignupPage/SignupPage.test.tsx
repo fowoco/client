@@ -116,6 +116,11 @@ describe('SignupPage', () => {
       display_name: '김경민',
       email: 'mini@naver.com',
       password: 'password123',
+      agreements: {
+        service_terms: { agreed: true, version: '1.0' },
+        privacy_policy: { agreed: true, version: '1.0' },
+        marketing: { agreed: false, version: '1.0' },
+      },
     })
   })
 

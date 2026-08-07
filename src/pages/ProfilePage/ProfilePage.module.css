@@ -156,6 +156,12 @@
   gap: 20px 24px;
 }
 
+@media (max-width: 480px) {
+  .fieldGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -259,6 +265,12 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px 24px;
+}
+
+@media (max-width: 480px) {
+  .notificationGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .notificationRow {

@@ -310,6 +310,12 @@
   color: var(--text-secondary);
 }
 
+.fieldError {
+  margin: var(--fowoco-spacing-12) 0 0;
+  color: var(--fowoco-red-600);
+  font-size: 13px;
+}
+
 .actionDock {
   display: flex;
   align-items: center;

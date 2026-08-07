@@ -18,7 +18,7 @@ import {
   saveAiRunWorkRequestDraft,
   type WorkRequestDraft,
 } from '../CreateWorkPage/workRequestDraft'
-import styles from './ReviewWorkPage.module.css'
+import styles from './AiRunReview.module.css'
 import { analysisOutcomeLabel, intentLabel, slotLabel } from './aiRunPresentation'
 
 interface AiRunReviewProps {

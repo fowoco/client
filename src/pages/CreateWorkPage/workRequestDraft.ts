@@ -1,4 +1,4 @@
-import type { InputModeId } from './createWorkData'
+export type WorkRequestInputMode = 'nl' | 'file'
 
 export interface WorkRequestAttachmentMetadata {
   name: string
@@ -8,7 +8,7 @@ export interface WorkRequestAttachmentMetadata {
 
 export interface WorkRequestDraft {
   request: string
-  mode: InputModeId
+  mode: WorkRequestInputMode
   workerId: string
   attachments: WorkRequestAttachmentMetadata[]
 }

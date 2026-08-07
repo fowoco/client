@@ -14,12 +14,15 @@
   padding: 0 16px 0 15px;
   background: var(--surface-default);
   border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-6);
+  border-radius: var(--fowoco-radius-10);
+  box-shadow: var(--shadow-sm);
   font-family: var(--font-sans);
   font-size: 13px;
   color: var(--text-primary);
   cursor: pointer;
-  transition: border-color var(--fowoco-motion-fast) var(--fowoco-easing-standard);
+  transition:
+    border-color var(--fowoco-motion-fast) var(--fowoco-easing-standard),
+    box-shadow var(--fowoco-motion-fast) var(--fowoco-easing-standard);
 }
 
 .trigger:hover {
@@ -27,8 +30,8 @@
 }
 
 .trigger:focus-visible {
-  outline: 2px solid var(--brand-primary);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--shadow-focus);
 }
 
 .triggerOpen {
@@ -65,8 +68,8 @@
   list-style: none;
   background: var(--surface-default);
   border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-6);
-  box-shadow: 0 4px 12px rgba(23, 43, 45, 0.12);
+  border-radius: var(--fowoco-radius-10);
+  box-shadow: var(--shadow-md);
 }
 
 .option {

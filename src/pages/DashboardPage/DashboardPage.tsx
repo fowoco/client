@@ -127,26 +127,26 @@ export function DashboardPage() {
 
       {status === 'success' && (
         <div className={styles.dashboardGrid}>
-          <div className={styles.primaryColumn}>
-            <div className={styles.metricStrip} aria-label="오늘의 업무 지표">
-              {metrics.map((metric) => (
-                <button
-                  key={metric.id}
-                  type="button"
-                  className={styles.metricCard}
-                  onClick={() => navigate('/tasks')}
-                >
-                  <span className={styles.metricText}>
-                    <span className={styles.metricLabel}>{metric.label}</span>
-                    <span className={styles.metricValue}>{metric.value}건 ›</span>
-                  </span>
-                  <span className={`${styles.metricIcon} ${styles[`metricIcon_${metric.tone}`]}`}>
-                    <img src={metric.iconSrc} alt="" aria-hidden="true" />
-                  </span>
-                </button>
-              ))}
-            </div>
+          <div className={styles.metricStrip} aria-label="오늘의 업무 지표">
+            {metrics.map((metric) => (
+              <button
+                key={metric.id}
+                type="button"
+                className={styles.metricCard}
+                onClick={() => navigate('/tasks')}
+              >
+                <span className={styles.metricText}>
+                  <span className={styles.metricLabel}>{metric.label}</span>
+                  <span className={styles.metricValue}>{metric.value}건 ›</span>
+                </span>
+                <span className={`${styles.metricIcon} ${styles[`metricIcon_${metric.tone}`]}`}>
+                  <img src={metric.iconSrc} alt="" aria-hidden="true" />
+                </span>
+              </button>
+            ))}
+          </div>
 
+          <div className={styles.primaryColumn}>
             <section className={styles.priorityApproval} aria-labelledby="priority-approval-title">
               <div className={styles.priorityHeader}>
                 <h2 id="priority-approval-title">먼저 검토할 승인 업무</h2>

@@ -14,8 +14,8 @@
 .promo {
   flex: 0 0 460px;
   padding: 52px 56px;
-  background: var(--brand-dark);
-  color: var(--fowoco-white);
+  background: var(--ink-panel-bg);
+  color: var(--ink-panel-text);
   display: flex;
   flex-direction: column;
 }
@@ -37,7 +37,7 @@
   margin: 208px 0 0;
   font-size: 12px;
   font-weight: 500;
-  color: var(--fowoco-teal-100);
+  color: var(--ink-panel-text-secondary);
 }
 
 .headline {
@@ -51,14 +51,14 @@
   margin: 24px 0 0;
   font-size: 14px;
   line-height: 24px;
-  color: var(--fowoco-teal-100);
+  color: var(--ink-panel-text-secondary);
 }
 
 .disclaimer {
   margin-top: auto;
   padding-top: 24px;
   font-size: 12px;
-  color: var(--fowoco-teal-100);
+  color: var(--ink-panel-text-secondary);
 }
 
 .formSide {
@@ -112,7 +112,7 @@
   margin-top: 24px;
   font-size: 14px;
   font-weight: 500;
-  color: var(--fowoco-white);
+  color: var(--ink-panel-text);
   background: var(--brand-primary);
   border-radius: var(--fowoco-radius-6);
 }

@@ -12,7 +12,8 @@
   padding: var(--fowoco-spacing-24);
   background: var(--surface-default);
   border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-8);
+  border-radius: var(--fowoco-radius-10);
+  box-shadow: var(--shadow-sm);
   text-align: center;
 }
 
@@ -34,8 +35,8 @@
   padding: 10px 20px;
   background: var(--brand-primary);
   border: none;
-  border-radius: var(--fowoco-radius-6);
-  color: #fff;
+  border-radius: var(--fowoco-radius-8);
+  color: var(--fowoco-white);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;

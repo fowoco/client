@@ -36,8 +36,8 @@
 
 .workspace {
   display: grid;
-  grid-template-columns: 520px 1fr;
-  gap: 16px;
+  grid-template-columns: 340px 1fr;
+  gap: 20px;
   margin-top: 16px;
   align-items: start;
 }
@@ -51,7 +51,8 @@
 .listPanel {
   background: var(--surface-default);
   border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-8);
+  border-radius: var(--fowoco-radius-10);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
 
@@ -148,7 +149,8 @@
   padding: 19px 23px;
   background: var(--surface-default);
   border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-8);
+  border-radius: var(--fowoco-radius-10);
+  box-shadow: var(--shadow-sm);
 }
 
 .detailHeader {

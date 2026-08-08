@@ -7,17 +7,34 @@ import { useToastStore } from '../../store/toastStore'
 import { CreateWorkPage } from './CreateWorkPage'
 
 function jsonResponse(body: unknown, init: ResponseInit = {}) {
-  return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' }, ...init })
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+    ...init,
+  })
 }
 
 function errorResponse(status: number, code: string, message: string) {
   return jsonResponse(
-    { timestamp: '2026-07-27T01:23:45Z', status, code, message, path: '/api/v1/tasks', request_id: 'req-1', field_errors: [] },
+    {
+      timestamp: '2026-07-27T01:23:45Z',
+      status,
+      code,
+      message,
+      path: '/api/v1/tasks',
+      request_id: 'req-1',
+      field_errors: [],
+    },
     { status },
   )
 }
 
-const WORKER_PAGE = { items: [{ worker_id: 'W-1', display_name: '응웬반A' }], page: 0, size: 100, total_elements: 1 }
+const WORKER_PAGE = {
+  items: [{ worker_id: 'W-1', display_name: '응웬반A' }],
+  page: 0,
+  size: 100,
+  total_elements: 1,
+}
 const CATALOG = {
   bundle_id: 'b-1',
   bundle_version: '1',
@@ -41,14 +58,22 @@ const CATALOG = {
 const AI_RUN = {
   ai_run_id: 'A-1',
   request_id: 'R-1',
-  instruction: '체류연장 준비, EXPIRY_RENEWAL',
+  instruction: '체류연장 준비',
   status: 'SUCCEEDED',
   analysis_outcome: 'NEEDS_INFO',
   detected_intent: 'EXPIRY_RENEWAL',
   error_code: null,
   attempt_count: 2,
   version: 2,
-  questions: [{ slot_key: 'due_at', label: '신청 목표일을 입력해 주세요.', input_type: 'DATE', required: true, answer: null }],
+  questions: [
+    {
+      slot_key: 'due_at',
+      label: '신청 목표일을 입력해 주세요.',
+      input_type: 'DATE',
+      required: true,
+      answer: null,
+    },
+  ],
   candidates: [],
   created_at: '2026-08-04T00:00:00Z',
   updated_at: '2026-08-04T00:00:01Z',
@@ -120,12 +145,35 @@ describe('CreateWorkPage', () => {
     await user.click(screen.getByRole('button', { name: '요청 분석하기 →' }))
 
     expect(await screen.findByText('Agent 추가 질문')).toBeInTheDocument()
-    const analyzeCall = vi.mocked(fetch).mock.calls.find(([url]) => String(url).endsWith('/ai-runs'))
+    const analyzeCall = vi
+      .mocked(fetch)
+      .mock.calls.find(([url]) => String(url).endsWith('/ai-runs'))
     expect(analyzeCall).toBeDefined()
     expect(JSON.parse((analyzeCall![1] as RequestInit).body as string)).toEqual({
       instruction: '체류연장 준비',
     })
-    expect(new Headers((analyzeCall![1] as RequestInit).headers).get('Idempotency-Key')).toBeTruthy()
+    expect(
+      new Headers((analyzeCall![1] as RequestInit).headers).get('Idempotency-Key'),
+    ).toBeTruthy()
+  })
+
+  it('sends an edited request without retaining the previously selected intent', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByRole('button', { name: '체류연장 준비' }))
+    const request = screen.getByLabelText('업무 요청 내용')
+    await user.clear(request)
+    await user.type(request, '이번 주 근태자료 차이를 설명해 주세요')
+    await user.click(screen.getByRole('button', { name: '요청 분석하기 →' }))
+
+    const analyzeCall = vi
+      .mocked(fetch)
+      .mock.calls.find(([url]) => String(url).endsWith('/ai-runs'))
+    expect(analyzeCall).toBeDefined()
+    expect(JSON.parse((analyzeCall![1] as RequestInit).body as string)).toEqual({
+      instruction: '이번 주 근태자료 차이를 설명해 주세요',
+    })
   })
 
   it('switches the active input mode', async () => {
@@ -155,7 +203,9 @@ describe('CreateWorkPage', () => {
     await user.click(screen.getByRole('button', { name: '임시 저장' }))
 
     expect(screen.getByText('이 브라우저 탭에 초안을 저장했습니다.')).toBeInTheDocument()
-    expect(JSON.parse(window.sessionStorage.getItem('fowoco:work-request-draft') ?? '{}')).toMatchObject({
+    expect(
+      JSON.parse(window.sessionStorage.getItem('fowoco:work-request-draft') ?? '{}'),
+    ).toMatchObject({
       request: '',
       mode: 'nl',
     })

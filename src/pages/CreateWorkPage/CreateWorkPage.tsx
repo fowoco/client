@@ -37,12 +37,17 @@ const TASK_TYPE_OPTIONS = [
 export function CreateWorkPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const routeState = location.state as
-    | { prefill?: string; request?: string; mode?: InputModeId; workerId?: string }
-    | null
+  const routeState = location.state as {
+    prefill?: string
+    request?: string
+    mode?: InputModeId
+    workerId?: string
+  } | null
   const storedDraft = readActiveWorkRequestDraft()
   const [mode, setMode] = useState<InputModeId>(routeState?.mode ?? storedDraft?.mode ?? 'nl')
-  const [request, setRequest] = useState(routeState?.request ?? routeState?.prefill ?? storedDraft?.request ?? '')
+  const [request, setRequest] = useState(
+    routeState?.request ?? routeState?.prefill ?? storedDraft?.request ?? '',
+  )
   const [importWizardOpen, setImportWizardOpen] = useState(false)
   const showToast = useToastStore((state) => state.showToast)
 
@@ -65,24 +70,36 @@ export function CreateWorkPage() {
   const workerOptions = useMemo(
     () => [
       { value: '', label: '근로자 선택' },
-      ...(workerPage?.items ?? []).map((worker) => ({ value: worker.worker_id, label: worker.display_name })),
+      ...(workerPage?.items ?? []).map((worker) => ({
+        value: worker.worker_id,
+        label: worker.display_name,
+      })),
     ],
     [workerPage],
   )
 
   const availableWorkflows = useMemo(
-    () => (catalog?.workflows ?? []).filter((workflow) => taskType && workflow.supported_task_types.includes(taskType)),
+    () =>
+      (catalog?.workflows ?? []).filter(
+        (workflow) => taskType && workflow.supported_task_types.includes(taskType),
+      ),
     [catalog, taskType],
   )
   const workflowOptions = useMemo(
     () => [
       { value: '', label: taskType ? 'Workflow 선택' : '업무 유형을 먼저 선택하세요' },
-      ...availableWorkflows.map((workflow) => ({ value: workflow.workflow_id, label: workflow.name })),
+      ...availableWorkflows.map((workflow) => ({
+        value: workflow.workflow_id,
+        label: workflow.name,
+      })),
     ],
     [availableWorkflows, taskType],
   )
-  const selectedWorkflow = availableWorkflows.find((workflow) => workflow.workflow_id === workflowId)
-  const canSubmit = workerId !== '' && taskType !== '' && workflowId !== '' && title.trim() !== '' && !submitting
+  const selectedWorkflow = availableWorkflows.find(
+    (workflow) => workflow.workflow_id === workflowId,
+  )
+  const canSubmit =
+    workerId !== '' && taskType !== '' && workflowId !== '' && title.trim() !== '' && !submitting
 
   function currentDraft(): WorkRequestDraft {
     return { request, mode, workerId, attachments: [] }
@@ -117,7 +134,9 @@ export function CreateWorkPage() {
       showToast('업무를 생성했습니다.')
       navigate(`/tasks/${created.task_id}`)
     } catch (error) {
-      setFormError(error instanceof ApiError ? getErrorMessage(error) : '업무를 생성하지 못했습니다.')
+      setFormError(
+        error instanceof ApiError ? getErrorMessage(error) : '업무를 생성하지 못했습니다.',
+      )
     } finally {
       setSubmitting(false)
     }
@@ -132,8 +151,9 @@ export function CreateWorkPage() {
     setAnalyzing(true)
     setAnalysisError(null)
     try {
+      const instruction = request.trim()
       const idempotencyKey = globalThis.crypto.randomUUID()
-      const aiRun = await createAiRun(request, idempotencyKey)
+      const aiRun = await createAiRun(instruction, idempotencyKey)
       const draft = currentDraft()
       saveActiveWorkRequestDraft(draft)
       saveAiRunWorkRequestDraft(aiRun.ai_run_id, draft)
@@ -141,7 +161,9 @@ export function CreateWorkPage() {
         state: { aiRun, draft },
       })
     } catch (error) {
-      setAnalysisError(error instanceof ApiError ? getErrorMessage(error) : '요청을 분석하지 못했습니다.')
+      setAnalysisError(
+        error instanceof ApiError ? getErrorMessage(error) : '요청을 분석하지 못했습니다.',
+      )
     } finally {
       setAnalyzing(false)
     }
@@ -190,7 +212,11 @@ export function CreateWorkPage() {
               Excel·PDF·이미지 파일로 근로자 명단을 한 번에 가져옵니다. 파일 확인 → 컬럼 매핑 →
               오류·충돌 검토 → 등록 결과 순서로 진행됩니다.
             </p>
-            <button type="button" className={styles.fileImportButton} onClick={() => setImportWizardOpen(true)}>
+            <button
+              type="button"
+              className={styles.fileImportButton}
+              onClick={() => setImportWizardOpen(true)}
+            >
               파일 선택하기 →
             </button>
           </div>
@@ -262,7 +288,11 @@ export function CreateWorkPage() {
         <Link to="/tasks" className={styles.cancel}>
           취소
         </Link>
-        <Button onClick={handleAnalyze} disabled={request.trim() === '' || analyzing} isLoading={analyzing}>
+        <Button
+          onClick={handleAnalyze}
+          disabled={request.trim() === '' || analyzing}
+          isLoading={analyzing}
+        >
           요청 분석하기 →
         </Button>
       </div>
@@ -284,15 +314,30 @@ export function CreateWorkPage() {
         <div className={styles.directCreateGrid}>
           <div className={styles.field}>
             <span className={styles.fieldLabel}>근로자</span>
-            <Dropdown options={workerOptions} value={workerId} onChange={setWorkerId} ariaLabel="근로자 선택" />
+            <Dropdown
+              options={workerOptions}
+              value={workerId}
+              onChange={setWorkerId}
+              ariaLabel="근로자 선택"
+            />
           </div>
           <div className={styles.field}>
             <span className={styles.fieldLabel}>업무 유형</span>
-            <Dropdown options={TASK_TYPE_OPTIONS} value={taskType} onChange={handleTaskTypeChange} ariaLabel="업무 유형 선택" />
+            <Dropdown
+              options={TASK_TYPE_OPTIONS}
+              value={taskType}
+              onChange={handleTaskTypeChange}
+              ariaLabel="업무 유형 선택"
+            />
           </div>
           <div className={styles.field}>
             <span className={styles.fieldLabel}>처리 절차</span>
-            <Dropdown options={workflowOptions} value={workflowId} onChange={setWorkflowId} ariaLabel="Workflow 선택" />
+            <Dropdown
+              options={workflowOptions}
+              value={workflowId}
+              onChange={setWorkflowId}
+              ariaLabel="Workflow 선택"
+            />
           </div>
           <div className={styles.field}>
             <label className={styles.fieldLabel} htmlFor="direct-create-title">

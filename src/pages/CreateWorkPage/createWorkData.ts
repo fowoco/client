@@ -10,7 +10,12 @@ export const INPUT_MODES = [
 
 export type InputModeId = (typeof INPUT_MODES)[number]['id']
 
-export const EXAMPLE_PROMPTS = ['체류연장 준비', '입사자료 취합', '외부기관 제출', '근태자료 설명'] as const
+export const EXAMPLE_PROMPTS = [
+  '체류연장 준비',
+  '입사자료 취합',
+  '외부기관 제출',
+  '근태자료 설명',
+] as const
 
 export const MAX_LENGTH = 2000
 

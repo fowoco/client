@@ -1,12 +1,7 @@
+import { lazy } from 'react'
 import { createBrowserRouter } from 'react-router-dom'
 import { RequireAuth } from './components/auth/RequireAuth'
 import { AppLayout } from './components/layout/AppLayout'
-import { AgentLogPage } from './pages/AgentLogPage/AgentLogPage'
-import { CaseDetailPage } from './pages/CaseDetailPage/CaseDetailPage'
-import { CreateWorkPage } from './pages/CreateWorkPage/CreateWorkPage'
-import { DashboardPage } from './pages/DashboardPage/DashboardPage'
-import { DocumentDetailPage } from './pages/DocumentDetailPage/DocumentDetailPage'
-import { DocumentListPage } from './pages/DocumentListPage/DocumentListPage'
 import { EmailSentPage } from './pages/EmailSentPage/EmailSentPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage/ForgotPasswordPage'
 import { IntroPage } from './pages/IntroPage/IntroPage'
@@ -16,16 +11,71 @@ import { LinkUploadPage } from './pages/LinkUploadPage/LinkUploadPage'
 import { LoginPage } from './pages/LoginPage/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage/NotFoundPage'
 import { OnboardingImportPage } from './pages/OnboardingImportPage/OnboardingImportPage'
-import { ProfilePage } from './pages/ProfilePage/ProfilePage'
 import { ResetCompletePage } from './pages/ResetCompletePage/ResetCompletePage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage/ResetPasswordPage'
-import { ReviewWorkPage } from './pages/ReviewWorkPage/ReviewWorkPage'
 import { SignupPage } from './pages/SignupPage/SignupPage'
-import { TicketDetailPage } from './pages/TicketDetailPage/TicketDetailPage'
-import { TicketListPage } from './pages/TicketListPage/TicketListPage'
-import { WorkerDetailPage } from './pages/WorkerDetailPage/WorkerDetailPage'
-import { WorkerListPage } from './pages/WorkerListPage/WorkerListPage'
-import { WorkListPage } from './pages/WorkListPage/WorkListPage'
+
+const AgentLogPage = lazy(() =>
+  import('./pages/AgentLogPage/AgentLogPage').then((module) => ({ default: module.AgentLogPage })),
+)
+const CaseDetailPage = lazy(() =>
+  import('./pages/CaseDetailPage/CaseDetailPage').then((module) => ({
+    default: module.CaseDetailPage,
+  })),
+)
+const CreateWorkPage = lazy(() =>
+  import('./pages/CreateWorkPage/CreateWorkPage').then((module) => ({
+    default: module.CreateWorkPage,
+  })),
+)
+const DashboardPage = lazy(() =>
+  import('./pages/DashboardPage/DashboardPage').then((module) => ({
+    default: module.DashboardPage,
+  })),
+)
+const DocumentDetailPage = lazy(() =>
+  import('./pages/DocumentDetailPage/DocumentDetailPage').then((module) => ({
+    default: module.DocumentDetailPage,
+  })),
+)
+const DocumentListPage = lazy(() =>
+  import('./pages/DocumentListPage/DocumentListPage').then((module) => ({
+    default: module.DocumentListPage,
+  })),
+)
+const ProfilePage = lazy(() =>
+  import('./pages/ProfilePage/ProfilePage').then((module) => ({ default: module.ProfilePage })),
+)
+const ReviewWorkPage = lazy(() =>
+  import('./pages/ReviewWorkPage/ReviewWorkPage').then((module) => ({
+    default: module.ReviewWorkPage,
+  })),
+)
+const TicketDetailPage = lazy(() =>
+  import('./pages/TicketDetailPage/TicketDetailPage').then((module) => ({
+    default: module.TicketDetailPage,
+  })),
+)
+const TicketListPage = lazy(() =>
+  import('./pages/TicketListPage/TicketListPage').then((module) => ({
+    default: module.TicketListPage,
+  })),
+)
+const WorkerDetailPage = lazy(() =>
+  import('./pages/WorkerDetailPage/WorkerDetailPage').then((module) => ({
+    default: module.WorkerDetailPage,
+  })),
+)
+const WorkerListPage = lazy(() =>
+  import('./pages/WorkerListPage/WorkerListPage').then((module) => ({
+    default: module.WorkerListPage,
+  })),
+)
+const WorkListPage = lazy(() =>
+  import('./pages/WorkListPage/WorkListPage').then((module) => ({
+    default: module.WorkListPage,
+  })),
+)
 
 export const router = createBrowserRouter([
   { path: '/', element: <IntroPage />, errorElement: <NotFoundPage /> },

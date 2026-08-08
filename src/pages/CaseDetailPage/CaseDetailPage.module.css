@@ -387,6 +387,7 @@
 .documentRow {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 16px;
   padding: var(--fowoco-spacing-16) var(--fowoco-spacing-24);
   background: var(--surface-default);

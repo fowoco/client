@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ApiError, getErrorMessage } from '../../api/errors'
+import { subscribeAiRunEvents, type AiRunPublicEvent } from '../../api/aiRunEvents'
 import {
   createAiRun,
   decideAiRunCandidates,
@@ -135,14 +136,24 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
     workerId: initialDraft?.workerId ?? '',
   }
 
+  const isProcessing = run.status === 'QUEUED' || run.status === 'RUNNING'
+
   useEffect(() => {
-    if (run.status !== 'QUEUED' && run.status !== 'RUNNING') return
+    if (!isProcessing) return
 
     let cancelled = false
-    const timer = window.setTimeout(async () => {
+    let pollingTimer: number | null = null
+    let terminalEventSeen = false
+    const controller = new AbortController()
+
+    const updateFromFullRun = async () => {
       try {
         const latest = await fetchAiRun(run.ai_run_id)
-        if (!cancelled) setRun(latest)
+        if (!cancelled) {
+          setRun(latest)
+          setError(null)
+        }
+        return latest
       } catch (pollError) {
         if (!cancelled) {
           setError(
@@ -151,14 +162,66 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
               : '분석 상태를 확인하지 못했습니다.',
           )
         }
+        return null
       }
-    }, 1200)
+    }
+
+    const schedulePolling = () => {
+      if (cancelled || pollingTimer !== null) return
+      pollingTimer = window.setTimeout(async () => {
+        pollingTimer = null
+        const latest = await updateFromFullRun()
+        if (!latest || latest.status === 'QUEUED' || latest.status === 'RUNNING') {
+          schedulePolling()
+        }
+      }, 1200)
+    }
+
+    const handleEvent = (event: AiRunPublicEvent) => {
+      if (event.ai_run_id !== run.ai_run_id || cancelled) return
+      const terminal =
+        event.type === 'NEEDS_INFO' ||
+        event.type === 'REVIEW_REQUIRED' ||
+        event.type === 'COMPLETED' ||
+        event.type === 'FAILED'
+      if (terminal) {
+        terminalEventSeen = true
+        void updateFromFullRun().then((latest) => {
+          if (!latest) schedulePolling()
+        })
+        return
+      }
+      setRun((current) =>
+        current.version > event.version
+          ? current
+          : {
+              ...current,
+              status: event.status,
+              analysis_outcome: event.analysis_outcome,
+              attempt_count: event.attempt_count,
+              version: event.version,
+              updated_at: event.occurred_at,
+            },
+      )
+    }
+
+    subscribeAiRunEvents(run.ai_run_id, {
+      signal: controller.signal,
+      onEvent: handleEvent,
+    })
+      .then(() => {
+        if (!terminalEventSeen) schedulePolling()
+      })
+      .catch(() => {
+        if (!cancelled && !controller.signal.aborted) schedulePolling()
+      })
 
     return () => {
       cancelled = true
-      window.clearTimeout(timer)
+      controller.abort()
+      if (pollingTimer !== null) window.clearTimeout(pollingTimer)
     }
-  }, [run])
+  }, [isProcessing, run.ai_run_id])
 
   useEffect(() => {
     setAnswers(

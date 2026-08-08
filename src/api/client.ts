@@ -5,6 +5,10 @@ import { ApiError, networkApiError, type ApiErrorBody } from './errors'
 // 명시적으로 다루도록 하고, 응답 전체를 자동으로 camelCase 변환하지 않는다.
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
 
+export function getApiUrl(path: string) {
+  return `${API_BASE_URL}${path}`
+}
+
 let accessToken: string | null = null
 
 export function setAccessToken(token: string | null) {
@@ -78,7 +82,7 @@ async function rawFetch(path: string, init: RequestInit): Promise<Response> {
     headers.set('Authorization', `Bearer ${accessToken}`)
   }
 
-  return fetch(`${API_BASE_URL}${path}`, {
+  return fetch(getApiUrl(path), {
     ...init,
     headers,
     credentials: 'include',

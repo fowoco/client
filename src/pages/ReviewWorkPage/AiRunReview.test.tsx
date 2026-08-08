@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -85,6 +85,55 @@ beforeEach(() => {
 })
 
 afterEach(() => vi.unstubAllGlobals())
+
+function processingRun(): AiRunResponse {
+  return {
+    ...RUN,
+    status: 'RUNNING',
+    analysis_outcome: null,
+    detected_intent: null,
+    version: 1,
+    questions: [],
+    candidates: [],
+  }
+}
+
+function needsInfoRun(): AiRunResponse {
+  return {
+    ...processingRun(),
+    status: 'SUCCEEDED',
+    analysis_outcome: 'NEEDS_INFO',
+    detected_intent: 'EXPIRY_RENEWAL',
+    version: 2,
+    questions: [
+      {
+        slot_key: 'due_at',
+        label: '신청 목표일을 입력해 주세요.',
+        input_type: 'DATE',
+        required: true,
+        answer: null,
+      },
+    ],
+  }
+}
+
+function renderProcessingReview() {
+  render(
+    <MemoryRouter>
+      <AiRunReview initialRun={processingRun()} />
+    </MemoryRouter>,
+  )
+}
+
+function eventStream(event: unknown) {
+  const payload = `id:2\nevent:NEEDS_INFO\ndata:${JSON.stringify(event)}\n\n`
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode(payload))
+      controller.close()
+    },
+  })
+}
 
 function renderReview() {
   render(
@@ -182,5 +231,71 @@ describe('AiRunReview candidate decision', () => {
 
     expect(await screen.findByRole('button', { name: '체류기간 연장 처리 선택' })).toBeDisabled()
     expect(screen.getByRole('button', { name: '선택한 업무 생성' })).toBeDisabled()
+  })
+})
+
+describe('AiRunReview progress updates', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('uses a terminal SSE event to fetch the complete questions and candidates', async () => {
+    const terminalEvent = {
+      event_id: 2,
+      ai_run_id: RUN.ai_run_id,
+      type: 'NEEDS_INFO',
+      status: 'SUCCEEDED',
+      analysis_outcome: 'NEEDS_INFO',
+      attempt_count: 1,
+      version: 2,
+      occurred_at: '2026-08-09T00:00:02Z',
+    }
+    vi.mocked(fetch).mockImplementation((input) => {
+      const url = String(input)
+      if (url.includes('/events')) {
+        return Promise.resolve(
+          new Response(eventStream(terminalEvent), {
+            status: 200,
+            headers: { 'Content-Type': 'text/event-stream' },
+          }),
+        )
+      }
+      if (url.includes(`/ai-runs/${RUN.ai_run_id}`)) {
+        return Promise.resolve(jsonResponse(needsInfoRun()))
+      }
+      return Promise.reject(new Error(`Unexpected request: ${url}`))
+    })
+
+    renderProcessingReview()
+
+    expect(await screen.findByLabelText('신청 목표일을 입력해 주세요. *')).toBeInTheDocument()
+    expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).includes('/events'))).toBe(true)
+    expect(
+      vi
+        .mocked(fetch)
+        .mock.calls.some(([url]) => String(url).endsWith(`/ai-runs/${RUN.ai_run_id}`)),
+    ).toBe(true)
+  })
+
+  it('falls back to the existing polling endpoint when the SSE connection fails', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.mocked(fetch).mockImplementation((input) => {
+      const url = String(input)
+      if (url.includes('/events')) return Promise.reject(new TypeError('stream disconnected'))
+      if (url.includes(`/ai-runs/${RUN.ai_run_id}`)) {
+        return Promise.resolve(jsonResponse(needsInfoRun()))
+      }
+      return Promise.reject(new Error(`Unexpected request: ${url}`))
+    })
+    renderProcessingReview()
+
+    await waitFor(() =>
+      expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).includes('/events'))).toBe(
+        true,
+      ),
+    )
+    await vi.advanceTimersByTimeAsync(1300)
+
+    expect(await screen.findByLabelText('신청 목표일을 입력해 주세요. *')).toBeInTheDocument()
   })
 })

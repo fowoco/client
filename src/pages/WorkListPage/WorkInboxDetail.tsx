@@ -12,11 +12,16 @@ import {
   getWorkflowLabel,
   isReviewCase,
 } from './workInboxPresentation'
+import { isActiveWorkInboxCase } from './workInboxModel'
 import styles from './WorkListPage.module.css'
 
 interface WorkInboxDetailProps {
   group: WorkInboxWorkerGroup
   onOpenTask: (taskId: string) => void
+  onCreateWork: (workerId: string, workerDisplayName: string) => void
+  onOpenWorker: (workerId: string) => void
+  onOpenDocuments: (workerId: string) => void
+  casesUnavailable?: boolean
 }
 
 const NATIONALITY_LABEL: Record<string, string> = {
@@ -29,42 +34,111 @@ const NATIONALITY_LABEL: Record<string, string> = {
   TH: '태국',
 }
 
+const WORK_STATUS_LABEL = {
+  ACTIVE: '재직',
+  ON_LEAVE: '휴직',
+  RESIGNED: '퇴사',
+  TERMINATED: '계약 종료',
+} as const
+
 function getWorkerMeta(group: WorkInboxWorkerGroup): string {
   const worker = group.worker
   if (!worker) return '근무 정보 확인 필요'
   const nationality = NATIONALITY_LABEL[worker.nationality_code] ?? worker.nationality_code
-  const workStatus = worker.work_status === 'ACTIVE' ? '재직' : '근무 상태 확인 필요'
-  return `${nationality} · ${workStatus} · 비자·근무 정보 미등록`
+  const workStatus = WORK_STATUS_LABEL[worker.work_status]
+  const visa = worker.visa_type ? `${worker.visa_type} 비자` : '비자 미등록'
+  return `${nationality} · ${workStatus} · ${visa}`
 }
 
-export function WorkInboxDetail({ group, onOpenTask }: WorkInboxDetailProps) {
+export function WorkInboxDetail({
+  group,
+  onOpenTask,
+  onCreateWork,
+  onOpenWorker,
+  onOpenDocuments,
+  casesUnavailable = false,
+}: WorkInboxDetailProps) {
   const showToast = useToastStore((state) => state.showToast)
-  const [activeCaseId, setActiveCaseId] = useState(group.primaryCase.case_id)
+  const [activeCaseId, setActiveCaseId] = useState<string | null>(group.primaryCase?.case_id ?? null)
 
   // 근로자를 바꾸면 새 근로자의 우선 Case로 되돌린다.
   useEffect(() => {
-    setActiveCaseId(group.primaryCase.case_id)
-  }, [group.workerId, group.primaryCase.case_id])
+    setActiveCaseId(group.primaryCase?.case_id ?? null)
+  }, [group.workerId, group.primaryCase?.case_id])
 
-  const activeCaseIndex = group.cases.findIndex((item) => item.case_id === activeCaseId)
-  const activeCase = group.cases[activeCaseIndex] ?? group.primaryCase
+  const detailTitleId = `work-inbox-detail-${group.workerId}`
+  const activeCases = group.cases.filter(isActiveWorkInboxCase)
+
+  if (activeCases.length === 0 || !group.primaryCase) {
+    const emptyTitle = casesUnavailable
+      ? '업무 정보를 확인하지 못했습니다'
+      : '현재 진행 중인 업무가 없습니다'
+    const emptyBody = casesUnavailable
+      ? '근로자 정보는 불러왔지만 업무 목록 연결에 실패했습니다. 잠시 후 다시 확인해 주세요.'
+      : group.historyCaseCount > 0
+        ? `완료·취소된 업무 이력 ${group.historyCaseCount}건이 있습니다. 필요한 후속 업무를 새로 요청할 수 있습니다.`
+        : '이 근로자에게 필요한 업무를 요청하면 Agent가 절차와 준비 서류를 정리합니다.'
+
+    return (
+      <section className={styles.detailPanel} role="region" aria-labelledby={detailTitleId}>
+        <header className={styles.detailHeader}>
+          <div>
+            <h2 id={detailTitleId} className={styles.detailName}>
+              {group.workerDisplayName}
+            </h2>
+            <p className={styles.detailMeta}>{getWorkerMeta(group)}</p>
+          </div>
+          <button
+            type="button"
+            className={styles.moreButton}
+            aria-label={`${group.workerDisplayName} 근로자 정보 보기`}
+            onClick={() => onOpenWorker(group.workerId)}
+          >
+            <span aria-hidden="true">···</span>
+          </button>
+        </header>
+
+        <div className={styles.noWorkPanel}>
+          <div className={styles.noWorkContent}>
+            <span className={styles.noWorkEyebrow}>
+              {casesUnavailable ? '업무 연결 확인 필요' : '업무 없음'}
+            </span>
+            <h3 className={styles.noWorkTitle}>{emptyTitle}</h3>
+            <p className={styles.noWorkBody}>{emptyBody}</p>
+          </div>
+          <div className={styles.noWorkActions}>
+            <Button
+              disabled={casesUnavailable}
+              onClick={() => onCreateWork(group.workerId, group.workerDisplayName)}
+            >
+              새 업무 요청
+            </Button>
+            <Button variant="secondary" onClick={() => onOpenWorker(group.workerId)}>
+              근로자 정보 보기
+            </Button>
+            <Button variant="secondary" onClick={() => onOpenDocuments(group.workerId)}>
+              문서 확인
+            </Button>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  const activeCaseIndex = activeCases.findIndex((item) => item.case_id === activeCaseId)
+  const activeCase = activeCases[activeCaseIndex] ?? group.primaryCase
   const activeTask = activeCase.current_task
   const due = getDuePresentation(activeTask?.due_date ?? activeCase.due_date)
   const activeStatus = getCaseDisplayStatusPresentation(activeCase.display_status)
-  const reviewCases = group.cases.filter((item) => isReviewCase(item.display_status))
-  const detailTitleId = `work-inbox-detail-${group.workerId}`
+  const reviewCases = activeCases.filter((item) => isReviewCase(item.display_status))
 
   function handleOpenOtherCase() {
-    const nextIndex = (Math.max(activeCaseIndex, 0) + 1) % group.cases.length
-    setActiveCaseId(group.cases[nextIndex].case_id)
+    const nextIndex = (Math.max(activeCaseIndex, 0) + 1) % activeCases.length
+    setActiveCaseId(activeCases[nextIndex].case_id)
   }
 
   function handleViewEvidence() {
     showToast('판단 근거 보기는 준비 중입니다.')
-  }
-
-  function handleOpenWorkerMenu() {
-    showToast('근로자 업무 메뉴는 준비 중입니다.')
   }
 
   return (
@@ -80,8 +154,8 @@ export function WorkInboxDetail({ group, onOpenTask }: WorkInboxDetailProps) {
           <button
             type="button"
             className={styles.moreButton}
-            aria-label={`${group.workerDisplayName} 업무 메뉴`}
-            onClick={handleOpenWorkerMenu}
+            aria-label={`${group.workerDisplayName} 근로자 정보 보기`}
+            onClick={() => onOpenWorker(group.workerId)}
           >
             <span aria-hidden="true">···</span>
           </button>
@@ -96,7 +170,7 @@ export function WorkInboxDetail({ group, onOpenTask }: WorkInboxDetailProps) {
         <div className={styles.priorityCase}>
           <div className={styles.priorityCaseHeader}>
             <p className={styles.caseEyebrow}>
-              우선 업무 건 · {Math.max(activeCaseIndex, 0) + 1}/{group.cases.length}
+              우선 업무 건 · {Math.max(activeCaseIndex, 0) + 1}/{activeCases.length}
             </p>
             {activeTask && (
               <button
@@ -128,7 +202,7 @@ export function WorkInboxDetail({ group, onOpenTask }: WorkInboxDetailProps) {
                 aria-label={`${activeCase.title} Case 진행률`}
               />
             </div>
-            {group.cases.length > 1 && (
+            {activeCases.length > 1 && (
               <button type="button" className={styles.textLink} onClick={handleOpenOtherCase}>
                 다른 Case 열기 →
               </button>
@@ -195,7 +269,7 @@ export function WorkInboxDetail({ group, onOpenTask }: WorkInboxDetailProps) {
               {activeTask ? getDecisionSummary(activeTask.status) : activeStatus.label}
             </p>
             <p className={styles.decisionMeta}>
-              진행 업무 건 {group.cases.length}개 · 확인할 업무 {reviewCases.length}개 · 자동
+              진행 업무 건 {group.activeCaseCount}개 · 확인할 업무 {reviewCases.length}개 · 자동
               확정되지 않음
             </p>
           </div>

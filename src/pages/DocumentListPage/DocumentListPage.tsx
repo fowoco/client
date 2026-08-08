@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { fetchDocuments, type DocumentItemResponse } from '../../api/documents'
 import { getErrorMessage } from '../../api/errors'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
@@ -42,13 +42,15 @@ const DOCUMENT_TABS: { id: TabId; label: string }[] = [
 
 export function DocumentListPage() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const workerId = searchParams.get('workerId')?.trim() || null
   const [activeTab, setActiveTab] = useState<TabId>('all')
   const [query, setQuery] = useState('')
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const debouncedQuery = useDebouncedValue(query)
 
   const { status, data, error, refetch } = useApiQuery(
-    useCallback(() => fetchDocuments({ size: 100 }), []),
+    useCallback(() => fetchDocuments({ workerId: workerId ?? undefined, size: 100 }), [workerId]),
     useCallback((page: { items: unknown[] }) => page.items.length === 0, []),
   )
   const documents = useMemo(() => data?.items ?? [], [data])
@@ -92,12 +94,27 @@ export function DocumentListPage() {
     navigate(`/documents/${workerDocumentId}`)
   }
 
+  function handleClearWorkerFilter() {
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.delete('workerId')
+    setSearchParams(nextParams)
+  }
+
   return (
     <div>
       <h1 className={styles.headline}>근로자별 서류 제출 현황</h1>
       <p className={styles.description}>
         서류 없음·승인 대기·완료 상태와 문서 만료일을 서버 응답 기준으로 확인합니다.
       </p>
+
+      {workerId && (
+        <div className={styles.workerFilterNotice} role="status">
+          <span>업무함에서 선택한 근로자의 문서만 표시합니다.</span>
+          <button type="button" onClick={handleClearWorkerFilter}>
+            전체 문서 보기
+          </button>
+        </div>
+      )}
 
       <div className={styles.metricStrip}>
         {metricStrip.map((metric) => (

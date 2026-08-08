@@ -29,9 +29,12 @@ function worker(overrides: Partial<WorkerResponse> = {}): WorkerResponse {
     nationality_code: 'VN',
     preferred_language: 'vi',
     work_status: 'ACTIVE',
+    visa_type: null,
     stay_expiry_date: null,
     contract_start_date: null,
     contract_end_date: null,
+    employment_permit_end_date: null,
+    employment_activity_end_date: null,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
     version: 1,
@@ -110,11 +113,18 @@ afterEach(() => {
 
 describe('WorkerDetailPage', () => {
   it('renders basic profile info for the selected worker', async () => {
-    mockWorkerAndDocuments()
+    mockWorkerAndDocuments({
+      visa_type: 'E-9',
+      employment_permit_end_date: '2028-03-01',
+      employment_activity_end_date: '2028-04-01',
+    })
     renderPage('W-018')
 
     expect(await screen.findByRole('heading', { name: '쩐티B' })).toBeInTheDocument()
     expect(screen.getByText('VN')).toBeInTheDocument()
+    expect(screen.getAllByText('E-9').length).toBeGreaterThan(0)
+    expect(screen.getByText(/2028\.03\.01/)).toBeInTheDocument()
+    expect(screen.getByText(/2028\.04\.01/)).toBeInTheDocument()
     expect(screen.getAllByText('준비 중').length).toBeGreaterThan(0)
   })
 
@@ -250,5 +260,21 @@ describe('WorkerDetailPage', () => {
     const patchCall = calls.find((c) => c.url.includes('/workers/W-018') && c.method === 'PATCH')
     expect(patchCall).toBeDefined()
     expect(JSON.parse(patchCall!.body!)).toMatchObject({ display_name: '쩐티B(수정)', expected_version: 1 })
+  })
+
+  it('does not report success when an existing employment date is cleared', async () => {
+    const user = userEvent.setup()
+    mockWorkerAndDocuments({ employment_permit_end_date: '2028-03-01' })
+    renderPage('W-018')
+    await screen.findByRole('heading', { name: '쩐티B' })
+
+    await user.click(screen.getByRole('button', { name: '정보 수정' }))
+    await user.clear(screen.getByLabelText('고용허가 종료일'))
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    expect(
+      screen.getByText('등록된 비자·날짜 값의 삭제는 아직 지원하지 않습니다. 기존 값을 유지해 주세요.'),
+    ).toBeInTheDocument()
+    expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === 'PATCH')).toBe(false)
   })
 })

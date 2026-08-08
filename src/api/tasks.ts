@@ -11,7 +11,16 @@ export type TaskStatus =
   | 'COMPLETED'
   | 'CANCELLED'
 
-export type TaskType = 'RECONTRACT' | 'EMPLOYMENT_PERIOD_EXTENSION' | 'STAY_PERIOD_EXTENSION'
+export type TaskType =
+  | 'RECONTRACT'
+  | 'EMPLOYMENT_PERIOD_EXTENSION'
+  | 'STAY_PERIOD_EXTENSION'
+  | 'DOCUMENT_REQUEST'
+  | 'WORKER_ONBOARDING'
+  | 'PAYROLL_EXPLANATION'
+  | 'EMPLOYMENT_CHANGE'
+  | 'WORK_INSTRUCTION'
+export type TaskTargetType = 'WORKER' | 'COMPANY'
 export type TaskSource = 'MANUAL' | 'SYSTEM_DDAY' | 'AI_CANDIDATE'
 
 export interface TaskChecklistItemResponse {
@@ -27,7 +36,8 @@ export interface TaskChecklistItemResponse {
 
 export interface TaskDetailResponse {
   task_id: string
-  worker_id: string
+  target_type: TaskTargetType
+  worker_id: string | null
   case_id: string | null
   task_type: TaskType
   workflow_id: string
@@ -50,7 +60,8 @@ export interface TaskDetailResponse {
 
 export interface TaskSummaryResponse {
   task_id: string
-  worker_id: string
+  target_type: TaskTargetType
+  worker_id: string | null
   case_id: string | null
   task_type: TaskType
   workflow_id: string
@@ -76,6 +87,8 @@ export interface TaskPageResponse {
 export interface FetchTasksParams {
   status?: TaskStatus
   taskType?: TaskType
+  targetType?: TaskTargetType
+  source?: TaskSource
   workerId?: string
   caseId?: string
   dueFrom?: string
@@ -89,8 +102,10 @@ export function fetchTasks(params: FetchTasksParams = {}): Promise<TaskPageRespo
   const query = new URLSearchParams()
   if (params.status) query.set('status', params.status)
   if (params.taskType) query.set('taskType', params.taskType)
+  if (params.targetType) query.set('target_type', params.targetType)
+  if (params.source) query.set('source', params.source)
   if (params.workerId) query.set('workerId', params.workerId)
-  if (params.caseId) query.set('caseId', params.caseId)
+  if (params.caseId) query.set('case_id', params.caseId)
   if (params.dueFrom) query.set('dueFrom', params.dueFrom)
   if (params.dueTo) query.set('dueTo', params.dueTo)
   if (params.keyword) query.set('keyword', params.keyword)
@@ -103,8 +118,7 @@ export function fetchTaskById(taskId: string): Promise<TaskDetailResponse> {
   return apiFetch<TaskDetailResponse>(`/tasks/${encodeURIComponent(taskId)}`)
 }
 
-export interface CreateTaskBody {
-  worker_id: string
+interface CreateTaskFields {
   case_id?: string
   task_type: TaskType
   workflow_id: string
@@ -113,6 +127,12 @@ export interface CreateTaskBody {
   due_date?: string
   business_data?: Record<string, unknown>
 }
+
+export type CreateTaskBody = CreateTaskFields &
+  (
+    | { target_type?: 'WORKER'; worker_id: string }
+    | { target_type: 'COMPANY'; worker_id?: never }
+  )
 
 export function createTask(body: CreateTaskBody): Promise<TaskDetailResponse> {
   return apiFetch<TaskDetailResponse>('/tasks', { method: 'POST', body: JSON.stringify(body) })

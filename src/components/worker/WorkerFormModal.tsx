@@ -38,14 +38,21 @@ function errorMessageOf(error: unknown, fallback: string): string {
   return fallback
 }
 
+function clearedExistingField(original: string | null | undefined, current: string): boolean {
+  return Boolean(original) && current === ''
+}
+
 export function WorkerFormModal({ open, mode, worker, onClose, onSaved }: WorkerFormModalProps) {
   const [displayName, setDisplayName] = useState('')
   const [nationalityCode, setNationalityCode] = useState('')
   const [preferredLanguage, setPreferredLanguage] = useState('')
   const [workStatus, setWorkStatus] = useState<WorkStatus>('ACTIVE')
+  const [visaType, setVisaType] = useState('E-9')
   const [stayExpiryDate, setStayExpiryDate] = useState('')
   const [contractStartDate, setContractStartDate] = useState('')
   const [contractEndDate, setContractEndDate] = useState('')
+  const [employmentPermitEndDate, setEmploymentPermitEndDate] = useState('')
+  const [employmentActivityEndDate, setEmploymentActivityEndDate] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
@@ -55,9 +62,12 @@ export function WorkerFormModal({ open, mode, worker, onClose, onSaved }: Worker
     setNationalityCode(worker?.nationality_code ?? '')
     setPreferredLanguage(worker?.preferred_language ?? '')
     setWorkStatus(worker?.work_status ?? 'ACTIVE')
+    setVisaType(worker?.visa_type ?? 'E-9')
     setStayExpiryDate(worker?.stay_expiry_date ?? '')
     setContractStartDate(worker?.contract_start_date ?? '')
     setContractEndDate(worker?.contract_end_date ?? '')
+    setEmploymentPermitEndDate(worker?.employment_permit_end_date ?? '')
+    setEmploymentActivityEndDate(worker?.employment_activity_end_date ?? '')
     setErrorMessage(null)
   }, [open, worker])
 
@@ -71,6 +81,25 @@ export function WorkerFormModal({ open, mode, worker, onClose, onSaved }: Worker
       setErrorMessage('표시 이름을 입력해 주세요.')
       return
     }
+    if (contractStartDate && contractEndDate && contractEndDate < contractStartDate) {
+      setErrorMessage('계약 종료일은 계약 시작일보다 빠를 수 없습니다.')
+      return
+    }
+    if (
+      mode === 'edit' &&
+      worker &&
+      [
+        [worker.visa_type, visaType],
+        [worker.stay_expiry_date, stayExpiryDate],
+        [worker.contract_start_date, contractStartDate],
+        [worker.contract_end_date, contractEndDate],
+        [worker.employment_permit_end_date, employmentPermitEndDate],
+        [worker.employment_activity_end_date, employmentActivityEndDate],
+      ].some(([original, current]) => clearedExistingField(original, current ?? ''))
+    ) {
+      setErrorMessage('등록된 비자·날짜 값의 삭제는 아직 지원하지 않습니다. 기존 값을 유지해 주세요.')
+      return
+    }
 
     setSubmitting(true)
     setErrorMessage(null)
@@ -81,18 +110,24 @@ export function WorkerFormModal({ open, mode, worker, onClose, onSaved }: Worker
               display_name: displayName.trim(),
               nationality_code: nationalityCode || undefined,
               preferred_language: preferredLanguage || undefined,
+              visa_type: visaType || undefined,
               stay_expiry_date: stayExpiryDate || undefined,
               contract_start_date: contractStartDate || undefined,
               contract_end_date: contractEndDate || undefined,
+              employment_permit_end_date: employmentPermitEndDate || undefined,
+              employment_activity_end_date: employmentActivityEndDate || undefined,
             })
           : await patchWorker(worker!.worker_id, {
               display_name: displayName.trim(),
               nationality_code: nationalityCode || undefined,
               preferred_language: preferredLanguage || undefined,
               work_status: workStatus,
+              visa_type: visaType || undefined,
               stay_expiry_date: stayExpiryDate || undefined,
               contract_start_date: contractStartDate || undefined,
               contract_end_date: contractEndDate || undefined,
+              employment_permit_end_date: employmentPermitEndDate || undefined,
+              employment_activity_end_date: employmentActivityEndDate || undefined,
               expected_version: worker!.version,
             })
       onSaved(saved)
@@ -135,6 +170,7 @@ export function WorkerFormModal({ open, mode, worker, onClose, onSaved }: Worker
       <input
         type="text"
         className={styles.textInput}
+        aria-label="선호 언어"
         value={preferredLanguage}
         onChange={(event) => setPreferredLanguage(event.target.value)}
         placeholder="vi"
@@ -158,10 +194,22 @@ export function WorkerFormModal({ open, mode, worker, onClose, onSaved }: Worker
         </>
       )}
 
+      <p className={`${styles.fieldLabel} ${styles.fieldLabelSpaced}`}>비자 유형</p>
+      <input
+        type="text"
+        className={styles.textInput}
+        aria-label="비자 유형"
+        value={visaType}
+        onChange={(event) => setVisaType(event.target.value)}
+        placeholder="E-9"
+        maxLength={20}
+      />
+
       <p className={`${styles.fieldLabel} ${styles.fieldLabelSpaced}`}>체류 만료일</p>
       <input
         type="date"
         className={styles.textInput}
+        aria-label="체류 만료일"
         value={stayExpiryDate}
         onChange={(event) => setStayExpiryDate(event.target.value)}
       />
@@ -181,6 +229,24 @@ export function WorkerFormModal({ open, mode, worker, onClose, onSaved }: Worker
           aria-label="계약 종료일"
           value={contractEndDate}
           onChange={(event) => setContractEndDate(event.target.value)}
+        />
+      </div>
+
+      <p className={`${styles.fieldLabel} ${styles.fieldLabelSpaced}`}>고용 관련 종료일</p>
+      <div className={styles.dateRow}>
+        <input
+          type="date"
+          className={styles.textInput}
+          aria-label="고용허가 종료일"
+          value={employmentPermitEndDate}
+          onChange={(event) => setEmploymentPermitEndDate(event.target.value)}
+        />
+        <input
+          type="date"
+          className={styles.textInput}
+          aria-label="취업활동 종료일"
+          value={employmentActivityEndDate}
+          onChange={(event) => setEmploymentActivityEndDate(event.target.value)}
         />
       </div>
 

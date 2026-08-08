@@ -48,6 +48,7 @@ export function buildTaskApprovalSnapshot(task: TaskDetailResponse): RequestTask
     expected_version: task.version,
     ai_snapshot: null,
     hr_snapshot: {
+      target_type: task.target_type,
       worker_id: task.worker_id,
       task_type: task.task_type,
       workflow_id: task.workflow_id,

@@ -30,6 +30,7 @@ function task(
 ): TaskSummaryResponse {
   return {
     task_id: taskId,
+    target_type: 'WORKER',
     worker_id: 'W-1',
     case_id: null,
     task_type: 'STAY_PERIOD_EXTENSION',

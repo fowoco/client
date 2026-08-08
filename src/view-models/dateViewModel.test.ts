@@ -9,6 +9,9 @@ describe('getOperationalDateViewModel', () => {
       missing: true,
     })
     expect(getOperationalDateViewModel('TASK_DUE', null).display).toBe('업무 마감일 미등록')
+    expect(getOperationalDateViewModel('EMPLOYMENT_PERMIT_END', null).display).toBe(
+      '고용허가 종료일 미등록',
+    )
   })
 
   it('formats a document expiry date with a relative deadline', () => {

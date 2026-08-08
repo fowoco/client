@@ -40,6 +40,7 @@ function errorResponse(status: number, code: string, message: string) {
 function task(overrides: Partial<TaskDetailResponse> = {}): TaskDetailResponse {
   return {
     task_id: 'T-1',
+    target_type: 'WORKER',
     worker_id: 'W-1',
     case_id: null,
     task_type: 'STAY_PERIOD_EXTENSION',

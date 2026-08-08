@@ -28,7 +28,7 @@ import { StatusLabel, type StatusTone } from '../../components/ui/StatusLabel/St
 import { Tabs } from '../../components/ui/Tabs/Tabs'
 import { useApiQuery } from '../../hooks/useApiQuery'
 import { useToastStore } from '../../store/toastStore'
-import { ACTOR_TYPE_TO_AGENT_SOURCE, AUDIT_ACTION_LABEL } from '../../utils/auditLabels'
+import { ACTOR_TYPE_TO_AGENT_SOURCE, getAuditActionLabel } from '../../utils/auditLabels'
 import { formatEventTime } from '../../utils/datetime'
 import { TASK_SOURCE_LABEL, TASK_STATUS_LABEL, TASK_STATUS_TONE } from '../../utils/taskStatus'
 import { getDocumentViewModel } from '../../view-models/documentViewModel'
@@ -746,7 +746,7 @@ export function CaseDetailPage() {
                     className={`${styles.timelineDot} ${index === 0 ? styles.timelineDotHighlighted : ''}`}
                   />
                   <span className={styles.timelineLabel}>
-                    {entry.change_summary ?? AUDIT_ACTION_LABEL[entry.action]}
+                    {entry.change_summary ?? getAuditActionLabel(entry.action)}
                   </span>
                   <AgentSourceLabel source={ACTOR_TYPE_TO_AGENT_SOURCE[entry.actor_type]} />
                 </div>
@@ -877,7 +877,7 @@ export function CaseDetailPage() {
                   className={`${styles.timelineDot} ${index === 0 ? styles.timelineDotHighlighted : ''}`}
                 />
                 <span className={styles.timelineLabel}>
-                  {entry.change_summary ?? AUDIT_ACTION_LABEL[entry.action]}
+                  {entry.change_summary ?? getAuditActionLabel(entry.action)}
                 </span>
               </div>
             ))}

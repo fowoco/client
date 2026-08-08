@@ -13,7 +13,7 @@ import { SearchInput } from '../../components/ui/SearchInput/SearchInput'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import { useApiQuery } from '../../hooks/useApiQuery'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
-import { AUDIT_ACTION_LABEL } from '../../utils/auditLabels'
+import { getAuditActionLabel } from '../../utils/auditLabels'
 import { formatEventTime } from '../../utils/datetime'
 import { TASK_STATUS_LABEL, TASK_STATUS_NEXT_ACTION } from '../../utils/taskStatus'
 import { daysUntil, getUrgencyTier, URGENCY_TONE } from '../../utils/urgency'
@@ -68,9 +68,9 @@ function etaFor(task: TaskSummaryResponse | null): string {
 
 const PRIORITY_COUNT = 5
 
-// 제품이 E-9(비전문취업) 근로자를 대상으로 하는 만큼 비자 유형은 항상 E-9다.
-// WorkerResponse에는 별도 visa_type 필드가 없다.
-const VISA_TYPE = 'E-9'
+function visaTypeLabel(worker: WorkerResponse): string {
+  return worker.visa_type ?? '비자 미등록'
+}
 
 function toRow(worker: WorkerResponse) {
   const deadlineDays = daysUntil(worker.stay_expiry_date)
@@ -103,6 +103,7 @@ export function WorkerListPage() {
   const tasksByWorker = useMemo(() => {
     const map = new Map<string, TaskSummaryResponse[]>()
     for (const task of taskPage?.items ?? []) {
+      if (!task.worker_id) continue
       const list = map.get(task.worker_id) ?? []
       list.push(task)
       map.set(task.worker_id, list)
@@ -264,7 +265,7 @@ export function WorkerListPage() {
                     </span>
                   </div>
                   <p className={styles.workerMeta}>
-                    {row.worker.nationality_code} · {VISA_TYPE}
+                    {row.worker.nationality_code} · {visaTypeLabel(row.worker)}
                   </p>
                 </button>
               ))
@@ -285,7 +286,7 @@ export function WorkerListPage() {
               )}
             </div>
             <p className={styles.detailMeta}>
-              {selectedRow.worker.nationality_code} · {VISA_TYPE} | 연락처·사번 준비 중
+              {selectedRow.worker.nationality_code} · {visaTypeLabel(selectedRow.worker)} | 연락처·사번 준비 중
             </p>
 
             <hr className={styles.divider} />
@@ -362,7 +363,7 @@ export function WorkerListPage() {
                   <div key={event.audit_event_id} className={styles.timelineRow}>
                     <span className={styles.timelineDate}>{formatEventTime(event.created_at)}</span>
                     <span className={styles.timelineLabel}>
-                      {event.change_summary ?? AUDIT_ACTION_LABEL[event.action]}
+                      {event.change_summary ?? getAuditActionLabel(event.action)}
                     </span>
                   </div>
                 ))}

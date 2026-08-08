@@ -6,6 +6,8 @@ export type OperationalDateKind =
   | 'STAY_EXPIRY'
   | 'CONTRACT_START'
   | 'CONTRACT_END'
+  | 'EMPLOYMENT_PERMIT_END'
+  | 'EMPLOYMENT_ACTIVITY_END'
   | 'DOCUMENT_EXPIRY'
 
 export interface OperationalDateViewModel {
@@ -24,6 +26,8 @@ const DATE_LABEL: Record<OperationalDateKind, string> = {
   STAY_EXPIRY: '체류 만료일',
   CONTRACT_START: '근로계약 시작일',
   CONTRACT_END: '근로계약 종료일',
+  EMPLOYMENT_PERMIT_END: '고용허가 종료일',
+  EMPLOYMENT_ACTIVITY_END: '취업활동 종료일',
   DOCUMENT_EXPIRY: '문서 만료일',
 }
 

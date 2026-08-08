@@ -10,16 +10,22 @@ function makeFile(name: string, sizeBytes: number, type = 'application/octet-str
 }
 
 beforeEach(() => {
-  vi.useFakeTimers({ shouldAdvanceTime: true })
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    file_id: 'file-server-1',
+    name: '계약서.hwpx',
+    mime_type: 'application/octet-stream',
+    size: 2048,
+    scan_status: 'NOT_SCANNED',
+  }), { status: 201, headers: { 'Content-Type': 'application/json' } })))
 })
 
 afterEach(() => {
-  vi.useRealTimers()
+  vi.unstubAllGlobals()
 })
 
 describe('FileUploadModal', () => {
   it('uploads a valid HWPX file via the file picker and shows a file_id when done', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const user = userEvent.setup()
     render(<FileUploadModal open onClose={() => {}} />)
 
     const input = screen.getByLabelText('HWP/HWPX 파일 선택')
@@ -27,11 +33,12 @@ describe('FileUploadModal', () => {
     await user.upload(input, file)
 
     expect(screen.getByText('계약서.hwpx')).toBeInTheDocument()
-    expect(screen.getByText(/업로드 중/)).toBeInTheDocument()
-
-    await vi.advanceTimersByTimeAsync(1000)
-
-    expect(await screen.findByText(/업로드 완료 · file-/)).toBeInTheDocument()
+    expect(await screen.findByText(/업로드 완료 · file-server-1/)).toBeInTheDocument()
+    expect(fetch).toHaveBeenCalledTimes(1)
+    const [, init] = vi.mocked(fetch).mock.calls[0]
+    const formData = init?.body as FormData
+    expect(formData.get('file')).toBe(file)
+    expect(formData.get('purpose')).toBe('document_automation')
   })
 
   it('rejects a file with an unsupported extension (bypassing the input accept filter via drag and drop)', () => {
@@ -43,17 +50,18 @@ describe('FileUploadModal', () => {
     expect(screen.getByText(/지원하지 않는 파일 형식입니다/)).toBeInTheDocument()
   })
 
-  it('rejects a file larger than 10MB', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  it('rejects a file larger than 20MB', async () => {
+    const user = userEvent.setup()
     render(<FileUploadModal open onClose={() => {}} />)
 
     const input = screen.getByLabelText('HWP/HWPX 파일 선택')
-    await user.upload(input, makeFile('큰파일.hwp', 11 * 1024 * 1024))
+    await user.upload(input, makeFile('큰파일.hwp', 21 * 1024 * 1024))
 
     expect(screen.getByText(/파일이 너무 큽니다/)).toBeInTheDocument()
+    expect(fetch).not.toHaveBeenCalled()
   })
 
-  it('accepts a dropped file via drag and drop', () => {
+  it('accepts a dropped file via drag and drop', async () => {
     render(<FileUploadModal open onClose={() => {}} />)
 
     const dropzone = screen.getByText('여기로 파일을 끌어다 놓거나').closest('div')!
@@ -61,23 +69,25 @@ describe('FileUploadModal', () => {
     fireEvent.drop(dropzone, { dataTransfer: { files: [file] } })
 
     expect(screen.getByText('안내문.hwp')).toBeInTheDocument()
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1))
   })
 
   it('removes a file from the list', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const user = userEvent.setup()
     render(<FileUploadModal open onClose={() => {}} />)
 
     const input = screen.getByLabelText('HWP/HWPX 파일 선택')
     await user.upload(input, makeFile('삭제할파일.hwp', 1024))
     expect(screen.getByText('삭제할파일.hwp')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: '삭제' }))
+    await screen.findByText(/업로드 완료/)
+    await user.click(screen.getByRole('button', { name: '목록에서 제거' }))
 
     expect(screen.queryByText('삭제할파일.hwp')).not.toBeInTheDocument()
   })
 
   it('closes via the 닫기 button', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const user = userEvent.setup()
     const onClose = vi.fn()
     render(<FileUploadModal open onClose={onClose} />)
 
@@ -92,16 +102,23 @@ describe('FileUploadModal', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  it('waits for pending upload timers before letting Vitest tear down the test', async () => {
-    // useEffect cleanup in the component clears pending timers on unmount; this test just
-    // asserts nothing throws when a component with an in-flight upload unmounts.
-    const { unmount } = render(<FileUploadModal open onClose={() => {}} />)
+  it('shows the server error and allows removing a failed upload', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({
+      timestamp: '2026-08-08T00:00:00Z',
+      status: 415,
+      code: 'UNSUPPORTED_FILE_TYPE',
+      message: '지원하지 않는 파일입니다.',
+      path: '/api/v1/files',
+      request_id: 'request-1',
+      field_errors: [],
+    }), { status: 415, headers: { 'Content-Type': 'application/json' } }))
+    const user = userEvent.setup()
+    render(<FileUploadModal open onClose={() => {}} />)
     const input = screen.getByLabelText('HWP/HWPX 파일 선택')
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-    await user.upload(input, makeFile('언마운트.hwp', 1024))
+    await user.upload(input, makeFile('손상파일.hwp', 1024))
 
-    unmount()
-
-    await waitFor(() => {})
+    expect(await screen.findByText(/지원하지 않는 파일입니다/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '목록에서 제거' }))
+    expect(screen.queryByText('손상파일.hwp')).not.toBeInTheDocument()
   })
 })

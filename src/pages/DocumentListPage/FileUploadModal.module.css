@@ -116,6 +116,11 @@
   cursor: pointer;
 }
 
+.removeButton:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+
 .actionRow {
   display: flex;
   justify-content: flex-end;

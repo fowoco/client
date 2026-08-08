@@ -91,6 +91,7 @@ describe('ExternalCompletionModal', () => {
     expect(completeButton).toBeDisabled()
     expect(screen.getByText('완료할 수 없습니다 · 증빙을 등록해 주세요.')).toBeInTheDocument()
 
+    await user.type(screen.getByLabelText('제출 기관'), '수원출입국·외국인청')
     await user.click(screen.getByRole('button', { name: '접수번호' }))
     await user.type(screen.getByPlaceholderText('접수번호를 입력하세요'), 'HI-2026-0718-032')
     expect(completeButton).toBeDisabled()
@@ -100,7 +101,37 @@ describe('ExternalCompletionModal', () => {
     expect(screen.getByText('✓ 완료 조건을 모두 충족했습니다.')).toBeInTheDocument()
 
     await user.click(completeButton)
-    expect(onComplete).toHaveBeenCalledWith('접수번호', 'HI-2026-0718-032', '')
+    expect(onComplete).toHaveBeenCalledWith({
+      destination: '수원출입국·외국인청',
+      evidenceType: '접수번호',
+      evidenceValue: 'HI-2026-0718-032',
+      memo: '',
+    })
+  })
+
+  it('does not request the destination again after an external submission was recorded', async () => {
+    const user = userEvent.setup()
+    const onComplete = vi.fn()
+    render(
+      <ExternalCompletionModal
+        open
+        submissionAlreadyRecorded
+        onClose={vi.fn()}
+        onComplete={onComplete}
+      />,
+    )
+
+    expect(screen.queryByLabelText('제출 기관')).not.toBeInTheDocument()
+    expect(screen.getByText('외부기관 제출 기록이 확인되었습니다.')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '접수번호' }))
+    await user.type(screen.getByPlaceholderText('접수번호를 입력하세요'), 'HI-2026-0718-032')
+    await user.click(screen.getByLabelText('실제 제출은 담당자가 직접 수행했습니다.'))
+    await user.click(screen.getByRole('button', { name: '완료 처리' }))
+
+    expect(onComplete).toHaveBeenCalledWith(
+      expect.objectContaining({ destination: '', evidenceValue: 'HI-2026-0718-032' }),
+    )
   })
 })
 

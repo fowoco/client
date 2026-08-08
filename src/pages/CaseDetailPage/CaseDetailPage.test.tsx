@@ -185,10 +185,28 @@ function mockTaskAndActivities(
         jsonResponse({ task_id: 'T-1', task_status: 'DRAFT', task_version: 2 }),
       )
     }
+    if (url.endsWith('/external-submissions')) {
+      return Promise.resolve(
+        jsonResponse(
+          {
+            resource_id: 'S-1',
+            task_id: 'T-1',
+            task_status: 'WAITING_EXTERNAL',
+            task_version: 2,
+          },
+          { status: 201 },
+        ),
+      )
+    }
     if (url.endsWith('/evidence')) {
       return Promise.resolve(
         jsonResponse(
-          { resource_id: 'E-1', task_id: 'T-1', task_status: 'APPROVED', task_version: 1 },
+          {
+            resource_id: 'E-1',
+            task_id: 'T-1',
+            task_status: 'WAITING_EXTERNAL',
+            task_version: 2,
+          },
           { status: 201 },
         ),
       )
@@ -716,6 +734,7 @@ describe('CaseDetailPage', () => {
     await user.click(await screen.findByRole('button', { name: '완료 처리 시작 →' }))
     expect(screen.getByRole('dialog', { name: '외부기관 업무 완료' })).toBeInTheDocument()
 
+    await user.type(screen.getByLabelText('제출 기관'), '수원출입국·외국인청')
     await user.click(screen.getByRole('button', { name: '접수번호' }))
     await user.type(screen.getByPlaceholderText('접수번호를 입력하세요'), 'HI-2026-0718-032')
     await user.click(screen.getByLabelText('실제 제출은 담당자가 직접 수행했습니다.'))
@@ -726,10 +745,54 @@ describe('CaseDetailPage', () => {
     )
 
     expect(screen.getByText('업무를 완료했습니다.')).toBeInTheDocument()
+    expect(
+      vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/external-submissions')),
+    ).toBe(true)
     expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/evidence'))).toBe(
       true,
     )
     expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/complete'))).toBe(
+      true,
+    )
+  })
+
+  it('does not duplicate the external submission when retrying from WAITING_EXTERNAL', async () => {
+    const user = userEvent.setup()
+    mockTaskAndActivities({
+      status: 'WAITING_EXTERNAL',
+      checklist_items: [
+        {
+          checklist_item_id: 'chk-1',
+          item_code: 'passport',
+          label: '여권 사본 확인',
+          required: true,
+          completed: true,
+          completed_by: null,
+          completed_at: null,
+          version: 1,
+        },
+      ],
+    })
+    renderPage()
+    await screen.findByText('응웬반A 체류연장 준비')
+
+    await user.click(await screen.findByRole('button', { name: '완료 처리 시작 →' }))
+    expect(screen.queryByLabelText('제출 기관')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '접수번호' }))
+    await user.type(screen.getByPlaceholderText('접수번호를 입력하세요'), 'HI-2026-0718-032')
+    await user.click(screen.getByLabelText('실제 제출은 담당자가 직접 수행했습니다.'))
+    await user.click(
+      within(screen.getByRole('dialog', { name: '외부기관 업무 완료' })).getByRole('button', {
+        name: '완료 처리',
+      }),
+    )
+
+    expect(await screen.findByText('업무를 완료했습니다.')).toBeInTheDocument()
+    expect(
+      vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/external-submissions')),
+    ).toBe(false)
+    expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/evidence'))).toBe(
       true,
     )
   })

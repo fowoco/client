@@ -1,8 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Modal } from '../../../components/ui/Modal/Modal'
 import styles from './overlays.module.css'
 
 type EvidenceType = '접수번호' | '파일' | '화면 캡처'
+
+export interface ExternalCompletionSubmission {
+  destination: string
+  evidenceType: EvidenceType
+  evidenceValue: string
+  memo: string
+}
 
 const EVIDENCE_TYPES: EvidenceType[] = ['접수번호', '파일', '화면 캡처']
 
@@ -14,25 +21,43 @@ const EVIDENCE_PLACEHOLDER: Record<EvidenceType, string> = {
 
 export interface ExternalCompletionModalProps {
   open: boolean
+  submissionAlreadyRecorded?: boolean
+  submitting?: boolean
   onClose: () => void
-  onComplete: (evidenceType: EvidenceType, evidenceValue: string, memo: string) => void
+  onComplete: (submission: ExternalCompletionSubmission) => void
 }
 
-export function ExternalCompletionModal({ open, onClose, onComplete }: ExternalCompletionModalProps) {
+export function ExternalCompletionModal({
+  open,
+  submissionAlreadyRecorded = false,
+  submitting = false,
+  onClose,
+  onComplete,
+}: ExternalCompletionModalProps) {
+  const [destination, setDestination] = useState('')
   const [evidenceType, setEvidenceType] = useState<EvidenceType | null>(null)
   const [evidenceValue, setEvidenceValue] = useState('')
   const [confirmed, setConfirmed] = useState(false)
   const [memo, setMemo] = useState('')
 
-  const isReady = evidenceType !== null && evidenceValue.trim() !== '' && confirmed
-
-  function handleComplete() {
-    if (!isReady || evidenceType === null) return
-    onComplete(evidenceType, evidenceValue, memo)
+  useEffect(() => {
+    if (open) return
+    setDestination('')
     setEvidenceType(null)
     setEvidenceValue('')
     setConfirmed(false)
     setMemo('')
+  }, [open])
+
+  const isReady =
+    (submissionAlreadyRecorded || destination.trim() !== '') &&
+    evidenceType !== null &&
+    evidenceValue.trim() !== '' &&
+    confirmed
+
+  function handleComplete() {
+    if (!isReady || evidenceType === null) return
+    onComplete({ destination: destination.trim(), evidenceType, evidenceValue, memo })
   }
 
   return (
@@ -47,6 +72,27 @@ export function ExternalCompletionModal({ open, onClose, onComplete }: ExternalC
         <p className={styles.blockedBanner}>완료할 수 없습니다 · 증빙을 등록해 주세요.</p>
       )}
 
+      {!submissionAlreadyRecorded && (
+        <div className={styles.field}>
+          <label className={styles.fieldLabel} htmlFor="external-destination">
+            제출 기관
+          </label>
+          <input
+            id="external-destination"
+            className={styles.textInput}
+            value={destination}
+            onChange={(event) => setDestination(event.target.value)}
+            placeholder="예: 수원출입국·외국인청"
+            maxLength={160}
+            disabled={submitting}
+          />
+        </div>
+      )}
+
+      {submissionAlreadyRecorded && (
+        <p className={styles.successNote}>외부기관 제출 기록이 확인되었습니다.</p>
+      )}
+
       <p className={`${styles.fieldLabel} ${styles.evidenceTypeLabel}`}>허용된 증빙 유형</p>
       <div className={styles.chipRow}>
         {EVIDENCE_TYPES.map((type) => (
@@ -55,6 +101,7 @@ export function ExternalCompletionModal({ open, onClose, onComplete }: ExternalC
             type="button"
             className={`${styles.chip} ${evidenceType === type ? styles.chipSelected : ''}`}
             onClick={() => setEvidenceType(type)}
+            disabled={submitting}
           >
             {type}
           </button>
@@ -68,6 +115,8 @@ export function ExternalCompletionModal({ open, onClose, onComplete }: ExternalC
             value={evidenceValue}
             onChange={(event) => setEvidenceValue(event.target.value)}
             placeholder={EVIDENCE_PLACEHOLDER[evidenceType]}
+            maxLength={300}
+            disabled={submitting}
           />
         </div>
       )}
@@ -77,12 +126,17 @@ export function ExternalCompletionModal({ open, onClose, onComplete }: ExternalC
           type="checkbox"
           checked={confirmed}
           onChange={(event) => setConfirmed(event.target.checked)}
+          disabled={submitting}
         />
         <span>실제 제출은 담당자가 직접 수행했습니다.</span>
       </label>
 
       {!isReady && (
-        <p className={styles.blockedNote}>증빙과 담당자 확인을 완료해야 버튼이 활성화됩니다.</p>
+        <p className={styles.blockedNote}>
+          {submissionAlreadyRecorded
+            ? '증빙과 담당자 확인을 완료해야 버튼이 활성화됩니다.'
+            : '제출 기관, 증빙과 담당자 확인을 완료해야 버튼이 활성화됩니다.'}
+        </p>
       )}
 
       {isReady && (
@@ -91,15 +145,22 @@ export function ExternalCompletionModal({ open, onClose, onComplete }: ExternalC
           value={memo}
           onChange={(event) => setMemo(event.target.value)}
           placeholder="완료 메모 · 선택사항"
+          maxLength={500}
+          disabled={submitting}
         />
       )}
 
       <div className={styles.actionRow}>
-        <button type="button" className={styles.textLink} onClick={onClose}>
+        <button type="button" className={styles.textLink} onClick={onClose} disabled={submitting}>
           취소
         </button>
-        <button type="button" className={styles.primaryButton} onClick={handleComplete} disabled={!isReady}>
-          완료 처리
+        <button
+          type="button"
+          className={styles.primaryButton}
+          onClick={handleComplete}
+          disabled={!isReady || submitting}
+        >
+          {submitting ? '완료 처리 중…' : '완료 처리'}
         </button>
       </div>
     </Modal>

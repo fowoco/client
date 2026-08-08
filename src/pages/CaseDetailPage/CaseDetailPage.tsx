@@ -4,6 +4,7 @@ import {
   approveTask,
   buildTaskApprovalSnapshot,
   completeTask,
+  recordExternalSubmission,
   recordTaskEvidence,
   rejectTask,
   requestTaskApproval,
@@ -51,7 +52,10 @@ import styles from './CaseDetailPage.module.css'
 import { CASE_TABS, CONTEXT_DRAWER } from './caseDetailData'
 import { ApprovalDecisionModal } from './overlays/ApprovalDecisionModal'
 import { ApprovalRequestModal } from './overlays/ApprovalRequestModal'
-import { ExternalCompletionModal } from './overlays/ExternalCompletionModal'
+import {
+  ExternalCompletionModal,
+  type ExternalCompletionSubmission,
+} from './overlays/ExternalCompletionModal'
 import { LinkDeliveryConfirmModal } from './overlays/LinkDeliveryConfirmModal'
 import { LinkReissueModal, type ReissueSubmission } from './overlays/LinkReissueModal'
 import { LinkReissuedModal } from './overlays/LinkReissuedModal'
@@ -285,22 +289,50 @@ export function CaseDetailPage() {
     setCompletionOverlay('external')
   }
 
-  async function handleCompleteExternal(evidenceType: string, evidenceValue: string, memo: string) {
+  async function handleCompleteExternal(submission: ExternalCompletionSubmission) {
     if (!task || actionPending) return
-    const normalizedEvidenceType = EVIDENCE_TYPE_BY_LABEL[evidenceType]
+    const normalizedEvidenceType = EVIDENCE_TYPE_BY_LABEL[submission.evidenceType]
     if (!normalizedEvidenceType) return
+    const evidenceValue = submission.evidenceValue.trim()
+    const memo = submission.memo.trim()
+    let externalSubmissionRecorded = task.status === 'WAITING_EXTERNAL'
     setActionPending(true)
     try {
+      if (!externalSubmissionRecorded) {
+        await recordExternalSubmission(task.task_id, {
+          expected_version: task.version,
+          destination: submission.destination,
+          safe_reference: evidenceValue,
+        })
+        externalSubmissionRecorded = true
+      }
+
       const evidence = await recordTaskEvidence(task.task_id, {
         evidence_type: normalizedEvidenceType,
-        note: [evidenceValue.trim(), memo.trim()].filter(Boolean).join(' · '),
+        file_reference:
+          normalizedEvidenceType === 'DOCUMENT' || normalizedEvidenceType === 'OFFICIAL_RESULT'
+            ? evidenceValue
+            : undefined,
+        note:
+          normalizedEvidenceType === 'RECEIPT'
+            ? [evidenceValue, memo].filter(Boolean).join(' · ')
+            : memo || undefined,
       })
       await completeTask(task.task_id, evidence.task_version)
       setCompletionOverlay('none')
       refetchTask()
+      refetchActivities()
       showToast('업무를 완료했습니다.')
     } catch (error) {
-      showToast(error instanceof ApiError ? getErrorMessage(error) : '업무를 완료하지 못했습니다.')
+      refetchTask()
+      refetchActivities()
+      const detail =
+        error instanceof ApiError ? getErrorMessage(error) : '업무를 완료하지 못했습니다.'
+      showToast(
+        externalSubmissionRecorded
+          ? `외부 제출 기록은 저장됐습니다. ${detail}`
+          : detail,
+      )
     } finally {
       setActionPending(false)
     }
@@ -1102,7 +1134,11 @@ export function CaseDetailPage() {
       />
       <ExternalCompletionModal
         open={completionOverlay === 'external'}
-        onClose={() => setCompletionOverlay('none')}
+        submissionAlreadyRecorded={task.status === 'WAITING_EXTERNAL'}
+        submitting={actionPending}
+        onClose={() => {
+          if (!actionPending) setCompletionOverlay('none')
+        }}
         onComplete={handleCompleteExternal}
       />
       <LinkReissueModal

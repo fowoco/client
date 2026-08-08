@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import {
   approveTask,
   buildTaskApprovalSnapshot,
@@ -11,6 +11,7 @@ import {
   type EvidenceType,
 } from '../../api/approvals'
 import { fetchTaskActivities } from '../../api/audit'
+import { fetchCaseProjection, type CaseProjectionResponse } from '../../api/cases'
 import {
   fetchDocumentReadiness,
   fetchDocuments,
@@ -49,7 +50,12 @@ import {
   type WorkerRequestState,
 } from '../../view-models/workerRequestStateViewModel'
 import styles from './CaseDetailPage.module.css'
-import { CASE_TABS, CONTEXT_DRAWER } from './caseDetailData'
+import { CASE_TABS } from './caseDetailData'
+import {
+  getCaseDisplayStatusPresentation,
+  getTaskStatusPresentation,
+  getWorkflowLabel,
+} from '../WorkListPage/workInboxPresentation'
 import { ApprovalDecisionModal } from './overlays/ApprovalDecisionModal'
 import { ApprovalRequestModal } from './overlays/ApprovalRequestModal'
 import {
@@ -100,6 +106,12 @@ const WORKER_REQUEST_STATE_TONE: Record<WorkerRequestState, StatusTone> = {
   COMPLETED: 'success',
 }
 
+const CASE_LIFECYCLE_LABEL: Record<CaseProjectionResponse['lifecycle_status'], string> = {
+  ACTIVE: '진행 중',
+  COMPLETED: '완료',
+  CANCELLED: '취소',
+}
+
 async function fetchTaskWorkerLinkDeliveryOrNull(
   taskId: string,
 ): Promise<WorkerLinkDeliveryResponse | null> {
@@ -118,9 +130,11 @@ async function fetchTaskWorkerLinkDeliveryOrNull(
 
 export function CaseDetailPage() {
   const { taskId } = useParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const contextRequested = searchParams.get('context') === 'open'
   const [activeTab, setActiveTab] = useState(CASE_TABS[0])
   const [moreMenuOpen, setMoreMenuOpen] = useState(false)
-  const [contextDrawerOpen, setContextDrawerOpen] = useState(false)
+  const [contextDrawerOpen, setContextDrawerOpen] = useState(contextRequested)
   const [approvalOverlay, setApprovalOverlay] = useState<ApprovalOverlay>('none')
   const [completionOverlay, setCompletionOverlay] = useState<CompletionOverlay>('none')
   const [actionPending, setActionPending] = useState(false)
@@ -141,6 +155,10 @@ export function CaseDetailPage() {
   const userRole = useAuthStore((state) => state.user?.role)
   const showToast = useToastStore((state) => state.showToast)
 
+  useEffect(() => {
+    if (contextRequested) setContextDrawerOpen(true)
+  }, [contextRequested])
+
   const taskFetcher = useCallback(() => fetchTaskById(taskId ?? ''), [taskId])
   const {
     status: taskStatus,
@@ -154,7 +172,12 @@ export function CaseDetailPage() {
   const activityRows = activities ?? []
 
   const readinessFetcher = useCallback(() => fetchDocumentReadiness(taskId ?? ''), [taskId])
-  const { data: readiness } = useApiQuery(readinessFetcher)
+  const {
+    status: readinessStatus,
+    data: readiness,
+    error: readinessError,
+    refetch: refetchReadiness,
+  } = useApiQuery(readinessFetcher)
 
   const workerId = task?.worker_id
   const documentsFetcher = useCallback(() => {
@@ -186,6 +209,21 @@ export function CaseDetailPage() {
     useCallback((page: { items: unknown[] }) => page.items.length === 0, []),
   )
   const workerResponses = workerResponsesPage?.items ?? []
+
+  const caseId = task?.case_id
+  const caseProjectionFetcher = useCallback(() => {
+    if (!caseId || !contextDrawerOpen) return Promise.resolve(null)
+    return fetchCaseProjection(caseId)
+  }, [caseId, contextDrawerOpen])
+  const {
+    status: caseProjectionStatus,
+    data: caseProjection,
+    error: caseProjectionError,
+    refetch: refetchCaseProjection,
+  } = useApiQuery(
+    caseProjectionFetcher,
+    useCallback((projection: CaseProjectionResponse | null) => projection === null, []),
+  )
 
   const workerLinkDeliveryFetcher = useCallback(() => {
     if (!taskId || userRole === 'VIEWER') return Promise.resolve(null)
@@ -536,7 +574,9 @@ export function CaseDetailPage() {
   const completedRequiredChecklist = requiredChecklist.filter((item) => item.completed).length
   const checklistReady = completedRequiredChecklist === requiredChecklist.length
   const informationReady = task.missing_required_slots.length === 0
-  const documentsReady = readiness ? !readiness.completion_blocked : false
+  const documentsReady =
+    readinessStatus === 'success' && Boolean(readiness && !readiness.completion_blocked)
+  const documentsStateUnknown = readinessStatus === 'loading' || readinessStatus === 'error'
   const approvalReady =
     task.status === 'APPROVED' ||
     task.status === 'WAITING_WORKER' ||
@@ -551,7 +591,7 @@ export function CaseDetailPage() {
     !approvalReady && '승인',
     !checklistReady && '필수 체크리스트',
     !informationReady && '필수 정보',
-    !documentsReady && '서류 준비',
+    !documentsReady && (documentsStateUnknown ? '서류 상태 확인' : '서류 준비'),
   ].filter(Boolean) as string[]
   const firstIncompleteChecklistIndex = task.checklist_items.findIndex((item) => !item.completed)
   const agentHeadline =
@@ -579,6 +619,9 @@ export function CaseDetailPage() {
         : null,
     completedAt: task.status === 'COMPLETED' ? task.updated_at : null,
   })
+  const caseDisplayStatus = caseProjection
+    ? getCaseDisplayStatusPresentation(caseProjection.display_status)
+    : null
 
   function handleAgentAction() {
     if (!task) return
@@ -591,6 +634,15 @@ export function CaseDetailPage() {
       return
     }
     setActiveTab('체크리스트')
+  }
+
+  function handleCloseContext() {
+    setContextDrawerOpen(false)
+    if (!searchParams.has('context')) return
+
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.delete('context')
+    setSearchParams(nextParams, { replace: true })
   }
 
   return (
@@ -773,16 +825,38 @@ export function CaseDetailPage() {
               <DetailRow
                 label="필요한 서류"
                 value={
-                  !readiness
+                  readinessStatus === 'loading'
                     ? '확인 중'
+                    : readinessStatus === 'error'
+                      ? '조회 실패'
+                      : !readiness
+                        ? '확인할 정보 없음'
                     : readiness.completion_blocked
                       ? `누락 ${readiness.missing.length}건 · 만료 ${readiness.expired.length}건`
                       : '모두 확인됨'
                 }
                 tone={
-                  !readiness ? 'default' : readiness.completion_blocked ? 'critical' : 'success'
+                  readinessStatus === 'error'
+                    ? 'critical'
+                    : !readiness || readinessStatus === 'loading'
+                      ? 'default'
+                      : readiness.completion_blocked
+                        ? 'critical'
+                        : 'success'
                 }
               />
+              {readinessStatus === 'error' && (
+                <div className={styles.readinessError}>
+                  <p>
+                    {readinessError
+                      ? getErrorMessage(readinessError)
+                      : '서류 상태를 불러오지 못했습니다.'}
+                  </p>
+                  <button type="button" className={styles.contextLink} onClick={refetchReadiness}>
+                    다시 조회 →
+                  </button>
+                </div>
+              )}
               <DetailRow
                 label="필수 정보"
                 value={
@@ -1167,60 +1241,123 @@ export function CaseDetailPage() {
 
       <Drawer
         open={contextDrawerOpen}
-        onClose={() => setContextDrawerOpen(false)}
+        onClose={handleCloseContext}
         title="관련 Context"
       >
-        {/* TODO(backend): GET /api/work-items/:id/context -> CONTEXT_DRAWER 대체 */}
-        <div className={styles.contextSection}>
-          <h3 className={styles.contextSectionTitle}>Agent가 확인한 내용</h3>
-          <ul className={styles.contextList}>
-            {CONTEXT_DRAWER.agentConfirmed.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </div>
+        {caseId &&
+          (caseProjectionStatus === 'loading' || caseProjectionStatus === 'empty') && (
+          <EmptyState
+            kind="loading"
+            title="Case 정보를 불러오는 중입니다"
+            body="연결된 업무와 준비 현황을 확인하고 있습니다."
+          />
+        )}
 
-        <div className={styles.contextSection}>
-          <h3 className={styles.contextSectionTitle}>부족한 정보</h3>
-          <ul className={styles.contextList}>
-            {CONTEXT_DRAWER.missingInfo.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </div>
+        {caseProjectionStatus === 'error' && (
+          <EmptyState
+            kind="error"
+            title="Case 정보를 불러오지 못했습니다"
+            body={
+              caseProjectionError
+                ? getErrorMessage(caseProjectionError)
+                : '네트워크 상태를 확인한 뒤 다시 시도해 주세요.'
+            }
+            actionLabel="다시 시도"
+            onAction={refetchCaseProjection}
+          />
+        )}
 
-        <div className={styles.contextSection}>
-          <h3 className={styles.contextSectionTitle}>공식 출처</h3>
-          {CONTEXT_DRAWER.officialSources.map((source) => (
-            <DetailRow key={source.label} label={source.label} value={source.value} />
-          ))}
-        </div>
+        {!caseId && caseProjectionStatus === 'empty' && (
+          <EmptyState
+            kind="empty"
+            title="연결된 Case가 없습니다"
+            body="이 업무는 독립 업무로 등록되어 현재 Task 정보만 표시됩니다."
+          />
+        )}
 
-        <div className={styles.contextSection}>
-          <h3 className={styles.contextSectionTitle}>최근 활동</h3>
-          <div className={styles.timeline}>
-            {activityRows.slice(0, 3).map((entry, index) => (
-              <div key={entry.audit_event_id} className={styles.timelineRow}>
-                <span className={styles.timelineDate}>{formatEventTime(entry.created_at)}</span>
-                <span
-                  className={`${styles.timelineDot} ${index === 0 ? styles.timelineDotHighlighted : ''}`}
-                />
-                <span className={styles.timelineLabel}>
-                  {entry.change_summary ?? getAuditActionLabel(entry.action)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+        {caseProjectionStatus === 'success' && caseProjection && caseDisplayStatus && (
+          <>
+            <div className={styles.contextSection}>
+              <h3 className={styles.contextSectionTitle}>Case 현황</h3>
+              <DetailRow label="근로자" value={caseProjection.worker_display_name} />
+              <DetailRow label="Case" value={caseProjection.title} />
+              <DetailRow
+                label="상태"
+                value={
+                  <StatusLabel tone={caseDisplayStatus.tone}>{caseDisplayStatus.label}</StatusLabel>
+                }
+              />
+              <DetailRow
+                label="생명주기"
+                value={CASE_LIFECYCLE_LABEL[caseProjection.lifecycle_status]}
+              />
+              <DetailRow
+                label="진행률"
+                value={`${caseProjection.progress.completed_steps} / ${caseProjection.progress.total_steps} · ${caseProjection.progress.percentage}%`}
+              />
+            </div>
 
-        <div className={styles.contextSection}>
-          <h3 className={styles.contextSectionTitle}>HR이 할 일</h3>
-          <ul className={styles.contextList}>
-            {CONTEXT_DRAWER.hrTodo.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </div>
+            <div className={styles.contextSection}>
+              <h3 className={styles.contextSectionTitle}>준비 현황</h3>
+              <DetailRow
+                label="체크리스트"
+                value={`${caseProjection.readiness.completed_checklist_items} / ${caseProjection.readiness.total_checklist_items}`}
+              />
+              <DetailRow
+                label="검증 서류"
+                value={`${caseProjection.readiness.verified_documents} / ${caseProjection.readiness.total_documents}`}
+              />
+              <DetailRow
+                label="승인"
+                value={`${caseProjection.readiness.approved_approvals}건 완료 · ${caseProjection.readiness.pending_approvals}건 대기`}
+              />
+              <DetailRow
+                label="근로자 응답"
+                value={`${caseProjection.readiness.worker_responses}건`}
+              />
+              <DetailRow label="완료 증빙" value={`${caseProjection.readiness.evidence_items}건`} />
+            </div>
+
+            <div className={styles.contextSection}>
+              <h3 className={styles.contextSectionTitle}>연결된 업무</h3>
+              {caseProjection.tasks.length === 0 ? (
+                <p className={styles.contextEmpty}>연결된 업무가 없습니다.</p>
+              ) : (
+                caseProjection.tasks.map((caseTask) => {
+                  const status = getTaskStatusPresentation(caseTask.status)
+                  return (
+                    <DetailRow
+                      key={caseTask.task_id}
+                      label={caseTask.title}
+                      value={`${getWorkflowLabel(caseTask)} · ${status.label}`}
+                    />
+                  )
+                })
+              )}
+            </div>
+
+            <div className={styles.contextSection}>
+              <h3 className={styles.contextSectionTitle}>최근 활동</h3>
+              {activityRows.length === 0 ? (
+                <p className={styles.contextEmpty}>기록된 활동이 없습니다.</p>
+              ) : (
+                <div className={styles.timeline}>
+                  {activityRows.slice(0, 3).map((entry, index) => (
+                    <div key={entry.audit_event_id} className={styles.timelineRow}>
+                      <span className={styles.timelineDate}>{formatEventTime(entry.created_at)}</span>
+                      <span
+                        className={`${styles.timelineDot} ${index === 0 ? styles.timelineDotHighlighted : ''}`}
+                      />
+                      <span className={styles.timelineLabel}>
+                        {entry.change_summary ?? getAuditActionLabel(entry.action)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </Drawer>
     </div>
   )

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Button } from '../../components/ui/Button/Button'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
-import { useToastStore } from '../../store/toastStore'
 import type { WorkInboxWorkerGroup } from './workInboxModel'
 import {
   getCaseDisplayStatusPresentation,
@@ -18,6 +17,7 @@ import styles from './WorkListPage.module.css'
 interface WorkInboxDetailProps {
   group: WorkInboxWorkerGroup
   onOpenTask: (taskId: string) => void
+  onOpenTaskContext: (taskId: string) => void
   onCreateWork: (workerId: string, workerDisplayName: string) => void
   onOpenWorker: (workerId: string) => void
   onOpenDocuments: (workerId: string) => void
@@ -53,12 +53,12 @@ function getWorkerMeta(group: WorkInboxWorkerGroup): string {
 export function WorkInboxDetail({
   group,
   onOpenTask,
+  onOpenTaskContext,
   onCreateWork,
   onOpenWorker,
   onOpenDocuments,
   casesUnavailable = false,
 }: WorkInboxDetailProps) {
-  const showToast = useToastStore((state) => state.showToast)
   const [activeCaseId, setActiveCaseId] = useState<string | null>(group.primaryCase?.case_id ?? null)
 
   // 근로자를 바꾸면 새 근로자의 우선 Case로 되돌린다.
@@ -138,7 +138,7 @@ export function WorkInboxDetail({
   }
 
   function handleViewEvidence() {
-    showToast('판단 근거 보기는 준비 중입니다.')
+    if (activeTask) onOpenTaskContext(activeTask.task_id)
   }
 
   return (
@@ -257,7 +257,12 @@ export function WorkInboxDetail({
             <h3 id="current-decision-title" className={styles.sectionTitle}>
               현재 결정
             </h3>
-            <button type="button" className={styles.textLink} onClick={handleViewEvidence}>
+            <button
+              type="button"
+              className={styles.textLink}
+              onClick={handleViewEvidence}
+              disabled={!activeTask}
+            >
               <span>근거 보기</span>
               <span className={styles.linkChevron} aria-hidden="true">
                 ›

@@ -178,7 +178,13 @@ function LocationProbe() {
 
 function TaskDetailProbe() {
   const { taskId } = useParams()
-  return <p>업무 상세 {taskId}</p>
+  const location = useLocation()
+  return (
+    <>
+      <p>업무 상세 {taskId}</p>
+      <output data-testid="location">{`${location.pathname}${location.search}`}</output>
+    </>
+  )
 }
 
 function WorkCreateProbe() {
@@ -478,13 +484,14 @@ describe('WorkListPage', () => {
     expect(await screen.findByText('업무 검토 화면')).toBeInTheDocument()
   })
 
-  it('shows a placeholder toast for "근거 보기"', async () => {
+  it('opens the Task detail context entry from "근거 보기"', async () => {
     mockApi()
     const user = userEvent.setup()
-    renderPage('/tasks', { withToasts: true })
+    renderPage()
 
     await user.click(await screen.findByRole('button', { name: '근거 보기' }))
 
-    expect(screen.getByText('판단 근거 보기는 준비 중입니다.')).toBeInTheDocument()
+    expect(await screen.findByText('업무 상세 T-1')).toBeInTheDocument()
+    expect(screen.getByTestId('location')).toHaveTextContent('/tasks/T-1?context=open')
   })
 })

@@ -315,6 +315,20 @@
   color: var(--fowoco-green-600);
 }
 
+.readinessError {
+  margin-top: 8px;
+  padding: var(--fowoco-spacing-12) var(--fowoco-spacing-16);
+  border-radius: var(--fowoco-radius-6);
+  background: var(--fowoco-red-50);
+}
+
+.readinessError p {
+  margin: 0 0 6px;
+  color: var(--status-critical);
+  font-size: 12px;
+  line-height: 18px;
+}
+
 .tabPanel {
   margin-top: 20px;
 }
@@ -665,4 +679,11 @@
   gap: 8px;
   font-size: 13px;
   color: var(--text-primary);
+}
+
+.contextEmpty {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 20px;
 }

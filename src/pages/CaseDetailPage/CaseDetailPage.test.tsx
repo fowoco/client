@@ -3,16 +3,22 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AuditEventResponse } from '../../api/audit'
+import type { CaseProjectionResponse } from '../../api/cases'
 import type {
   DocumentItemResponse,
   DocumentPageResponse,
   DocumentReadinessResponse,
 } from '../../api/documents'
 import type { TaskDetailResponse } from '../../api/tasks'
+import type {
+  WorkerLinkDeliveryResponse,
+  WorkerResponseItemResponse,
+} from '../../api/workerLinks'
 import { ToastViewport } from '../../components/ui/ToastViewport/ToastViewport'
+import { useAuthStore } from '../../store/authStore'
 import { useToastStore } from '../../store/toastStore'
 import { CaseDetailPage } from './CaseDetailPage'
-import { CASE_COMMUNICATION, CASE_TABS, CONTEXT_DRAWER } from './caseDetailData'
+import { CASE_TABS } from './caseDetailData'
 
 function jsonResponse(body: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(body), {
@@ -120,17 +126,101 @@ function documentsResponse(items: DocumentItemResponse[] = []): DocumentPageResp
   return { items, page: 0, size: 100, total_elements: items.length }
 }
 
+function caseProjectionResponse(
+  overrides: Partial<CaseProjectionResponse> = {},
+): CaseProjectionResponse {
+  return {
+    case_id: 'C-1',
+    worker_id: 'W-1',
+    worker_display_name: '응웬반A',
+    title: '체류기간 연장',
+    display_status: 'REVIEW_REQUIRED',
+    has_unread_response: false,
+    priority: 'HIGH',
+    progress: { completed_steps: 1, total_steps: 2, percentage: 50 },
+    due_date: '2026-08-01',
+    current_task: {
+      task_id: 'T-1',
+      task_type: 'STAY_PERIOD_EXTENSION',
+      title: '응웬반A 체류연장 준비',
+      status: 'READY_FOR_REVIEW',
+      due_date: '2026-08-01',
+    },
+    updated_at: '2026-07-20T00:00:00Z',
+    lifecycle_status: 'ACTIVE',
+    readiness: {
+      completed_checklist_items: 1,
+      total_checklist_items: 2,
+      verified_documents: 2,
+      total_documents: 3,
+      pending_approvals: 1,
+      approved_approvals: 0,
+      worker_responses: 1,
+      evidence_items: 0,
+    },
+    tasks: [
+      {
+        task_id: 'T-1',
+        task_type: 'STAY_PERIOD_EXTENSION',
+        title: '응웬반A 체류연장 준비',
+        status: 'READY_FOR_REVIEW',
+        due_date: '2026-08-01',
+      },
+    ],
+    workflow_catalog_version: '1',
+    workflow_snapshot: {},
+    ...overrides,
+  }
+}
+
 function mockTaskAndActivities(
   taskOverrides: Partial<TaskDetailResponse> = {},
   activities: AuditEventResponse[] = [],
-  readinessOverrides: Partial<DocumentReadinessResponse> = {},
+  readinessOverrides: Partial<DocumentReadinessResponse> | Response = {},
   documents: DocumentItemResponse[] = [],
+  workerResponses: WorkerResponseItemResponse[] = [],
+  workerLinkDelivery: WorkerLinkDeliveryResponse | null = null,
+  caseProjection: CaseProjectionResponse | null = null,
 ) {
-  vi.mocked(fetch).mockImplementation((input) => {
+  let responsesReviewed = false
+  let currentWorkerLinkDelivery = workerLinkDelivery
+  vi.mocked(fetch).mockImplementation((input, init) => {
     const url = String(input)
     if (url.includes('/activities')) return Promise.resolve(jsonResponse(activities))
-    if (url.includes('/document-readiness'))
-      return Promise.resolve(jsonResponse(readinessResponse(readinessOverrides)))
+    if (url.includes('/cases/') && url.endsWith('/projection')) {
+      return Promise.resolve(
+        caseProjection
+          ? jsonResponse(caseProjection)
+          : errorResponse(404, 'CASE_NOT_FOUND', 'Case 없음'),
+      )
+    }
+    if (url.endsWith('/worker-responses/read')) {
+      responsesReviewed = true
+      return Promise.resolve(new Response(null, { status: 204 }))
+    }
+    if (url.includes('/worker-responses?')) {
+      const items = workerResponses.map((response) =>
+        responsesReviewed
+          ? { ...response, unread: false, conversation_status: 'REOPENED' as const }
+          : response,
+      )
+      return Promise.resolve(
+        jsonResponse({
+          items,
+          page: 0,
+          size: 100,
+          total_elements: items.length,
+          total_pages: items.length ? 1 : 0,
+        }),
+      )
+    }
+    if (url.includes('/document-readiness')) {
+      return Promise.resolve(
+        readinessOverrides instanceof Response
+          ? readinessOverrides
+          : jsonResponse(readinessResponse(readinessOverrides)),
+      )
+    }
     if (url.includes('/document-request-draft')) {
       return Promise.resolve(
         jsonResponse({ draft_id: 'draft-1', version: 1, review_status: 'PENDING' }),
@@ -156,10 +246,28 @@ function mockTaskAndActivities(
         jsonResponse({ task_id: 'T-1', task_status: 'DRAFT', task_version: 2 }),
       )
     }
+    if (url.endsWith('/external-submissions')) {
+      return Promise.resolve(
+        jsonResponse(
+          {
+            resource_id: 'S-1',
+            task_id: 'T-1',
+            task_status: 'WAITING_EXTERNAL',
+            task_version: 2,
+          },
+          { status: 201 },
+        ),
+      )
+    }
     if (url.endsWith('/evidence')) {
       return Promise.resolve(
         jsonResponse(
-          { resource_id: 'E-1', task_id: 'T-1', task_status: 'APPROVED', task_version: 1 },
+          {
+            resource_id: 'E-1',
+            task_id: 'T-1',
+            task_status: 'WAITING_EXTERNAL',
+            task_version: 2,
+          },
           { status: 201 },
         ),
       )
@@ -175,12 +283,43 @@ function mockTaskAndActivities(
       )
     }
     if (url.endsWith('/worker-link')) {
+      if (init?.method !== 'POST') {
+        return Promise.resolve(
+          currentWorkerLinkDelivery
+            ? jsonResponse(currentWorkerLinkDelivery)
+            : errorResponse(404, 'WORKER_LINK_RESOURCE_NOT_FOUND', '근로자 링크 없음'),
+        )
+      }
+      currentWorkerLinkDelivery = {
+        worker_link_id: 'L-1',
+        link_status: 'ACTIVE',
+        delivery_status: 'NOT_SENT',
+        sent_at: null,
+        expires_at: '2026-08-07T00:00:00Z',
+      }
       return Promise.resolve(
         jsonResponse(
-          { worker_url: 'worker-token-1', expires_at: '2026-08-07T00:00:00Z' },
+          {
+            worker_link_id: 'L-1',
+            worker_url: 'worker-token-1',
+            expires_at: '2026-08-07T00:00:00Z',
+            delivery_status: 'NOT_SENT',
+            sent_at: null,
+            already_issued: false,
+          },
           { status: 201 },
         ),
       )
+    }
+    if (url.endsWith('/worker-links/L-1/sent')) {
+      currentWorkerLinkDelivery = {
+        worker_link_id: 'L-1',
+        link_status: 'ACTIVE',
+        delivery_status: 'SENT',
+        sent_at: '2026-08-05T01:00:00Z',
+        expires_at: '2026-08-07T00:00:00Z',
+      }
+      return Promise.resolve(jsonResponse(currentWorkerLinkDelivery))
     }
     return Promise.resolve(jsonResponse(task(taskOverrides)))
   })
@@ -193,11 +332,20 @@ function mockTaskError(status: number, code: string, message: string) {
     if (url.includes('/document-readiness'))
       return Promise.resolve(jsonResponse(readinessResponse()))
     if (url.includes('/documents?')) return Promise.resolve(jsonResponse(documentsResponse()))
+    if (url.includes('/worker-responses?')) {
+      return Promise.resolve(
+        jsonResponse({ items: [], page: 0, size: 100, total_elements: 0, total_pages: 0 }),
+      )
+    }
+    if (url.endsWith('/worker-link')) {
+      return Promise.resolve(errorResponse(404, 'WORKER_LINK_RESOURCE_NOT_FOUND', '근로자 링크 없음'))
+    }
     return Promise.resolve(errorResponse(status, code, message))
   })
 }
 
 beforeEach(() => {
+  useAuthStore.setState({ user: null, status: 'ready' })
   useToastStore.setState({ toasts: [] })
   vi.stubGlobal('fetch', vi.fn())
 })
@@ -206,9 +354,9 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-function renderPage() {
+function renderPage(initialEntry = '/tasks/T-1') {
   render(
-    <MemoryRouter initialEntries={['/tasks/T-1']}>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
         <Route
           path="/tasks/:taskId"
@@ -344,7 +492,41 @@ describe('CaseDetailPage', () => {
     expect(await screen.findByText('서류 요청 초안을 저장했습니다.')).toBeInTheDocument()
   })
 
-  it('switches to the communication tab and shows message content', async () => {
+  it('shows real unread worker responses and marks them as reviewed', async () => {
+    const user = userEvent.setup()
+    mockTaskAndActivities({}, [], {}, [], [
+      {
+        response_id: 'response-1',
+        response_type: 'DOCUMENT_SUBMITTED',
+        message: '여권 사본을 제출했습니다.',
+        upload_ids: ['upload-1'],
+        conversation_status: 'NEEDS_FOLLOWUP',
+        unread: true,
+        received_at: '2026-07-20T01:00:00Z',
+      },
+    ])
+    renderPage()
+    await screen.findByText('응웬반A 체류연장 준비')
+
+    await user.click(screen.getByRole('tab', { name: CASE_TABS[3] }))
+
+    expect(screen.getByText('승인대기')).toBeInTheDocument()
+    expect(screen.getByText('여권 사본을 제출했습니다.')).toBeInTheDocument()
+    expect(screen.getByText('제출 파일 1개')).toBeInTheDocument()
+    expect(screen.queryByText('여권 사본 요청문 초안을 준비했습니다.')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '응답 확인 완료' }))
+
+    expect(await screen.findByText('근로자 응답을 확인 처리했습니다.')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('확인됨')).toBeInTheDocument()
+    })
+    expect(
+      vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/worker-responses/read')),
+    ).toBe(true)
+  })
+
+  it('shows a worker-response empty state instead of static demo messages', async () => {
     const user = userEvent.setup()
     mockTaskAndActivities()
     renderPage()
@@ -352,7 +534,62 @@ describe('CaseDetailPage', () => {
 
     await user.click(screen.getByRole('tab', { name: CASE_TABS[3] }))
 
-    expect(screen.getByText(CASE_COMMUNICATION[0].message)).toBeInTheDocument()
+    expect(screen.getByText('서류대기')).toBeInTheDocument()
+    expect(screen.getByText('도착한 근로자 응답이 없습니다')).toBeInTheDocument()
+  })
+
+  it('uses the persisted link delivery status and records delivery after confirmation', async () => {
+    const user = userEvent.setup()
+    mockTaskAndActivities({}, [], {}, [], [], {
+      worker_link_id: 'L-1',
+      link_status: 'ACTIVE',
+      delivery_status: 'NOT_SENT',
+      sent_at: null,
+      expires_at: '2026-08-07T00:00:00Z',
+    })
+    renderPage()
+    await screen.findByText('응웬반A 체류연장 준비')
+
+    await user.click(screen.getByRole('tab', { name: CASE_TABS[3] }))
+
+    expect(screen.getByText('서류대기')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '전달 완료 기록' }))
+    expect(screen.getByRole('dialog', { name: '링크 전달 완료 기록' })).toBeInTheDocument()
+
+    await user.click(screen.getByLabelText('근로자에게 링크를 직접 전달했습니다.'))
+    await user.click(screen.getByRole('button', { name: '전달 완료로 기록' }))
+
+    expect(await screen.findByText('근로자 링크 전달 완료를 기록했습니다.')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText('요청전송')).toBeInTheDocument())
+    expect(
+      vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/worker-links/L-1/sent')),
+    ).toBe(true)
+  })
+
+  it('does not offer the response review action to a viewer', async () => {
+    const user = userEvent.setup()
+    useAuthStore.setState({
+      user: { name: 'viewer', workplace: 'FOWOCO', role: 'VIEWER' },
+      status: 'ready',
+    })
+    mockTaskAndActivities({}, [], {}, [], [
+      {
+        response_id: 'response-1',
+        response_type: 'QUESTION',
+        message: '어떤 서류가 필요한가요?',
+        upload_ids: [],
+        conversation_status: 'NEEDS_FOLLOWUP',
+        unread: true,
+        received_at: '2026-07-20T01:00:00Z',
+      },
+    ])
+    renderPage()
+    await screen.findByText('응웬반A 체류연장 준비')
+
+    await user.click(screen.getByRole('tab', { name: CASE_TABS[3] }))
+
+    expect(screen.getByText('미확인')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '응답 확인 완료' })).not.toBeInTheDocument()
   })
 
   it('switches to the activity tab and shows real activity content', async () => {
@@ -372,6 +609,28 @@ describe('CaseDetailPage', () => {
     renderPage()
 
     expect(await screen.findByText(/완료 처리 불가 · 승인 · 필수 체크리스트/)).toBeInTheDocument()
+  })
+
+  it('blocks completion and offers retry when document readiness cannot be verified', async () => {
+    const user = userEvent.setup()
+    mockTaskAndActivities(
+      {},
+      [],
+      errorResponse(503, 'SERVICE_UNAVAILABLE', '서류 상태 확인 지연'),
+    )
+    renderPage()
+
+    expect(await screen.findByText('조회 실패')).toBeInTheDocument()
+    expect(screen.getByText('서류 상태 확인 지연')).toBeInTheDocument()
+    expect(screen.getByText(/완료 처리 불가.*서류 상태 확인/)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '다시 조회 →' }))
+
+    expect(
+      vi.mocked(fetch).mock.calls.filter(([url]) =>
+        String(url).includes('/document-readiness'),
+      ),
+    ).toHaveLength(2)
   })
 
   it('requests approval through the API and refetches the Task', async () => {
@@ -509,9 +768,17 @@ describe('CaseDetailPage', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
   })
 
-  it('opens the context drawer with every section and closes on Escape', async () => {
+  it('opens the context drawer with the real Case projection and closes on Escape', async () => {
     const user = userEvent.setup()
-    mockTaskAndActivities({}, [activity()])
+    mockTaskAndActivities(
+      { case_id: 'C-1' },
+      [activity()],
+      {},
+      [],
+      [],
+      null,
+      caseProjectionResponse(),
+    )
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
@@ -519,20 +786,42 @@ describe('CaseDetailPage', () => {
 
     await user.click(screen.getByRole('button', { name: '펼쳐 보기 →' }))
 
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
-    expect(screen.getByText('Agent가 확인한 내용')).toBeInTheDocument()
-    expect(screen.getByText(CONTEXT_DRAWER.agentConfirmed[0])).toBeInTheDocument()
-    expect(screen.getByText('부족한 정보')).toBeInTheDocument()
-    expect(screen.getByText(CONTEXT_DRAWER.missingInfo[0])).toBeInTheDocument()
-    expect(screen.getByText('공식 출처')).toBeInTheDocument()
-    expect(screen.getByText(CONTEXT_DRAWER.officialSources[0].label)).toBeInTheDocument()
-    expect(screen.getByText('최근 활동')).toBeInTheDocument()
-    expect(screen.getByText('Agent가 체류연장 요청문 초안을 작성함')).toBeInTheDocument()
-    expect(screen.getByText('HR이 할 일')).toBeInTheDocument()
-    expect(screen.getByText(CONTEXT_DRAWER.hrTodo[0])).toBeInTheDocument()
+    const drawer = screen.getByRole('dialog')
+    expect(drawer).toBeInTheDocument()
+    expect(within(drawer).getByText('Case 현황')).toBeInTheDocument()
+    expect(within(drawer).getByText('준비 현황')).toBeInTheDocument()
+    expect(within(drawer).getByText('검증 서류')).toBeInTheDocument()
+    expect(within(drawer).getByText('2 / 3')).toBeInTheDocument()
+    expect(within(drawer).getByText('연결된 업무')).toBeInTheDocument()
+    expect(within(drawer).getByText('체류기간 연장 · 검토 필요')).toBeInTheDocument()
+    expect(within(drawer).getByText('최근 활동')).toBeInTheDocument()
+    expect(within(drawer).getByText('Agent가 체류연장 요청문 초안을 작성함')).toBeInTheDocument()
 
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('opens the real Case context immediately from a context deep link', async () => {
+    mockTaskAndActivities(
+      { case_id: 'C-1' },
+      [activity()],
+      {},
+      [],
+      [],
+      null,
+      caseProjectionResponse(),
+    )
+
+    renderPage('/tasks/T-1?context=open')
+
+    const drawer = await screen.findByRole('dialog', { name: '관련 Context' })
+    expect(await within(drawer).findByText('Case 현황')).toBeInTheDocument()
+    expect(within(drawer).getByText('응웬반A')).toBeInTheDocument()
+    expect(
+      vi.mocked(fetch).mock.calls.some(([url]) =>
+        String(url).endsWith('/cases/C-1/projection'),
+      ),
+    ).toBe(true)
   })
 
   it('records evidence and completes through the API when the server Task is approved', async () => {
@@ -558,6 +847,7 @@ describe('CaseDetailPage', () => {
     await user.click(await screen.findByRole('button', { name: '완료 처리 시작 →' }))
     expect(screen.getByRole('dialog', { name: '외부기관 업무 완료' })).toBeInTheDocument()
 
+    await user.type(screen.getByLabelText('제출 기관'), '수원출입국·외국인청')
     await user.click(screen.getByRole('button', { name: '접수번호' }))
     await user.type(screen.getByPlaceholderText('접수번호를 입력하세요'), 'HI-2026-0718-032')
     await user.click(screen.getByLabelText('실제 제출은 담당자가 직접 수행했습니다.'))
@@ -568,10 +858,54 @@ describe('CaseDetailPage', () => {
     )
 
     expect(screen.getByText('업무를 완료했습니다.')).toBeInTheDocument()
+    expect(
+      vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/external-submissions')),
+    ).toBe(true)
     expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/evidence'))).toBe(
       true,
     )
     expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/complete'))).toBe(
+      true,
+    )
+  })
+
+  it('does not duplicate the external submission when retrying from WAITING_EXTERNAL', async () => {
+    const user = userEvent.setup()
+    mockTaskAndActivities({
+      status: 'WAITING_EXTERNAL',
+      checklist_items: [
+        {
+          checklist_item_id: 'chk-1',
+          item_code: 'passport',
+          label: '여권 사본 확인',
+          required: true,
+          completed: true,
+          completed_by: null,
+          completed_at: null,
+          version: 1,
+        },
+      ],
+    })
+    renderPage()
+    await screen.findByText('응웬반A 체류연장 준비')
+
+    await user.click(await screen.findByRole('button', { name: '완료 처리 시작 →' }))
+    expect(screen.queryByLabelText('제출 기관')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '접수번호' }))
+    await user.type(screen.getByPlaceholderText('접수번호를 입력하세요'), 'HI-2026-0718-032')
+    await user.click(screen.getByLabelText('실제 제출은 담당자가 직접 수행했습니다.'))
+    await user.click(
+      within(screen.getByRole('dialog', { name: '외부기관 업무 완료' })).getByRole('button', {
+        name: '완료 처리',
+      }),
+    )
+
+    expect(await screen.findByText('업무를 완료했습니다.')).toBeInTheDocument()
+    expect(
+      vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/external-submissions')),
+    ).toBe(false)
+    expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/evidence'))).toBe(
       true,
     )
   })
@@ -595,5 +929,6 @@ describe('CaseDetailPage', () => {
     expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/worker-link'))).toBe(
       true,
     )
+    expect(screen.getByRole('button', { name: '전달 완료 기록' })).toBeEnabled()
   })
 })

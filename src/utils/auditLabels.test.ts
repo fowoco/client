@@ -9,6 +9,9 @@ describe('getAuditActionLabel', () => {
     expect(getAuditActionLabel('WORKER_LINK_RESPONSES_REVIEWED')).toBe(
       '근로자 응답을 확인했습니다.',
     )
+    expect(getAuditActionLabel('WORKER_LINK_SENT')).toBe(
+      '근로자에게 모바일 링크를 전달했습니다.',
+    )
   })
 
   it('shows a safe fallback for a future server action', () => {

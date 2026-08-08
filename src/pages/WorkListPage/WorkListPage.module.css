@@ -527,6 +527,13 @@
   text-decoration: underline;
 }
 
+.textLink:disabled {
+  color: var(--text-secondary);
+  cursor: not-allowed;
+  opacity: 0.6;
+  text-decoration: none;
+}
+
 .textLink:focus-visible {
   outline: 2px solid var(--brand-primary);
   outline-offset: 2px;

@@ -80,6 +80,7 @@ export function CaseDetailPage() {
   const [lastReissue, setLastReissue] = useState<ReissueSubmission | null>(null)
   const [issuedWorkerUrl, setIssuedWorkerUrl] = useState<string | null>(null)
   const [issuedExpiresAt, setIssuedExpiresAt] = useState<string | null>(null)
+  const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null)
   const moreMenuRef = useRef<HTMLDivElement>(null)
   const showToast = useToastStore((state) => state.showToast)
 

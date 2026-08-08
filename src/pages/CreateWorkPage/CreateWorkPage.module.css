@@ -76,6 +76,11 @@
   cursor: pointer;
 }
 
+.modeCard:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .modeCardActive {
   background: var(--fowoco-teal-50);
   border: 2px solid var(--brand-primary);

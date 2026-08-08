@@ -2,15 +2,20 @@
 // TODO(backend): GET /api/work-items?recent=true -> '이전 업무' 모드의 최근 업무 목록
 
 export const INPUT_MODES = [
-  { id: 'nl', label: '자연어 요청', description: '직접 설명' },
-  { id: 'file', label: '파일 가져오기', description: 'Excel · PDF · 이미지' },
-  { id: 'procedure', label: '처리 절차', description: '등록된 절차에서 선택' },
-  { id: 'previous', label: '이전 업무', description: '기존 업무 복사' },
+  { id: 'nl', label: '자연어 요청', description: '직접 설명', available: true },
+  { id: 'file', label: '파일 가져오기', description: 'Excel · PDF · 이미지', available: true },
+  { id: 'procedure', label: '처리 절차', description: '등록된 절차 · 준비 중', available: false },
+  { id: 'previous', label: '이전 업무', description: '기존 업무 복사 · 준비 중', available: false },
 ] as const
 
 export type InputModeId = (typeof INPUT_MODES)[number]['id']
 
-export const EXAMPLE_PROMPTS = ['체류연장 준비', '입사자료 취합', '외부기관 제출', '근태자료 설명'] as const
+export const EXAMPLE_PROMPTS = [
+  '체류연장 준비',
+  '입사자료 취합',
+  '외부기관 제출',
+  '근태자료 설명',
+] as const
 
 export const MAX_LENGTH = 2000
 

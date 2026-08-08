@@ -7,17 +7,34 @@ import { useToastStore } from '../../store/toastStore'
 import { CreateWorkPage } from './CreateWorkPage'
 
 function jsonResponse(body: unknown, init: ResponseInit = {}) {
-  return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' }, ...init })
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+    ...init,
+  })
 }
 
 function errorResponse(status: number, code: string, message: string) {
   return jsonResponse(
-    { timestamp: '2026-07-27T01:23:45Z', status, code, message, path: '/api/v1/tasks', request_id: 'req-1', field_errors: [] },
+    {
+      timestamp: '2026-07-27T01:23:45Z',
+      status,
+      code,
+      message,
+      path: '/api/v1/tasks',
+      request_id: 'req-1',
+      field_errors: [],
+    },
     { status },
   )
 }
 
-const WORKER_PAGE = { items: [{ worker_id: 'W-1', display_name: '응웬반A' }], page: 0, size: 100, total_elements: 1 }
+const WORKER_PAGE = {
+  items: [{ worker_id: 'W-1', display_name: '응웬반A' }],
+  page: 0,
+  size: 100,
+  total_elements: 1,
+}
 const CATALOG = {
   bundle_id: 'b-1',
   bundle_version: '1',
@@ -48,7 +65,15 @@ const AI_RUN = {
   error_code: null,
   attempt_count: 2,
   version: 2,
-  questions: [{ slot_key: 'due_at', label: '신청 목표일을 입력해 주세요.', input_type: 'DATE', required: true, answer: null }],
+  questions: [
+    {
+      slot_key: 'due_at',
+      label: '신청 목표일을 입력해 주세요.',
+      input_type: 'DATE',
+      required: true,
+      answer: null,
+    },
+  ],
   candidates: [],
   created_at: '2026-08-04T00:00:00Z',
   updated_at: '2026-08-04T00:00:01Z',
@@ -56,6 +81,7 @@ const AI_RUN = {
 
 beforeEach(() => {
   useToastStore.setState({ toasts: [] })
+  window.sessionStorage.clear()
   vi.stubGlobal('fetch', vi.fn())
   vi.mocked(fetch).mockImplementation((input) => {
     const url = String(input)
@@ -111,7 +137,7 @@ describe('CreateWorkPage', () => {
     expect(screen.getByLabelText('업무 요청 내용')).toHaveValue('체류연장 준비')
   })
 
-  it('sends the selected example as written and opens the review page', async () => {
+  it('sends the exact natural-language request and opens the review page', async () => {
     const user = userEvent.setup()
     renderPage()
 
@@ -119,12 +145,16 @@ describe('CreateWorkPage', () => {
     await user.click(screen.getByRole('button', { name: '요청 분석하기 →' }))
 
     expect(await screen.findByText('Agent 추가 질문')).toBeInTheDocument()
-    const analyzeCall = vi.mocked(fetch).mock.calls.find(([url]) => String(url).endsWith('/ai-runs'))
+    const analyzeCall = vi
+      .mocked(fetch)
+      .mock.calls.find(([url]) => String(url).endsWith('/ai-runs'))
     expect(analyzeCall).toBeDefined()
     expect(JSON.parse((analyzeCall![1] as RequestInit).body as string)).toEqual({
       instruction: '체류연장 준비',
     })
-    expect(new Headers((analyzeCall![1] as RequestInit).headers).get('Idempotency-Key')).toBeTruthy()
+    expect(
+      new Headers((analyzeCall![1] as RequestInit).headers).get('Idempotency-Key'),
+    ).toBeTruthy()
   })
 
   it('sends an edited request without retaining the previously selected intent', async () => {
@@ -137,7 +167,9 @@ describe('CreateWorkPage', () => {
     await user.type(request, '이번 주 근태자료 차이를 설명해 주세요')
     await user.click(screen.getByRole('button', { name: '요청 분석하기 →' }))
 
-    const analyzeCall = vi.mocked(fetch).mock.calls.find(([url]) => String(url).endsWith('/ai-runs'))
+    const analyzeCall = vi
+      .mocked(fetch)
+      .mock.calls.find(([url]) => String(url).endsWith('/ai-runs'))
     expect(analyzeCall).toBeDefined()
     expect(JSON.parse((analyzeCall![1] as RequestInit).body as string)).toEqual({
       instruction: '이번 주 근태자료 차이를 설명해 주세요',
@@ -170,7 +202,20 @@ describe('CreateWorkPage', () => {
 
     await user.click(screen.getByRole('button', { name: '임시 저장' }))
 
-    expect(screen.getByText('초안을 저장했습니다.')).toBeInTheDocument()
+    expect(screen.getByText('이 브라우저 탭에 초안을 저장했습니다.')).toBeInTheDocument()
+    expect(
+      JSON.parse(window.sessionStorage.getItem('fowoco:work-request-draft') ?? '{}'),
+    ).toMatchObject({
+      request: '',
+      mode: 'nl',
+    })
+  })
+
+  it('marks unsupported input modes as unavailable', () => {
+    renderPage()
+
+    expect(screen.getByRole('button', { name: /처리 절차/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /이전 업무/ })).toBeDisabled()
   })
 
   it('disables the direct-create button until worker/type/workflow/title are filled', async () => {

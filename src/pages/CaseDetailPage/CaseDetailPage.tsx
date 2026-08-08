@@ -11,9 +11,12 @@ import {
 } from '../../api/approvals'
 import { fetchTaskActivities } from '../../api/audit'
 import {
+  fetchDocumentRequestDraft,
   fetchDocumentReadiness,
   fetchDocuments,
   upsertDocumentRequestDraft,
+  type DocumentRequestDraftResponse,
+  type DocumentType,
 } from '../../api/documents'
 import { ApiError, getErrorMessage } from '../../api/errors'
 import { cancelTask, fetchTaskById, updateChecklistItem } from '../../api/tasks'
@@ -27,9 +30,11 @@ import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { StatusLabel, type StatusTone } from '../../components/ui/StatusLabel/StatusLabel'
 import { Tabs } from '../../components/ui/Tabs/Tabs'
 import { useApiQuery } from '../../hooks/useApiQuery'
+import { useAuthStore } from '../../store/authStore'
 import { useToastStore } from '../../store/toastStore'
 import { ACTOR_TYPE_TO_AGENT_SOURCE, AUDIT_ACTION_LABEL } from '../../utils/auditLabels'
 import { formatEventTime } from '../../utils/datetime'
+import { DOCUMENT_TYPE_LABEL } from '../../utils/documentLabels'
 import { TASK_SOURCE_LABEL, TASK_STATUS_LABEL, TASK_STATUS_TONE } from '../../utils/taskStatus'
 import { getDocumentViewModel } from '../../view-models/documentViewModel'
 import { getOperationalDateViewModel } from '../../view-models/dateViewModel'
@@ -65,6 +70,53 @@ const EVIDENCE_TYPE_BY_LABEL: Record<string, EvidenceType> = {
   '화면 캡처': 'OFFICIAL_RESULT',
 }
 
+interface DocumentRequestDraftForm {
+  taskId: string
+  language: string
+  documentTypes: DocumentType[]
+  message: string
+}
+
+const GUIDANCE_LANGUAGES = [
+  { value: 'ko', label: '한국어' },
+  { value: 'vi', label: '베트남어' },
+  { value: 'en', label: '영어' },
+  { value: 'zh', label: '중국어' },
+  { value: 'th', label: '태국어' },
+  { value: 'id', label: '인도네시아어' },
+  { value: 'km', label: '크메르어' },
+  { value: 'mn', label: '몽골어' },
+  { value: 'uz', label: '우즈베크어' },
+  { value: 'ne', label: '네팔어' },
+]
+
+function uniqueDocumentTypes(types: DocumentType[]): DocumentType[] {
+  return [...new Set(types)]
+}
+
+function defaultDocumentRequestMessage(documentTypes: DocumentType[]): string {
+  if (documentTypes.length === 0) return ''
+  return `다음 서류를 제출해 주세요: ${documentTypes
+    .map((type) => DOCUMENT_TYPE_LABEL[type])
+    .join(', ')}.`
+}
+
+async function fetchDocumentRequestDraftOrNull(
+  taskId: string,
+): Promise<DocumentRequestDraftResponse | null> {
+  try {
+    return await fetchDocumentRequestDraft(taskId)
+  } catch (error) {
+    if (
+      error instanceof ApiError &&
+      (error.status === 404 || error.code === 'DOCUMENT_REQUEST_DRAFT_NOT_FOUND')
+    ) {
+      return null
+    }
+    throw error
+  }
+}
+
 export function CaseDetailPage() {
   const { taskId } = useParams()
   const [activeTab, setActiveTab] = useState(CASE_TABS[0])
@@ -78,7 +130,15 @@ export function CaseDetailPage() {
   const [lastReissue, setLastReissue] = useState<ReissueSubmission | null>(null)
   const [issuedWorkerUrl, setIssuedWorkerUrl] = useState<string | null>(null)
   const [issuedExpiresAt, setIssuedExpiresAt] = useState<string | null>(null)
+  const [savingDocumentRequestDraft, setSavingDocumentRequestDraft] = useState(false)
+  const [documentRequestDraftForm, setDocumentRequestDraftForm] =
+    useState<DocumentRequestDraftForm | null>(null)
+  const [documentRequestDraftVersion, setDocumentRequestDraftVersion] = useState<{
+    taskId: string
+    version: number
+  } | null>(null)
   const moreMenuRef = useRef<HTMLDivElement>(null)
+  const userRole = useAuthStore((state) => state.user?.role)
   const showToast = useToastStore((state) => state.showToast)
 
   const taskFetcher = useCallback(() => fetchTaskById(taskId ?? ''), [taskId])
@@ -95,6 +155,44 @@ export function CaseDetailPage() {
 
   const readinessFetcher = useCallback(() => fetchDocumentReadiness(taskId ?? ''), [taskId])
   const { data: readiness } = useApiQuery(readinessFetcher)
+
+  const documentRequestDraftFetcher = useCallback(() => {
+    if (!taskId || userRole === 'VIEWER') return Promise.resolve(null)
+    return fetchDocumentRequestDraftOrNull(taskId)
+  }, [taskId, userRole])
+  const {
+    status: documentRequestDraftStatus,
+    data: documentRequestDraft,
+    error: documentRequestDraftError,
+    refetch: refetchDocumentRequestDraft,
+  } = useApiQuery(
+    documentRequestDraftFetcher,
+    useCallback((draft: DocumentRequestDraftResponse | null) => draft === null, []),
+  )
+
+  useEffect(() => {
+    if (!taskId || !readiness || documentRequestDraftStatus === 'loading') return
+    if (documentRequestDraftStatus === 'error') return
+
+    setDocumentRequestDraftForm((current) => {
+      if (current?.taskId === taskId) return current
+      const documentTypes = documentRequestDraft
+        ? documentRequestDraft.document_types
+        : uniqueDocumentTypes([...readiness.missing, ...readiness.expired])
+      return {
+        taskId,
+        language: documentRequestDraft?.language ?? 'ko',
+        documentTypes,
+        message:
+          documentRequestDraft?.message ?? defaultDocumentRequestMessage(documentTypes),
+      }
+    })
+    setDocumentRequestDraftVersion(
+      documentRequestDraft
+        ? { taskId, version: documentRequestDraft.version }
+        : null,
+    )
+  }, [documentRequestDraft, documentRequestDraftStatus, readiness, taskId])
 
   const workerId = task?.worker_id
   const documentsFetcher = useCallback(() => {
@@ -260,16 +358,40 @@ export function CaseDetailPage() {
   }
 
   async function handleSaveDocumentRequestDraft() {
-    if (!task || !readiness) return
+    if (!task || !documentRequestDraftForm || savingDocumentRequestDraft) return
+    const message = documentRequestDraftForm.message.trim()
+    if (!message) {
+      showToast('근로자에게 표시할 안내문을 입력해 주세요.')
+      return
+    }
+    if (documentRequestDraftForm.documentTypes.length === 0) {
+      showToast('요청할 서류가 없습니다.')
+      return
+    }
+    setSavingDocumentRequestDraft(true)
     try {
-      await upsertDocumentRequestDraft(task.task_id, {
-        language: 'ko',
-        document_types: [...readiness.missing, ...readiness.expired],
-        expected_version: 0,
+      const savedDraft = await upsertDocumentRequestDraft(task.task_id, {
+        language: documentRequestDraftForm.language,
+        document_types: documentRequestDraftForm.documentTypes,
+        message,
+        expected_version:
+          documentRequestDraftVersion?.taskId === task.task_id
+            ? documentRequestDraftVersion.version
+            : 0,
       })
+      setDocumentRequestDraftVersion({ taskId: task.task_id, version: savedDraft.version })
+      setDocumentRequestDraftForm((current) =>
+        current?.taskId === task.task_id ? { ...current, message } : current,
+      )
       showToast('서류 요청 초안을 저장했습니다.')
-    } catch {
-      showToast('서류 요청 초안을 저장하지 못했습니다.')
+    } catch (error) {
+      showToast(
+        error instanceof ApiError
+          ? getErrorMessage(error)
+          : '서류 요청 초안을 저장하지 못했습니다.',
+      )
+    } finally {
+      setSavingDocumentRequestDraft(false)
     }
   }
 
@@ -692,15 +814,109 @@ export function CaseDetailPage() {
               })}
             </div>
           )}
-          {readiness && (readiness.missing.length > 0 || readiness.expired.length > 0) && (
-            <button
-              type="button"
-              className={styles.contextLink}
-              onClick={handleSaveDocumentRequestDraft}
-            >
-              요청 초안 저장 →
-            </button>
+          {userRole !== 'VIEWER' && documentRequestDraftStatus === 'loading' && (
+            <p className={styles.documentRequestStatus} role="status">
+              저장된 요청 초안을 확인하고 있습니다.
+            </p>
           )}
+          {userRole !== 'VIEWER' && documentRequestDraftStatus === 'error' && (
+            <div className={styles.documentRequestError} role="alert">
+              <p>
+                {documentRequestDraftError
+                  ? getErrorMessage(documentRequestDraftError)
+                  : '저장된 요청 초안을 불러오지 못했습니다.'}
+              </p>
+              <button type="button" onClick={refetchDocumentRequestDraft}>
+                다시 시도
+              </button>
+            </div>
+          )}
+          {userRole !== 'VIEWER' &&
+            documentRequestDraftStatus !== 'error' &&
+            documentRequestDraftForm?.taskId === task.task_id &&
+            documentRequestDraftForm.documentTypes.length > 0 && (
+              <section className={styles.documentRequestCard} aria-labelledby="document-request-title">
+                <div className={styles.documentRequestHeader}>
+                  <div>
+                    <p className={styles.documentRequestEyebrow}>근로자 모바일 요청</p>
+                    <h2 id="document-request-title" className={styles.documentRequestTitle}>
+                      서류 요청 초안
+                    </h2>
+                  </div>
+                  <span className={styles.documentRequestVersion}>
+                    {documentRequestDraftVersion?.taskId === task.task_id
+                      ? `저장본 v${documentRequestDraftVersion.version}`
+                      : '새 초안'}
+                  </span>
+                </div>
+
+                <div className={styles.documentRequestTypes} aria-label="요청 서류">
+                  {documentRequestDraftForm.documentTypes.map((type) => (
+                    <span key={type}>{DOCUMENT_TYPE_LABEL[type]}</span>
+                  ))}
+                </div>
+
+                <label className={styles.documentRequestLabel} htmlFor="document-request-language">
+                  안내 언어
+                </label>
+                <select
+                  id="document-request-language"
+                  className={styles.documentRequestSelect}
+                  value={documentRequestDraftForm.language}
+                  onChange={(event) =>
+                    setDocumentRequestDraftForm((current) =>
+                      current?.taskId === task.task_id
+                        ? { ...current, language: event.target.value }
+                        : current,
+                    )
+                  }
+                >
+                  {!GUIDANCE_LANGUAGES.some(
+                    (language) => language.value === documentRequestDraftForm.language,
+                  ) && (
+                    <option value={documentRequestDraftForm.language}>
+                      {documentRequestDraftForm.language}
+                    </option>
+                  )}
+                  {GUIDANCE_LANGUAGES.map((language) => (
+                    <option key={language.value} value={language.value}>
+                      {language.label}
+                    </option>
+                  ))}
+                </select>
+
+                <label className={styles.documentRequestLabel} htmlFor="document-request-message">
+                  근로자 안내문
+                </label>
+                <textarea
+                  id="document-request-message"
+                  className={styles.documentRequestTextarea}
+                  maxLength={1000}
+                  rows={4}
+                  value={documentRequestDraftForm.message}
+                  onChange={(event) =>
+                    setDocumentRequestDraftForm((current) =>
+                      current?.taskId === task.task_id
+                        ? { ...current, message: event.target.value }
+                        : current,
+                    )
+                  }
+                />
+
+                <div className={styles.documentRequestFooter}>
+                  <span>{documentRequestDraftForm.message.length}/1000</span>
+                  <button
+                    type="button"
+                    className={styles.documentRequestAction}
+                    disabled={savingDocumentRequestDraft}
+                    aria-busy={savingDocumentRequestDraft}
+                    onClick={handleSaveDocumentRequestDraft}
+                  >
+                    {savingDocumentRequestDraft ? '저장 중…' : '요청 초안 저장'}
+                  </button>
+                </div>
+              </section>
+            )}
         </div>
       )}
 

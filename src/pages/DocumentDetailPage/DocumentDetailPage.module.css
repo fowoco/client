@@ -108,15 +108,3 @@
   color: var(--brand-primary);
   cursor: pointer;
 }
-
-.actionDock {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 16px;
-  padding: var(--fowoco-spacing-12) var(--fowoco-spacing-20);
-  background: var(--surface-default);
-  border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-10);
-  box-shadow: var(--shadow-sm);
-}

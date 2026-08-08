@@ -10,6 +10,7 @@ import { useApiQuery } from '../../hooks/useApiQuery'
 import { useToastStore } from '../../store/toastStore'
 import { saveBlobAsFile } from '../../utils/fileDownload'
 import { getDocumentViewModel } from '../../view-models/documentViewModel'
+import { DocumentOcrPanel } from './DocumentOcrPanel'
 import styles from './DocumentDetailPage.module.css'
 
 export function DocumentDetailPage() {
@@ -20,7 +21,12 @@ export function DocumentDetailPage() {
 
   // GET /api/v1/documents/{id} 단건 조회가 없어서(#57 조사 결과), 목록을 통째로 받아
   // worker_document_id로 찾는다.
-  const { status: fetchStatus, data, error, refetch } = useApiQuery(useCallback(() => fetchDocuments({ size: 100 }), []))
+  const {
+    status: fetchStatus,
+    data,
+    error,
+    refetch,
+  } = useApiQuery(useCallback(() => fetchDocuments({ size: 100 }), []))
   const document = data?.items.find((item) => item.worker_document_id === documentId) ?? null
 
   if (fetchStatus === 'loading') {
@@ -53,7 +59,11 @@ export function DocumentDetailPage() {
   if (!document) {
     return (
       <div className={styles.stateWrap}>
-        <EmptyState kind="empty" title="서류를 찾을 수 없습니다" body="서류 목록에서 다시 확인해 주세요." />
+        <EmptyState
+          kind="empty"
+          title="서류를 찾을 수 없습니다"
+          body="서류 목록에서 다시 확인해 주세요."
+        />
       </div>
     )
   }
@@ -124,14 +134,11 @@ export function DocumentDetailPage() {
         </div>
       </div>
 
-      <div className={styles.actionDock}>
-        <Button variant="secondary" disabled>
-          반려
-        </Button>
-        <Button disabled>
-          {view.reviewable ? '확인 완료 API 대기' : view.actionLabel}
-        </Button>
-      </div>
+      <DocumentOcrPanel
+        documentId={document.worker_document_id}
+        documentType={document.document_type}
+        fileId={document.file_id}
+      />
     </div>
   )
 }

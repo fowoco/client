@@ -23,9 +23,12 @@ function worker(overrides: Partial<WorkerResponse>): WorkerResponse {
     nationality_code: 'VN',
     preferred_language: 'vi',
     work_status: 'ACTIVE',
+    visa_type: null,
     stay_expiry_date: null,
     contract_start_date: null,
     contract_end_date: null,
+    employment_permit_end_date: null,
+    employment_activity_end_date: null,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
     version: 1,
@@ -235,6 +238,7 @@ describe('WorkerListPage', () => {
             items: [
               {
                 task_id: 'T-1',
+                target_type: 'WORKER',
                 worker_id: 'W-021',
                 case_id: null,
                 task_type: 'STAY_PERIOD_EXTENSION',

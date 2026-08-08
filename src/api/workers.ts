@@ -10,9 +10,12 @@ export interface WorkerResponse {
   nationality_code: string
   preferred_language: string
   work_status: WorkStatus
+  visa_type: string | null
   stay_expiry_date: string | null
   contract_start_date: string | null
   contract_end_date: string | null
+  employment_permit_end_date: string | null
+  employment_activity_end_date: string | null
   created_at: string
   updated_at: string
   version: number
@@ -54,9 +57,12 @@ export interface WorkerCreateBody {
   display_name: string
   nationality_code?: string
   preferred_language?: string
+  visa_type?: string
   stay_expiry_date?: string
   contract_start_date?: string
   contract_end_date?: string
+  employment_permit_end_date?: string
+  employment_activity_end_date?: string
 }
 
 export function registerWorker(body: WorkerCreateBody): Promise<WorkerResponse> {
@@ -68,9 +74,12 @@ export interface WorkerPatchBody {
   nationality_code?: string
   preferred_language?: string
   work_status?: WorkStatus
+  visa_type?: string
   stay_expiry_date?: string
   contract_start_date?: string
   contract_end_date?: string
+  employment_permit_end_date?: string
+  employment_activity_end_date?: string
   expected_version: number
 }
 

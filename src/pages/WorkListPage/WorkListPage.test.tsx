@@ -29,9 +29,12 @@ function worker(
     nationality_code: 'VN',
     preferred_language: 'vi',
     work_status: 'ACTIVE',
+    visa_type: null,
     stay_expiry_date: null,
     contract_start_date: null,
     contract_end_date: null,
+    employment_permit_end_date: null,
+    employment_activity_end_date: null,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
     version: 1,
@@ -175,7 +178,19 @@ function LocationProbe() {
 
 function TaskDetailProbe() {
   const { taskId } = useParams()
-  return <p>업무 상세 {taskId}</p>
+  const location = useLocation()
+  return (
+    <>
+      <p>업무 상세 {taskId}</p>
+      <output data-testid="location">{`${location.pathname}${location.search}`}</output>
+    </>
+  )
+}
+
+function WorkCreateProbe() {
+  const location = useLocation()
+  const state = location.state as { workerId?: string; prefill?: string } | null
+  return <p>{`업무 생성 ${state?.workerId ?? ''} ${state?.prefill ?? ''}`}</p>
 }
 
 function renderPage(initialEntry = '/tasks', { withToasts = false } = {}) {
@@ -193,8 +208,11 @@ function renderPage(initialEntry = '/tasks', { withToasts = false } = {}) {
           }
         />
         <Route path="/tasks/:taskId" element={<TaskDetailProbe />} />
-        <Route path="/tasks/new" element={<p>업무 생성</p>} />
+        <Route path="/tasks/new" element={<WorkCreateProbe />} />
         <Route path="/tasks/new/review" element={<p>업무 검토 화면</p>} />
+        <Route path="/workers" element={<p>근로자 등록 화면</p>} />
+        <Route path="/workers/:workerId/detail" element={<p>근로자 상세 화면</p>} />
+        <Route path="/documents" element={<p>문서함 화면</p>} />
       </Routes>
     </MemoryRouter>,
   )
@@ -301,11 +319,34 @@ describe('WorkListPage', () => {
     expect(screen.queryByText('업무 상세 CASE-1')).not.toBeInTheDocument()
   })
 
-  it('shows a blocking error when the Case API fails', async () => {
+  it('keeps workers visible and marks the work connection as unavailable when the Case API fails', async () => {
     mockApi({ cases: errorResponse('/api/v1/cases') })
     renderPage()
 
-    expect(await screen.findByText('업무 정보를 불러오지 못했습니다')).toBeInTheDocument()
+    expect(
+      await screen.findByText('근로자 목록은 표시했지만 업무 정보를 갱신하지 못했습니다.'),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('listbox', { name: '업무 대상 근로자' })).toBeInTheDocument()
+    expect(screen.getByText('업무 정보를 확인하지 못했습니다')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '새 업무 요청' })).toBeDisabled()
+  })
+
+  it('shows a blocking error when neither workers nor cases can be loaded', async () => {
+    mockApi({
+      cases: errorResponse('/api/v1/cases'),
+      workers: errorResponse('/api/v1/workers'),
+    })
+    renderPage()
+
+    expect(await screen.findByText('업무함 정보를 불러오지 못했습니다')).toBeInTheDocument()
+    expect(screen.queryByRole('listbox', { name: '업무 대상 근로자' })).not.toBeInTheDocument()
+  })
+
+  it('shows a blocking error when cases are empty and workers cannot be loaded', async () => {
+    mockApi({ cases: casePageResponse([]), workers: errorResponse('/api/v1/workers') })
+    renderPage()
+
+    expect(await screen.findByText('업무함 정보를 불러오지 못했습니다')).toBeInTheDocument()
     expect(screen.queryByRole('listbox', { name: '업무 대상 근로자' })).not.toBeInTheDocument()
   })
 
@@ -317,14 +358,56 @@ describe('WorkListPage', () => {
     expect(screen.getByText('근무 정보 확인 필요')).toBeInTheDocument()
   })
 
-  it('shows the empty work state and create action when there are no cases', async () => {
+  it('shows registered workers on the left and a no-work detail when there are no cases', async () => {
     mockApi({ cases: casePageResponse([]) })
     const user = userEvent.setup()
     renderPage()
 
-    expect(await screen.findByText('등록된 업무가 없습니다')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '업무 만들기' }))
-    expect(await screen.findByText('업무 생성')).toBeInTheDocument()
+    expect(await screen.findByRole('option', { name: /응우옌 안.*업무 없음/ })).toBeInTheDocument()
+    expect(screen.getByText('현재 진행 중인 업무가 없습니다')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '새 업무 요청' }))
+    expect(
+      await screen.findByText('업무 생성 W-1 응우옌 안 근로자의 업무를 준비해 주세요'),
+    ).toBeInTheDocument()
+  })
+
+  it('shows worker registration only when both workers and cases are empty', async () => {
+    mockApi({ workers: workerPageResponse([]), cases: casePageResponse([]) })
+    const user = userEvent.setup()
+    renderPage()
+
+    expect(await screen.findByText('등록된 근로자가 없습니다')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '근로자 등록' }))
+    expect(await screen.findByText('근로자 등록 화면')).toBeInTheDocument()
+  })
+
+  it('filters the list to workers without active work', async () => {
+    mockApi({
+      workers: workerPageResponse([...WORKERS, worker('W-3', '김민지')]),
+      cases: casePageResponse(CASES),
+    })
+    const user = userEvent.setup()
+    renderPage()
+
+    await screen.findByRole('option', { name: /응우옌 안/ })
+    await user.click(screen.getByRole('button', { name: '업무 없음' }))
+
+    expect(screen.getByRole('option', { name: /김민지.*업무 없음/ })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: /응우옌 안/ })).not.toBeInTheDocument()
+  })
+
+  it('opens worker details and documents from a no-work worker', async () => {
+    mockApi({ cases: casePageResponse([]) })
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: '근로자 정보 보기' }))
+    expect(await screen.findByText('근로자 상세 화면')).toBeInTheDocument()
+
+    mockApi({ cases: casePageResponse([]) })
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: '문서 확인' }))
+    expect(await screen.findByText('문서함 화면')).toBeInTheDocument()
   })
 
   it('discloses pagination caps when only part of the case list has loaded', async () => {
@@ -401,13 +484,14 @@ describe('WorkListPage', () => {
     expect(await screen.findByText('업무 검토 화면')).toBeInTheDocument()
   })
 
-  it('shows a placeholder toast for "근거 보기"', async () => {
+  it('opens the Task detail context entry from "근거 보기"', async () => {
     mockApi()
     const user = userEvent.setup()
-    renderPage('/tasks', { withToasts: true })
+    renderPage()
 
     await user.click(await screen.findByRole('button', { name: '근거 보기' }))
 
-    expect(screen.getByText('판단 근거 보기는 준비 중입니다.')).toBeInTheDocument()
+    expect(await screen.findByText('업무 상세 T-1')).toBeInTheDocument()
+    expect(screen.getByTestId('location')).toHaveTextContent('/tasks/T-1?context=open')
   })
 })

@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import {
   approveTask,
   buildTaskApprovalSnapshot,
   completeTask,
+  recordExternalSubmission,
   recordTaskEvidence,
   rejectTask,
   requestTaskApproval,
   type EvidenceType,
 } from '../../api/approvals'
 import { fetchTaskActivities } from '../../api/audit'
+import { fetchCaseProjection, type CaseProjectionResponse } from '../../api/cases'
 import {
   fetchDocumentReadiness,
   fetchDocuments,
@@ -17,7 +19,16 @@ import {
 } from '../../api/documents'
 import { ApiError, getErrorMessage } from '../../api/errors'
 import { cancelTask, fetchTaskById, updateChecklistItem } from '../../api/tasks'
-import { issueWorkerLink, resolveWorkerPortalUrl } from '../../api/workerLinks'
+import {
+  fetchTaskWorkerLinkDelivery,
+  fetchTaskWorkerResponses,
+  issueWorkerLink,
+  markTaskWorkerResponsesRead,
+  markWorkerLinkSent,
+  resolveWorkerPortalUrl,
+  type WorkerLinkDeliveryResponse,
+  type WorkerResponseType,
+} from '../../api/workerLinks'
 import { AgentSourceLabel } from '../../components/ui/AgentSourceLabel/AgentSourceLabel'
 import { AgentSummary } from '../../components/ui/AgentSummary/AgentSummary'
 import { Button } from '../../components/ui/Button/Button'
@@ -27,24 +38,39 @@ import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { StatusLabel, type StatusTone } from '../../components/ui/StatusLabel/StatusLabel'
 import { Tabs } from '../../components/ui/Tabs/Tabs'
 import { useApiQuery } from '../../hooks/useApiQuery'
+import { useAuthStore } from '../../store/authStore'
 import { useToastStore } from '../../store/toastStore'
-import { ACTOR_TYPE_TO_AGENT_SOURCE, AUDIT_ACTION_LABEL } from '../../utils/auditLabels'
+import { ACTOR_TYPE_TO_AGENT_SOURCE, getAuditActionLabel } from '../../utils/auditLabels'
 import { formatEventTime } from '../../utils/datetime'
 import { TASK_SOURCE_LABEL, TASK_STATUS_LABEL, TASK_STATUS_TONE } from '../../utils/taskStatus'
 import { getDocumentViewModel } from '../../view-models/documentViewModel'
 import { getOperationalDateViewModel } from '../../view-models/dateViewModel'
+import {
+  getWorkerRequestStateViewModel,
+  type WorkerRequestState,
+} from '../../view-models/workerRequestStateViewModel'
 import styles from './CaseDetailPage.module.css'
-import { CASE_COMMUNICATION, CASE_TABS, CONTEXT_DRAWER } from './caseDetailData'
+import { CASE_TABS } from './caseDetailData'
+import {
+  getCaseDisplayStatusPresentation,
+  getTaskStatusPresentation,
+  getWorkflowLabel,
+} from '../WorkListPage/workInboxPresentation'
 import { ApprovalDecisionModal } from './overlays/ApprovalDecisionModal'
 import { ApprovalRequestModal } from './overlays/ApprovalRequestModal'
-import { ExternalCompletionModal } from './overlays/ExternalCompletionModal'
+import {
+  ExternalCompletionModal,
+  type ExternalCompletionSubmission,
+} from './overlays/ExternalCompletionModal'
+import { LinkDeliveryConfirmModal } from './overlays/LinkDeliveryConfirmModal'
 import { LinkReissueModal, type ReissueSubmission } from './overlays/LinkReissueModal'
 import { LinkReissuedModal } from './overlays/LinkReissuedModal'
 import { RejectionReasonModal } from './overlays/RejectionReasonModal'
 
 type ApprovalOverlay = 'none' | 'request' | 'decision' | 'rejection'
 type CompletionOverlay = 'none' | 'external'
-type LinkOverlay = 'none' | 'reissue' | 'reissued'
+type LinkOverlay = 'none' | 'reissue' | 'reissued' | 'delivery'
+type DeliveryConfirmReturn = 'none' | 'reissued'
 
 const CASE_TAB_ITEMS = CASE_TABS.map((label) => ({ id: label, label }))
 
@@ -65,21 +91,73 @@ const EVIDENCE_TYPE_BY_LABEL: Record<string, EvidenceType> = {
   '화면 캡처': 'OFFICIAL_RESULT',
 }
 
+const WORKER_RESPONSE_TYPE_LABEL: Record<WorkerResponseType, string> = {
+  ACKNOWLEDGED: '확인했습니다',
+  QUESTION: '질문',
+  NOT_UNDERSTOOD: '이해가 어려워요',
+  DOCUMENT_SUBMITTED: '서류 제출',
+  DIFFICULT: '진행이 어려워요',
+}
+
+const WORKER_REQUEST_STATE_TONE: Record<WorkerRequestState, StatusTone> = {
+  DOCUMENT_WAITING: 'neutral',
+  REQUEST_SENT: 'info',
+  APPROVAL_WAITING: 'warning',
+  COMPLETED: 'success',
+}
+
+const CASE_LIFECYCLE_LABEL: Record<CaseProjectionResponse['lifecycle_status'], string> = {
+  ACTIVE: '진행 중',
+  COMPLETED: '완료',
+  CANCELLED: '취소',
+}
+
+async function fetchTaskWorkerLinkDeliveryOrNull(
+  taskId: string,
+): Promise<WorkerLinkDeliveryResponse | null> {
+  try {
+    return await fetchTaskWorkerLinkDelivery(taskId)
+  } catch (error) {
+    if (
+      error instanceof ApiError &&
+      (error.status === 404 || error.code === 'WORKER_LINK_RESOURCE_NOT_FOUND')
+    ) {
+      return null
+    }
+    throw error
+  }
+}
+
 export function CaseDetailPage() {
   const { taskId } = useParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const contextRequested = searchParams.get('context') === 'open'
   const [activeTab, setActiveTab] = useState(CASE_TABS[0])
   const [moreMenuOpen, setMoreMenuOpen] = useState(false)
-  const [contextDrawerOpen, setContextDrawerOpen] = useState(false)
+  const [contextDrawerOpen, setContextDrawerOpen] = useState(contextRequested)
   const [approvalOverlay, setApprovalOverlay] = useState<ApprovalOverlay>('none')
   const [completionOverlay, setCompletionOverlay] = useState<CompletionOverlay>('none')
   const [actionPending, setActionPending] = useState(false)
   const [togglingItemId, setTogglingItemId] = useState<string | null>(null)
   const [linkOverlay, setLinkOverlay] = useState<LinkOverlay>('none')
+  const [deliveryConfirmReturn, setDeliveryConfirmReturn] =
+    useState<DeliveryConfirmReturn>('none')
   const [lastReissue, setLastReissue] = useState<ReissueSubmission | null>(null)
   const [issuedWorkerUrl, setIssuedWorkerUrl] = useState<string | null>(null)
   const [issuedExpiresAt, setIssuedExpiresAt] = useState<string | null>(null)
+  const [localWorkerLinkDelivery, setLocalWorkerLinkDelivery] = useState<{
+    taskId: string
+    data: WorkerLinkDeliveryResponse
+  } | null>(null)
+  const [markingLinkSent, setMarkingLinkSent] = useState(false)
+  const [markingResponsesRead, setMarkingResponsesRead] = useState(false)
   const moreMenuRef = useRef<HTMLDivElement>(null)
+  const userRole = useAuthStore((state) => state.user?.role)
   const showToast = useToastStore((state) => state.showToast)
+
+  useEffect(() => {
+    if (contextRequested) setContextDrawerOpen(true)
+  }, [contextRequested])
 
   const taskFetcher = useCallback(() => fetchTaskById(taskId ?? ''), [taskId])
   const {
@@ -90,11 +168,16 @@ export function CaseDetailPage() {
   } = useApiQuery(taskFetcher)
 
   const activitiesFetcher = useCallback(() => fetchTaskActivities(taskId ?? ''), [taskId])
-  const { data: activities } = useApiQuery(activitiesFetcher)
+  const { data: activities, refetch: refetchActivities } = useApiQuery(activitiesFetcher)
   const activityRows = activities ?? []
 
   const readinessFetcher = useCallback(() => fetchDocumentReadiness(taskId ?? ''), [taskId])
-  const { data: readiness } = useApiQuery(readinessFetcher)
+  const {
+    status: readinessStatus,
+    data: readiness,
+    error: readinessError,
+    refetch: refetchReadiness,
+  } = useApiQuery(readinessFetcher)
 
   const workerId = task?.worker_id
   const documentsFetcher = useCallback(() => {
@@ -111,6 +194,62 @@ export function CaseDetailPage() {
     useCallback((page: { items: unknown[] }) => page.items.length === 0, []),
   )
   const documents = documentsPage?.items ?? []
+
+  const workerResponsesFetcher = useCallback(
+    () => fetchTaskWorkerResponses(taskId ?? '', 0, 100),
+    [taskId],
+  )
+  const {
+    status: workerResponsesStatus,
+    data: workerResponsesPage,
+    error: workerResponsesError,
+    refetch: refetchWorkerResponses,
+  } = useApiQuery(
+    workerResponsesFetcher,
+    useCallback((page: { items: unknown[] }) => page.items.length === 0, []),
+  )
+  const workerResponses = workerResponsesPage?.items ?? []
+
+  const caseId = task?.case_id
+  const caseProjectionFetcher = useCallback(() => {
+    if (!caseId || !contextDrawerOpen) return Promise.resolve(null)
+    return fetchCaseProjection(caseId)
+  }, [caseId, contextDrawerOpen])
+  const {
+    status: caseProjectionStatus,
+    data: caseProjection,
+    error: caseProjectionError,
+    refetch: refetchCaseProjection,
+  } = useApiQuery(
+    caseProjectionFetcher,
+    useCallback((projection: CaseProjectionResponse | null) => projection === null, []),
+  )
+
+  const workerLinkDeliveryFetcher = useCallback(() => {
+    if (!taskId || userRole === 'VIEWER') return Promise.resolve(null)
+    return fetchTaskWorkerLinkDeliveryOrNull(taskId)
+  }, [taskId, userRole])
+  const {
+    status: workerLinkDeliveryStatus,
+    data: workerLinkDelivery,
+    error: workerLinkDeliveryError,
+    refetch: refetchWorkerLinkDelivery,
+  } = useApiQuery(
+    workerLinkDeliveryFetcher,
+    useCallback((delivery: WorkerLinkDeliveryResponse | null) => delivery === null, []),
+  )
+
+  useEffect(() => {
+    if (!localWorkerLinkDelivery || !workerLinkDelivery) return
+    if (
+      localWorkerLinkDelivery.taskId === taskId &&
+      workerLinkDelivery.worker_link_id === localWorkerLinkDelivery.data.worker_link_id &&
+      (workerLinkDelivery.delivery_status === localWorkerLinkDelivery.data.delivery_status ||
+        workerLinkDelivery.delivery_status === 'SENT')
+    ) {
+      setLocalWorkerLinkDelivery(null)
+    }
+  }, [localWorkerLinkDelivery, taskId, workerLinkDelivery])
 
   useEffect(() => {
     if (!moreMenuOpen) return
@@ -188,22 +327,50 @@ export function CaseDetailPage() {
     setCompletionOverlay('external')
   }
 
-  async function handleCompleteExternal(evidenceType: string, evidenceValue: string, memo: string) {
+  async function handleCompleteExternal(submission: ExternalCompletionSubmission) {
     if (!task || actionPending) return
-    const normalizedEvidenceType = EVIDENCE_TYPE_BY_LABEL[evidenceType]
+    const normalizedEvidenceType = EVIDENCE_TYPE_BY_LABEL[submission.evidenceType]
     if (!normalizedEvidenceType) return
+    const evidenceValue = submission.evidenceValue.trim()
+    const memo = submission.memo.trim()
+    let externalSubmissionRecorded = task.status === 'WAITING_EXTERNAL'
     setActionPending(true)
     try {
+      if (!externalSubmissionRecorded) {
+        await recordExternalSubmission(task.task_id, {
+          expected_version: task.version,
+          destination: submission.destination,
+          safe_reference: evidenceValue,
+        })
+        externalSubmissionRecorded = true
+      }
+
       const evidence = await recordTaskEvidence(task.task_id, {
         evidence_type: normalizedEvidenceType,
-        note: [evidenceValue.trim(), memo.trim()].filter(Boolean).join(' · '),
+        file_reference:
+          normalizedEvidenceType === 'DOCUMENT' || normalizedEvidenceType === 'OFFICIAL_RESULT'
+            ? evidenceValue
+            : undefined,
+        note:
+          normalizedEvidenceType === 'RECEIPT'
+            ? [evidenceValue, memo].filter(Boolean).join(' · ')
+            : memo || undefined,
       })
       await completeTask(task.task_id, evidence.task_version)
       setCompletionOverlay('none')
       refetchTask()
+      refetchActivities()
       showToast('업무를 완료했습니다.')
     } catch (error) {
-      showToast(error instanceof ApiError ? getErrorMessage(error) : '업무를 완료하지 못했습니다.')
+      refetchTask()
+      refetchActivities()
+      const detail =
+        error instanceof ApiError ? getErrorMessage(error) : '업무를 완료하지 못했습니다.'
+      showToast(
+        externalSubmissionRecorded
+          ? `외부 제출 기록은 저장됐습니다. ${detail}`
+          : detail,
+      )
     } finally {
       setActionPending(false)
     }
@@ -288,16 +455,87 @@ export function CaseDetailPage() {
         crypto.randomUUID(),
       )
       setLastReissue(submission)
-      setIssuedWorkerUrl(resolveWorkerPortalUrl(issued.worker_url, window.location.origin))
+      setIssuedWorkerUrl(
+        issued.worker_url
+          ? resolveWorkerPortalUrl(issued.worker_url, window.location.origin)
+          : null,
+      )
       setIssuedExpiresAt(issued.expires_at)
+      setLocalWorkerLinkDelivery({
+        taskId: task.task_id,
+        data: {
+          worker_link_id: issued.worker_link_id,
+          link_status: 'ACTIVE',
+          delivery_status: issued.delivery_status,
+          sent_at: issued.sent_at,
+          expires_at: issued.expires_at,
+        },
+      })
+      refetchWorkerLinkDelivery()
       setLinkOverlay('reissued')
-      showToast('보안 링크를 발급했습니다. 아직 자동 전송되지는 않았습니다.')
+      showToast(
+        issued.worker_url
+          ? '보안 링크를 발급했습니다. 아직 자동 전송되지는 않았습니다.'
+          : '링크는 이미 발급됐지만 보안상 원문을 다시 표시할 수 없습니다.',
+      )
     } catch (error) {
       showToast(
         error instanceof ApiError ? getErrorMessage(error) : '보안 링크를 발급하지 못했습니다.',
       )
     } finally {
       setActionPending(false)
+    }
+  }
+
+  function handleOpenDeliveryConfirm(returnTo: DeliveryConfirmReturn = 'none') {
+    setDeliveryConfirmReturn(returnTo)
+    setLinkOverlay('delivery')
+  }
+
+  async function handleMarkLinkSent() {
+    if (!task || markingLinkSent) return
+    const currentDelivery =
+      localWorkerLinkDelivery?.taskId === task.task_id
+        ? localWorkerLinkDelivery.data
+        : workerLinkDelivery
+    if (!currentDelivery || currentDelivery.delivery_status === 'SENT') return
+
+    setMarkingLinkSent(true)
+    try {
+      const marked = await markWorkerLinkSent(currentDelivery.worker_link_id)
+      setLocalWorkerLinkDelivery({ taskId: task.task_id, data: marked })
+      refetchWorkerLinkDelivery()
+      refetchActivities()
+      setDeliveryConfirmReturn('none')
+      setLinkOverlay('none')
+      showToast('근로자 링크 전달 완료를 기록했습니다.')
+    } catch (error) {
+      showToast(
+        error instanceof ApiError
+          ? getErrorMessage(error)
+          : '링크 전달 완료를 기록하지 못했습니다.',
+      )
+    } finally {
+      setMarkingLinkSent(false)
+    }
+  }
+
+  async function handleMarkResponsesRead() {
+    if (!task || markingResponsesRead) return
+    setMarkingResponsesRead(true)
+    try {
+      await markTaskWorkerResponsesRead(task.task_id)
+      refetchWorkerResponses()
+      refetchActivities()
+      showToast('근로자 응답을 확인 처리했습니다.')
+    } catch (error) {
+      showToast(
+        error instanceof ApiError
+          ? getErrorMessage(error)
+          : '근로자 응답을 확인 처리하지 못했습니다.',
+      )
+    } finally {
+      setMarkingResponsesRead(false)
     }
   }
 
@@ -336,7 +574,9 @@ export function CaseDetailPage() {
   const completedRequiredChecklist = requiredChecklist.filter((item) => item.completed).length
   const checklistReady = completedRequiredChecklist === requiredChecklist.length
   const informationReady = task.missing_required_slots.length === 0
-  const documentsReady = readiness ? !readiness.completion_blocked : false
+  const documentsReady =
+    readinessStatus === 'success' && Boolean(readiness && !readiness.completion_blocked)
+  const documentsStateUnknown = readinessStatus === 'loading' || readinessStatus === 'error'
   const approvalReady =
     task.status === 'APPROVED' ||
     task.status === 'WAITING_WORKER' ||
@@ -351,7 +591,7 @@ export function CaseDetailPage() {
     !approvalReady && '승인',
     !checklistReady && '필수 체크리스트',
     !informationReady && '필수 정보',
-    !documentsReady && '서류 준비',
+    !documentsReady && (documentsStateUnknown ? '서류 상태 확인' : '서류 준비'),
   ].filter(Boolean) as string[]
   const firstIncompleteChecklistIndex = task.checklist_items.findIndex((item) => !item.completed)
   const agentHeadline =
@@ -361,6 +601,27 @@ export function CaseDetailPage() {
   const agentBody = completionBlockers.length
     ? `${completionBlockers.join(' · ')} 확인이 필요합니다.`
     : (task.description ?? '필수 항목과 서류가 모두 준비되었습니다.')
+  const unreadWorkerResponseCount = workerResponses.filter((response) => response.unread).length
+  const newestWorkerResponse = workerResponses[0]
+  const currentWorkerLinkDelivery =
+    localWorkerLinkDelivery?.taskId === task.task_id
+      ? localWorkerLinkDelivery.data
+      : workerLinkDelivery
+  const workerRequestState = getWorkerRequestStateViewModel({
+    requestSentAt:
+      currentWorkerLinkDelivery?.delivery_status === 'SENT'
+        ? (currentWorkerLinkDelivery.sent_at ?? newestWorkerResponse?.received_at)
+        : newestWorkerResponse?.received_at,
+    responseReceivedAt: newestWorkerResponse?.received_at,
+    responseReadAt:
+      newestWorkerResponse && unreadWorkerResponseCount === 0
+        ? newestWorkerResponse.received_at
+        : null,
+    completedAt: task.status === 'COMPLETED' ? task.updated_at : null,
+  })
+  const caseDisplayStatus = caseProjection
+    ? getCaseDisplayStatusPresentation(caseProjection.display_status)
+    : null
 
   function handleAgentAction() {
     if (!task) return
@@ -373,6 +634,15 @@ export function CaseDetailPage() {
       return
     }
     setActiveTab('체크리스트')
+  }
+
+  function handleCloseContext() {
+    setContextDrawerOpen(false)
+    if (!searchParams.has('context')) return
+
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.delete('context')
+    setSearchParams(nextParams, { replace: true })
   }
 
   return (
@@ -555,16 +825,38 @@ export function CaseDetailPage() {
               <DetailRow
                 label="필요한 서류"
                 value={
-                  !readiness
+                  readinessStatus === 'loading'
                     ? '확인 중'
+                    : readinessStatus === 'error'
+                      ? '조회 실패'
+                      : !readiness
+                        ? '확인할 정보 없음'
                     : readiness.completion_blocked
                       ? `누락 ${readiness.missing.length}건 · 만료 ${readiness.expired.length}건`
                       : '모두 확인됨'
                 }
                 tone={
-                  !readiness ? 'default' : readiness.completion_blocked ? 'critical' : 'success'
+                  readinessStatus === 'error'
+                    ? 'critical'
+                    : !readiness || readinessStatus === 'loading'
+                      ? 'default'
+                      : readiness.completion_blocked
+                        ? 'critical'
+                        : 'success'
                 }
               />
+              {readinessStatus === 'error' && (
+                <div className={styles.readinessError}>
+                  <p>
+                    {readinessError
+                      ? getErrorMessage(readinessError)
+                      : '서류 상태를 불러오지 못했습니다.'}
+                  </p>
+                  <button type="button" className={styles.contextLink} onClick={refetchReadiness}>
+                    다시 조회 →
+                  </button>
+                </div>
+              )}
               <DetailRow
                 label="필수 정보"
                 value={
@@ -711,16 +1003,113 @@ export function CaseDetailPage() {
           aria-labelledby="case-tab-3"
           className={styles.tabPanel}
         >
-          {/* TODO(backend): GET /api/work-items/:id/communication -> CASE_COMMUNICATION 대체 */}
-          <div className={styles.commList}>
-            {CASE_COMMUNICATION.map((entry) => (
-              <div key={entry.id} className={styles.commRow}>
-                <span className={styles.commTime}>{entry.time}</span>
-                <span className={styles.commActor}>{entry.actor}</span>
-                <p className={styles.commMessage}>{entry.message}</p>
-              </div>
-            ))}
-          </div>
+          {(workerResponsesStatus === 'loading' || workerLinkDeliveryStatus === 'loading') && (
+            <EmptyState
+              kind="loading"
+              title="근로자 응답을 불러오는 중입니다"
+              body="잠시만 기다려 주세요."
+            />
+          )}
+          {(workerResponsesStatus === 'error' || workerLinkDeliveryStatus === 'error') && (
+            <EmptyState
+              kind="error"
+              title="근로자 요청 상태를 불러오지 못했습니다"
+              body={
+                workerResponsesError
+                  ? getErrorMessage(workerResponsesError)
+                  : workerLinkDeliveryError
+                    ? getErrorMessage(workerLinkDeliveryError)
+                  : '네트워크 상태를 확인한 뒤 다시 시도해 주세요.'
+              }
+              actionLabel="다시 시도"
+              onAction={() => {
+                refetchWorkerResponses()
+                refetchWorkerLinkDelivery()
+              }}
+            />
+          )}
+          {(workerResponsesStatus === 'empty' || workerResponsesStatus === 'success') &&
+            (workerLinkDeliveryStatus === 'empty' || workerLinkDeliveryStatus === 'success') && (
+            <>
+              <section className={styles.responseOverview} aria-labelledby="worker-response-title">
+                <div className={styles.responseOverviewCopy}>
+                  <p className={styles.responseEyebrow}>근로자 모바일 요청</p>
+                  <div className={styles.responseTitleRow}>
+                    <h2 id="worker-response-title" className={styles.responseTitle}>
+                      응답 현황
+                    </h2>
+                    <StatusLabel tone={WORKER_REQUEST_STATE_TONE[workerRequestState.state]}>
+                      {workerRequestState.label}
+                    </StatusLabel>
+                  </div>
+                  <p className={styles.responseDescription}>{workerRequestState.description}</p>
+                </div>
+                {unreadWorkerResponseCount > 0 && userRole !== 'VIEWER' && (
+                  <Button
+                    variant="secondary"
+                    onClick={handleMarkResponsesRead}
+                    isLoading={markingResponsesRead}
+                  >
+                    응답 확인 완료
+                  </Button>
+                )}
+                {unreadWorkerResponseCount === 0 &&
+                  currentWorkerLinkDelivery?.delivery_status === 'NOT_SENT' &&
+                  userRole !== 'VIEWER' && (
+                    <Button
+                      variant="secondary"
+                      onClick={() => handleOpenDeliveryConfirm('none')}
+                    >
+                      전달 완료 기록
+                    </Button>
+                  )}
+              </section>
+
+              {workerResponses.length === 0 ? (
+                <EmptyState
+                  kind="empty"
+                  title="도착한 근로자 응답이 없습니다"
+                  body={
+                    issuedWorkerUrl
+                      ? '발급한 링크를 근로자에게 전달한 뒤 응답을 기다려 주세요.'
+                      : '모바일 링크를 발급하고 근로자에게 직접 전달해 주세요.'
+                  }
+                />
+              ) : (
+                <div className={styles.commList} aria-label="근로자 응답 목록">
+                  {workerResponses.map((response) => (
+                    <article
+                      key={response.response_id}
+                      className={`${styles.commRow} ${response.unread ? styles.commRowUnread : ''}`}
+                    >
+                      <div className={styles.commMeta}>
+                        <span className={styles.commTime}>
+                          {formatEventTime(response.received_at)}
+                        </span>
+                        <StatusLabel tone={response.unread ? 'warning' : 'neutral'}>
+                          {response.unread ? '미확인' : '확인됨'}
+                        </StatusLabel>
+                      </div>
+                      <div className={styles.commContent}>
+                        <div className={styles.commHeading}>
+                          <span className={styles.commActor}>근로자</span>
+                          <span className={styles.commType}>
+                            {WORKER_RESPONSE_TYPE_LABEL[response.response_type]}
+                          </span>
+                        </div>
+                        <p className={styles.commMessage}>
+                          {response.message?.trim() || '별도 메시지 없이 응답했습니다.'}
+                        </p>
+                        {response.upload_ids.length > 0 && (
+                          <p className={styles.commFiles}>제출 파일 {response.upload_ids.length}개</p>
+                        )}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
 
@@ -746,7 +1135,7 @@ export function CaseDetailPage() {
                     className={`${styles.timelineDot} ${index === 0 ? styles.timelineDotHighlighted : ''}`}
                   />
                   <span className={styles.timelineLabel}>
-                    {entry.change_summary ?? AUDIT_ACTION_LABEL[entry.action]}
+                    {entry.change_summary ?? getAuditActionLabel(entry.action)}
                   </span>
                   <AgentSourceLabel source={ACTOR_TYPE_TO_AGENT_SOURCE[entry.actor_type]} />
                 </div>
@@ -819,7 +1208,11 @@ export function CaseDetailPage() {
       />
       <ExternalCompletionModal
         open={completionOverlay === 'external'}
-        onClose={() => setCompletionOverlay('none')}
+        submissionAlreadyRecorded={task.status === 'WAITING_EXTERNAL'}
+        submitting={actionPending}
+        onClose={() => {
+          if (!actionPending) setCompletionOverlay('none')
+        }}
         onComplete={handleCompleteExternal}
       />
       <LinkReissueModal
@@ -833,65 +1226,138 @@ export function CaseDetailPage() {
         submission={lastReissue}
         workerUrl={issuedWorkerUrl}
         expiresAt={issuedExpiresAt}
+        canRecordDelivery={
+          Boolean(issuedWorkerUrl) && currentWorkerLinkDelivery?.delivery_status === 'NOT_SENT'
+        }
+        onRecordDelivery={() => handleOpenDeliveryConfirm('reissued')}
         onClose={() => setLinkOverlay('none')}
+      />
+      <LinkDeliveryConfirmModal
+        open={linkOverlay === 'delivery'}
+        submitting={markingLinkSent}
+        onClose={() => setLinkOverlay(deliveryConfirmReturn)}
+        onConfirm={handleMarkLinkSent}
       />
 
       <Drawer
         open={contextDrawerOpen}
-        onClose={() => setContextDrawerOpen(false)}
+        onClose={handleCloseContext}
         title="관련 Context"
       >
-        {/* TODO(backend): GET /api/work-items/:id/context -> CONTEXT_DRAWER 대체 */}
-        <div className={styles.contextSection}>
-          <h3 className={styles.contextSectionTitle}>Agent가 확인한 내용</h3>
-          <ul className={styles.contextList}>
-            {CONTEXT_DRAWER.agentConfirmed.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </div>
+        {caseId &&
+          (caseProjectionStatus === 'loading' || caseProjectionStatus === 'empty') && (
+          <EmptyState
+            kind="loading"
+            title="Case 정보를 불러오는 중입니다"
+            body="연결된 업무와 준비 현황을 확인하고 있습니다."
+          />
+        )}
 
-        <div className={styles.contextSection}>
-          <h3 className={styles.contextSectionTitle}>부족한 정보</h3>
-          <ul className={styles.contextList}>
-            {CONTEXT_DRAWER.missingInfo.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </div>
+        {caseProjectionStatus === 'error' && (
+          <EmptyState
+            kind="error"
+            title="Case 정보를 불러오지 못했습니다"
+            body={
+              caseProjectionError
+                ? getErrorMessage(caseProjectionError)
+                : '네트워크 상태를 확인한 뒤 다시 시도해 주세요.'
+            }
+            actionLabel="다시 시도"
+            onAction={refetchCaseProjection}
+          />
+        )}
 
-        <div className={styles.contextSection}>
-          <h3 className={styles.contextSectionTitle}>공식 출처</h3>
-          {CONTEXT_DRAWER.officialSources.map((source) => (
-            <DetailRow key={source.label} label={source.label} value={source.value} />
-          ))}
-        </div>
+        {!caseId && caseProjectionStatus === 'empty' && (
+          <EmptyState
+            kind="empty"
+            title="연결된 Case가 없습니다"
+            body="이 업무는 독립 업무로 등록되어 현재 Task 정보만 표시됩니다."
+          />
+        )}
 
-        <div className={styles.contextSection}>
-          <h3 className={styles.contextSectionTitle}>최근 활동</h3>
-          <div className={styles.timeline}>
-            {activityRows.slice(0, 3).map((entry, index) => (
-              <div key={entry.audit_event_id} className={styles.timelineRow}>
-                <span className={styles.timelineDate}>{formatEventTime(entry.created_at)}</span>
-                <span
-                  className={`${styles.timelineDot} ${index === 0 ? styles.timelineDotHighlighted : ''}`}
-                />
-                <span className={styles.timelineLabel}>
-                  {entry.change_summary ?? AUDIT_ACTION_LABEL[entry.action]}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+        {caseProjectionStatus === 'success' && caseProjection && caseDisplayStatus && (
+          <>
+            <div className={styles.contextSection}>
+              <h3 className={styles.contextSectionTitle}>Case 현황</h3>
+              <DetailRow label="근로자" value={caseProjection.worker_display_name} />
+              <DetailRow label="Case" value={caseProjection.title} />
+              <DetailRow
+                label="상태"
+                value={
+                  <StatusLabel tone={caseDisplayStatus.tone}>{caseDisplayStatus.label}</StatusLabel>
+                }
+              />
+              <DetailRow
+                label="생명주기"
+                value={CASE_LIFECYCLE_LABEL[caseProjection.lifecycle_status]}
+              />
+              <DetailRow
+                label="진행률"
+                value={`${caseProjection.progress.completed_steps} / ${caseProjection.progress.total_steps} · ${caseProjection.progress.percentage}%`}
+              />
+            </div>
 
-        <div className={styles.contextSection}>
-          <h3 className={styles.contextSectionTitle}>HR이 할 일</h3>
-          <ul className={styles.contextList}>
-            {CONTEXT_DRAWER.hrTodo.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </div>
+            <div className={styles.contextSection}>
+              <h3 className={styles.contextSectionTitle}>준비 현황</h3>
+              <DetailRow
+                label="체크리스트"
+                value={`${caseProjection.readiness.completed_checklist_items} / ${caseProjection.readiness.total_checklist_items}`}
+              />
+              <DetailRow
+                label="검증 서류"
+                value={`${caseProjection.readiness.verified_documents} / ${caseProjection.readiness.total_documents}`}
+              />
+              <DetailRow
+                label="승인"
+                value={`${caseProjection.readiness.approved_approvals}건 완료 · ${caseProjection.readiness.pending_approvals}건 대기`}
+              />
+              <DetailRow
+                label="근로자 응답"
+                value={`${caseProjection.readiness.worker_responses}건`}
+              />
+              <DetailRow label="완료 증빙" value={`${caseProjection.readiness.evidence_items}건`} />
+            </div>
+
+            <div className={styles.contextSection}>
+              <h3 className={styles.contextSectionTitle}>연결된 업무</h3>
+              {caseProjection.tasks.length === 0 ? (
+                <p className={styles.contextEmpty}>연결된 업무가 없습니다.</p>
+              ) : (
+                caseProjection.tasks.map((caseTask) => {
+                  const status = getTaskStatusPresentation(caseTask.status)
+                  return (
+                    <DetailRow
+                      key={caseTask.task_id}
+                      label={caseTask.title}
+                      value={`${getWorkflowLabel(caseTask)} · ${status.label}`}
+                    />
+                  )
+                })
+              )}
+            </div>
+
+            <div className={styles.contextSection}>
+              <h3 className={styles.contextSectionTitle}>최근 활동</h3>
+              {activityRows.length === 0 ? (
+                <p className={styles.contextEmpty}>기록된 활동이 없습니다.</p>
+              ) : (
+                <div className={styles.timeline}>
+                  {activityRows.slice(0, 3).map((entry, index) => (
+                    <div key={entry.audit_event_id} className={styles.timelineRow}>
+                      <span className={styles.timelineDate}>{formatEventTime(entry.created_at)}</span>
+                      <span
+                        className={`${styles.timelineDot} ${index === 0 ? styles.timelineDotHighlighted : ''}`}
+                      />
+                      <span className={styles.timelineLabel}>
+                        {entry.change_summary ?? getAuditActionLabel(entry.action)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </Drawer>
     </div>
   )

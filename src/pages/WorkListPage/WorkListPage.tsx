@@ -10,13 +10,23 @@ import { useApiQuery } from '../../hooks/useApiQuery'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { WorkInboxDetail } from './WorkInboxDetail'
 import { WorkInboxTargetList } from './WorkInboxTargetList'
-import { buildWorkInboxModel, type WorkInboxSort } from './workInboxModel'
+import {
+  buildWorkInboxModel,
+  type WorkInboxFilter,
+  type WorkInboxSort,
+} from './workInboxModel'
 import styles from './WorkListPage.module.css'
 
 const SORT_OPTIONS: { value: WorkInboxSort; label: string }[] = [
   { value: 'priority', label: '정렬 · 우선순위' },
   { value: 'due-date', label: '정렬 · 마감 임박순' },
   { value: 'worker-name', label: '정렬 · 근로자명' },
+]
+
+const FILTER_OPTIONS: { value: WorkInboxFilter; label: string }[] = [
+  { value: 'all', label: '전체' },
+  { value: 'active', label: '진행 중' },
+  { value: 'no-work', label: '업무 없음' },
 ]
 
 function isCasePageEmpty(page: CasePageResponse): boolean {
@@ -28,6 +38,7 @@ export function WorkListPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<WorkInboxSort>('priority')
+  const [filter, setFilter] = useState<WorkInboxFilter>('all')
   const debouncedQuery = useDebouncedValue(query)
   const selectedWorkerId = searchParams.get('workerId')
 
@@ -45,8 +56,9 @@ export function WorkListPage() {
         query: debouncedQuery,
         selectedWorkerId,
         sort,
+        filter,
       }),
-    [casesQuery.data, workersQuery.data, debouncedQuery, selectedWorkerId, sort],
+    [casesQuery.data, workersQuery.data, debouncedQuery, selectedWorkerId, sort, filter],
   )
 
   const selectedGroup = inbox.selectedGroup
@@ -54,7 +66,6 @@ export function WorkListPage() {
 
   useEffect(() => {
     if (
-      casesQuery.status !== 'success' ||
       !selectedGroupId ||
       selectedWorkerId === selectedGroupId
     ) {
@@ -63,7 +74,7 @@ export function WorkListPage() {
     const nextParams = new URLSearchParams(searchParams)
     nextParams.set('workerId', selectedGroupId)
     setSearchParams(nextParams, { replace: true })
-  }, [searchParams, selectedGroupId, selectedWorkerId, setSearchParams, casesQuery.status])
+  }, [searchParams, selectedGroupId, selectedWorkerId, setSearchParams])
 
   function handleSelectWorker(workerId: string) {
     const nextParams = new URLSearchParams(searchParams)
@@ -71,11 +82,28 @@ export function WorkListPage() {
     setSearchParams(nextParams)
   }
 
-  const hasPaginationCap =
+  const hasCasePaginationCap =
     (casesQuery.data?.total_elements ?? 0) > (casesQuery.data?.items.length ?? 0)
-  const capNotice = hasPaginationCap
+  const hasWorkerPaginationCap =
+    (workersQuery.data?.total_elements ?? 0) > (workersQuery.data?.items.length ?? 0)
+  const capNotice = hasCasePaginationCap || hasWorkerPaginationCap
     ? '일부 데이터만 불러왔습니다. 검색·정렬·진행률은 현재 불러온 범위 기준입니다.'
     : null
+  const isInitialLoading =
+    (casesQuery.status === 'loading' && casesQuery.data === null) ||
+    (inbox.allGroups.length === 0 && workersQuery.status === 'loading')
+  const isBlockingError =
+    inbox.allGroups.length === 0 &&
+    casesQuery.status !== 'loading' &&
+    workersQuery.status !== 'loading' &&
+    (casesQuery.status === 'error' || workersQuery.status === 'error')
+  const blockingError = casesQuery.error ?? workersQuery.error
+  const isTrueEmpty =
+    inbox.allGroups.length === 0 &&
+    casesQuery.status !== 'loading' &&
+    casesQuery.status !== 'error' &&
+    workersQuery.status === 'success'
+  const hasFilteredEmpty = inbox.allGroups.length > 0 && inbox.groups.length === 0
 
   return (
     <div className={styles.page}>
@@ -92,17 +120,32 @@ export function WorkListPage() {
           ariaLabel="근로자·업무 건·지금 할 일 검색"
           className={styles.searchInput}
         />
-        <Dropdown
-          options={SORT_OPTIONS}
-          value={sort}
-          onChange={(value) => setSort(value as WorkInboxSort)}
-          ariaLabel="업무함 정렬"
-          className={styles.sortDropdown}
-          width="133px"
-        />
+        <div className={styles.toolbarControls}>
+          <div className={styles.statusFilters} role="group" aria-label="업무 상태 필터">
+            {FILTER_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={`${styles.statusFilter} ${filter === option.value ? styles.statusFilterActive : ''}`}
+                aria-pressed={filter === option.value}
+                onClick={() => setFilter(option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <Dropdown
+            options={SORT_OPTIONS}
+            value={sort}
+            onChange={(value) => setSort(value as WorkInboxSort)}
+            ariaLabel="업무함 정렬"
+            className={styles.sortDropdown}
+            width="133px"
+          />
+        </div>
       </div>
 
-      {casesQuery.status === 'loading' && (
+      {isInitialLoading && (
         <div className={styles.stateWrap}>
           <EmptyState
             kind="loading"
@@ -113,14 +156,14 @@ export function WorkListPage() {
         </div>
       )}
 
-      {casesQuery.status === 'error' && (
+      {isBlockingError && (
         <div className={styles.stateWrap}>
           <EmptyState
             kind="error"
-            title="업무 정보를 불러오지 못했습니다"
+            title="업무함 정보를 불러오지 못했습니다"
             body={
-              casesQuery.error
-                ? getErrorMessage(casesQuery.error)
+              blockingError
+                ? getErrorMessage(blockingError)
                 : '네트워크 상태를 확인한 뒤 다시 시도해 주세요.'
             }
             actionLabel="다시 시도"
@@ -129,30 +172,45 @@ export function WorkListPage() {
         </div>
       )}
 
-      {casesQuery.status === 'empty' && (
+      {isTrueEmpty && (
         <div className={styles.stateWrap}>
           <EmptyState
             kind="empty"
-            title="등록된 업무가 없습니다"
-            body="새 요청을 입력하거나 파일을 가져와 업무를 만들어 보세요."
-            actionLabel="업무 만들기"
-            onAction={() => navigate('/tasks/new')}
+            title="등록된 근로자가 없습니다"
+            body="근로자를 먼저 등록하면 업무 유무와 진행 상태를 한곳에서 확인할 수 있습니다."
+            actionLabel="근로자 등록"
+            onAction={() => navigate('/workers')}
           />
         </div>
       )}
 
-      {casesQuery.status === 'success' && inbox.groups.length === 0 && (
+      {hasFilteredEmpty && (
         <div className={styles.stateWrap}>
           <EmptyState
             kind="empty"
             title="검색 결과가 없습니다"
-            body="다른 근로자명, Case 또는 업무명으로 다시 검색해 보세요."
+            body="검색어나 업무 상태 필터를 바꿔 다시 확인해 보세요."
           />
         </div>
       )}
 
-      {casesQuery.status === 'success' && selectedGroup && (
+      {selectedGroup && !isInitialLoading && (
         <>
+          <div className={styles.noticeStack}>
+            {casesQuery.status === 'error' && (
+              <div className={styles.noticeWarning} role="status">
+                <span>근로자 목록은 표시했지만 업무 정보를 갱신하지 못했습니다.</span>
+                <button type="button" onClick={casesQuery.refetch}>
+                  다시 시도
+                </button>
+              </div>
+            )}
+            {workersQuery.status === 'error' && (
+              <p className={styles.notice} role="status">
+                근로자 상세 정보를 불러오지 못해 Case에 저장된 이름으로 표시합니다.
+              </p>
+            )}
+          </div>
           <div className={styles.workspace}>
             <WorkInboxTargetList
               groups={inbox.groups}
@@ -164,6 +222,18 @@ export function WorkListPage() {
             <WorkInboxDetail
               group={selectedGroup}
               onOpenTask={(taskId) => navigate(`/tasks/${taskId}`)}
+              onOpenTaskContext={(taskId) => navigate(`/tasks/${taskId}?context=open`)}
+              onCreateWork={(workerId, workerDisplayName) =>
+                navigate('/tasks/new', {
+                  state: {
+                    prefill: `${workerDisplayName} 근로자의 업무를 준비해 주세요`,
+                    workerId,
+                  },
+                })
+              }
+              onOpenWorker={(workerId) => navigate(`/workers/${workerId}/detail`)}
+              onOpenDocuments={(workerId) => navigate(`/documents?workerId=${workerId}`)}
+              casesUnavailable={casesQuery.status === 'error'}
             />
           </div>
           <p className={styles.srOnly} aria-live="polite">

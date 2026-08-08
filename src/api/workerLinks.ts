@@ -42,6 +42,26 @@ export interface WorkerResponseSubmitResponse {
   received_at: string
 }
 
+export type WorkerConversationStatus = 'WAITING_WORKER' | 'NEEDS_FOLLOWUP' | 'REOPENED'
+
+export interface WorkerResponseItemResponse {
+  response_id: string
+  response_type: WorkerResponseType
+  message: string | null
+  upload_ids: string[]
+  conversation_status: WorkerConversationStatus
+  unread: boolean
+  received_at: string
+}
+
+export interface WorkerResponsePageResponse {
+  items: WorkerResponseItemResponse[]
+  page: number
+  size: number
+  total_elements: number
+  total_pages: number
+}
+
 export function issueWorkerLink(
   taskId: string,
   body: WorkerLinkIssueBody,
@@ -93,6 +113,24 @@ export function submitWorkerResponse(
       body: JSON.stringify(body),
       skipAuthRetry: true,
     },
+  )
+}
+
+export function fetchTaskWorkerResponses(
+  taskId: string,
+  page = 0,
+  size = 20,
+): Promise<WorkerResponsePageResponse> {
+  const query = new URLSearchParams({ page: String(page), size: String(size) })
+  return apiFetch<WorkerResponsePageResponse>(
+    `/tasks/${encodeURIComponent(taskId)}/worker-responses?${query.toString()}`,
+  )
+}
+
+export function markTaskWorkerResponsesRead(taskId: string): Promise<void> {
+  return apiFetch<void>(
+    `/tasks/${encodeURIComponent(taskId)}/worker-responses/read`,
+    { method: 'POST' },
   )
 }
 

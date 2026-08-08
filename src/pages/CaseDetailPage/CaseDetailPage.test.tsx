@@ -9,10 +9,12 @@ import type {
   DocumentReadinessResponse,
 } from '../../api/documents'
 import type { TaskDetailResponse } from '../../api/tasks'
+import type { WorkerResponseItemResponse } from '../../api/workerLinks'
 import { ToastViewport } from '../../components/ui/ToastViewport/ToastViewport'
+import { useAuthStore } from '../../store/authStore'
 import { useToastStore } from '../../store/toastStore'
 import { CaseDetailPage } from './CaseDetailPage'
-import { CASE_COMMUNICATION, CASE_TABS, CONTEXT_DRAWER } from './caseDetailData'
+import { CASE_TABS, CONTEXT_DRAWER } from './caseDetailData'
 
 function jsonResponse(body: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(body), {
@@ -125,10 +127,32 @@ function mockTaskAndActivities(
   activities: AuditEventResponse[] = [],
   readinessOverrides: Partial<DocumentReadinessResponse> = {},
   documents: DocumentItemResponse[] = [],
+  workerResponses: WorkerResponseItemResponse[] = [],
 ) {
+  let responsesReviewed = false
   vi.mocked(fetch).mockImplementation((input) => {
     const url = String(input)
     if (url.includes('/activities')) return Promise.resolve(jsonResponse(activities))
+    if (url.endsWith('/worker-responses/read')) {
+      responsesReviewed = true
+      return Promise.resolve(new Response(null, { status: 204 }))
+    }
+    if (url.includes('/worker-responses?')) {
+      const items = workerResponses.map((response) =>
+        responsesReviewed
+          ? { ...response, unread: false, conversation_status: 'REOPENED' as const }
+          : response,
+      )
+      return Promise.resolve(
+        jsonResponse({
+          items,
+          page: 0,
+          size: 100,
+          total_elements: items.length,
+          total_pages: items.length ? 1 : 0,
+        }),
+      )
+    }
     if (url.includes('/document-readiness'))
       return Promise.resolve(jsonResponse(readinessResponse(readinessOverrides)))
     if (url.includes('/document-request-draft')) {
@@ -193,11 +217,17 @@ function mockTaskError(status: number, code: string, message: string) {
     if (url.includes('/document-readiness'))
       return Promise.resolve(jsonResponse(readinessResponse()))
     if (url.includes('/documents?')) return Promise.resolve(jsonResponse(documentsResponse()))
+    if (url.includes('/worker-responses?')) {
+      return Promise.resolve(
+        jsonResponse({ items: [], page: 0, size: 100, total_elements: 0, total_pages: 0 }),
+      )
+    }
     return Promise.resolve(errorResponse(status, code, message))
   })
 }
 
 beforeEach(() => {
+  useAuthStore.setState({ user: null, status: 'ready' })
   useToastStore.setState({ toasts: [] })
   vi.stubGlobal('fetch', vi.fn())
 })
@@ -344,7 +374,41 @@ describe('CaseDetailPage', () => {
     expect(await screen.findByText('서류 요청 초안을 저장했습니다.')).toBeInTheDocument()
   })
 
-  it('switches to the communication tab and shows message content', async () => {
+  it('shows real unread worker responses and marks them as reviewed', async () => {
+    const user = userEvent.setup()
+    mockTaskAndActivities({}, [], {}, [], [
+      {
+        response_id: 'response-1',
+        response_type: 'DOCUMENT_SUBMITTED',
+        message: '여권 사본을 제출했습니다.',
+        upload_ids: ['upload-1'],
+        conversation_status: 'NEEDS_FOLLOWUP',
+        unread: true,
+        received_at: '2026-07-20T01:00:00Z',
+      },
+    ])
+    renderPage()
+    await screen.findByText('응웬반A 체류연장 준비')
+
+    await user.click(screen.getByRole('tab', { name: CASE_TABS[3] }))
+
+    expect(screen.getByText('승인대기')).toBeInTheDocument()
+    expect(screen.getByText('여권 사본을 제출했습니다.')).toBeInTheDocument()
+    expect(screen.getByText('제출 파일 1개')).toBeInTheDocument()
+    expect(screen.queryByText('여권 사본 요청문 초안을 준비했습니다.')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '응답 확인 완료' }))
+
+    expect(await screen.findByText('근로자 응답을 확인 처리했습니다.')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('확인됨')).toBeInTheDocument()
+    })
+    expect(
+      vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/worker-responses/read')),
+    ).toBe(true)
+  })
+
+  it('shows a worker-response empty state instead of static demo messages', async () => {
     const user = userEvent.setup()
     mockTaskAndActivities()
     renderPage()
@@ -352,7 +416,34 @@ describe('CaseDetailPage', () => {
 
     await user.click(screen.getByRole('tab', { name: CASE_TABS[3] }))
 
-    expect(screen.getByText(CASE_COMMUNICATION[0].message)).toBeInTheDocument()
+    expect(screen.getByText('서류대기')).toBeInTheDocument()
+    expect(screen.getByText('도착한 근로자 응답이 없습니다')).toBeInTheDocument()
+  })
+
+  it('does not offer the response review action to a viewer', async () => {
+    const user = userEvent.setup()
+    useAuthStore.setState({
+      user: { name: 'viewer', workplace: 'FOWOCO', role: 'VIEWER' },
+      status: 'ready',
+    })
+    mockTaskAndActivities({}, [], {}, [], [
+      {
+        response_id: 'response-1',
+        response_type: 'QUESTION',
+        message: '어떤 서류가 필요한가요?',
+        upload_ids: [],
+        conversation_status: 'NEEDS_FOLLOWUP',
+        unread: true,
+        received_at: '2026-07-20T01:00:00Z',
+      },
+    ])
+    renderPage()
+    await screen.findByText('응웬반A 체류연장 준비')
+
+    await user.click(screen.getByRole('tab', { name: CASE_TABS[3] }))
+
+    expect(screen.getByText('미확인')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '응답 확인 완료' })).not.toBeInTheDocument()
   })
 
   it('switches to the activity tab and shows real activity content', async () => {

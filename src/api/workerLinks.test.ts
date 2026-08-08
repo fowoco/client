@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  fetchTaskWorkerResponses,
   fetchWorkerLink,
   issueWorkerLink,
+  markTaskWorkerResponsesRead,
   resolveWorkerPortalUrl,
   submitWorkerResponse,
   uploadWorkerLinkDocument,
@@ -38,6 +40,23 @@ describe('worker link APIs', () => {
     expect(String(calls[1][0])).toContain('/documents')
     expect(calls[1][1]?.body).toBeInstanceOf(FormData)
     expect(String(calls[2][0])).toContain('/responses')
+  })
+
+  it('lists and marks HR worker responses as reviewed through authenticated endpoints', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        jsonResponse({ items: [], page: 1, size: 10, total_elements: 0, total_pages: 0 }),
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+
+    await fetchTaskWorkerResponses('T/1', 1, 10)
+    await markTaskWorkerResponsesRead('T/1')
+
+    const calls = vi.mocked(fetch).mock.calls
+    expect(String(calls[0][0])).toContain('/tasks/T%2F1/worker-responses?page=1&size=10')
+    expect(calls[0][1]?.method).toBeUndefined()
+    expect(String(calls[1][0])).toContain('/tasks/T%2F1/worker-responses/read')
+    expect(calls[1][1]?.method).toBe('POST')
   })
 
   it('turns the current backend raw-token response into a frontend route', () => {

@@ -17,7 +17,13 @@ import {
 } from '../../api/documents'
 import { ApiError, getErrorMessage } from '../../api/errors'
 import { cancelTask, fetchTaskById, updateChecklistItem } from '../../api/tasks'
-import { issueWorkerLink, resolveWorkerPortalUrl } from '../../api/workerLinks'
+import {
+  fetchTaskWorkerResponses,
+  issueWorkerLink,
+  markTaskWorkerResponsesRead,
+  resolveWorkerPortalUrl,
+  type WorkerResponseType,
+} from '../../api/workerLinks'
 import { AgentSourceLabel } from '../../components/ui/AgentSourceLabel/AgentSourceLabel'
 import { AgentSummary } from '../../components/ui/AgentSummary/AgentSummary'
 import { Button } from '../../components/ui/Button/Button'
@@ -27,14 +33,19 @@ import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { StatusLabel, type StatusTone } from '../../components/ui/StatusLabel/StatusLabel'
 import { Tabs } from '../../components/ui/Tabs/Tabs'
 import { useApiQuery } from '../../hooks/useApiQuery'
+import { useAuthStore } from '../../store/authStore'
 import { useToastStore } from '../../store/toastStore'
 import { ACTOR_TYPE_TO_AGENT_SOURCE, getAuditActionLabel } from '../../utils/auditLabels'
 import { formatEventTime } from '../../utils/datetime'
 import { TASK_SOURCE_LABEL, TASK_STATUS_LABEL, TASK_STATUS_TONE } from '../../utils/taskStatus'
 import { getDocumentViewModel } from '../../view-models/documentViewModel'
 import { getOperationalDateViewModel } from '../../view-models/dateViewModel'
+import {
+  getWorkerRequestStateViewModel,
+  type WorkerRequestState,
+} from '../../view-models/workerRequestStateViewModel'
 import styles from './CaseDetailPage.module.css'
-import { CASE_COMMUNICATION, CASE_TABS, CONTEXT_DRAWER } from './caseDetailData'
+import { CASE_TABS, CONTEXT_DRAWER } from './caseDetailData'
 import { ApprovalDecisionModal } from './overlays/ApprovalDecisionModal'
 import { ApprovalRequestModal } from './overlays/ApprovalRequestModal'
 import { ExternalCompletionModal } from './overlays/ExternalCompletionModal'
@@ -65,6 +76,21 @@ const EVIDENCE_TYPE_BY_LABEL: Record<string, EvidenceType> = {
   '화면 캡처': 'OFFICIAL_RESULT',
 }
 
+const WORKER_RESPONSE_TYPE_LABEL: Record<WorkerResponseType, string> = {
+  ACKNOWLEDGED: '확인했습니다',
+  QUESTION: '질문',
+  NOT_UNDERSTOOD: '이해가 어려워요',
+  DOCUMENT_SUBMITTED: '서류 제출',
+  DIFFICULT: '진행이 어려워요',
+}
+
+const WORKER_REQUEST_STATE_TONE: Record<WorkerRequestState, StatusTone> = {
+  DOCUMENT_WAITING: 'neutral',
+  REQUEST_SENT: 'info',
+  APPROVAL_WAITING: 'warning',
+  COMPLETED: 'success',
+}
+
 export function CaseDetailPage() {
   const { taskId } = useParams()
   const [activeTab, setActiveTab] = useState(CASE_TABS[0])
@@ -78,7 +104,9 @@ export function CaseDetailPage() {
   const [lastReissue, setLastReissue] = useState<ReissueSubmission | null>(null)
   const [issuedWorkerUrl, setIssuedWorkerUrl] = useState<string | null>(null)
   const [issuedExpiresAt, setIssuedExpiresAt] = useState<string | null>(null)
+  const [markingResponsesRead, setMarkingResponsesRead] = useState(false)
   const moreMenuRef = useRef<HTMLDivElement>(null)
+  const userRole = useAuthStore((state) => state.user?.role)
   const showToast = useToastStore((state) => state.showToast)
 
   const taskFetcher = useCallback(() => fetchTaskById(taskId ?? ''), [taskId])
@@ -90,7 +118,7 @@ export function CaseDetailPage() {
   } = useApiQuery(taskFetcher)
 
   const activitiesFetcher = useCallback(() => fetchTaskActivities(taskId ?? ''), [taskId])
-  const { data: activities } = useApiQuery(activitiesFetcher)
+  const { data: activities, refetch: refetchActivities } = useApiQuery(activitiesFetcher)
   const activityRows = activities ?? []
 
   const readinessFetcher = useCallback(() => fetchDocumentReadiness(taskId ?? ''), [taskId])
@@ -111,6 +139,21 @@ export function CaseDetailPage() {
     useCallback((page: { items: unknown[] }) => page.items.length === 0, []),
   )
   const documents = documentsPage?.items ?? []
+
+  const workerResponsesFetcher = useCallback(
+    () => fetchTaskWorkerResponses(taskId ?? '', 0, 100),
+    [taskId],
+  )
+  const {
+    status: workerResponsesStatus,
+    data: workerResponsesPage,
+    error: workerResponsesError,
+    refetch: refetchWorkerResponses,
+  } = useApiQuery(
+    workerResponsesFetcher,
+    useCallback((page: { items: unknown[] }) => page.items.length === 0, []),
+  )
+  const workerResponses = workerResponsesPage?.items ?? []
 
   useEffect(() => {
     if (!moreMenuOpen) return
@@ -301,6 +344,25 @@ export function CaseDetailPage() {
     }
   }
 
+  async function handleMarkResponsesRead() {
+    if (!task || markingResponsesRead) return
+    setMarkingResponsesRead(true)
+    try {
+      await markTaskWorkerResponsesRead(task.task_id)
+      refetchWorkerResponses()
+      refetchActivities()
+      showToast('근로자 응답을 확인 처리했습니다.')
+    } catch (error) {
+      showToast(
+        error instanceof ApiError
+          ? getErrorMessage(error)
+          : '근로자 응답을 확인 처리하지 못했습니다.',
+      )
+    } finally {
+      setMarkingResponsesRead(false)
+    }
+  }
+
   if (taskStatus === 'loading') {
     return (
       <div className={styles.stateWrap}>
@@ -361,6 +423,18 @@ export function CaseDetailPage() {
   const agentBody = completionBlockers.length
     ? `${completionBlockers.join(' · ')} 확인이 필요합니다.`
     : (task.description ?? '필수 항목과 서류가 모두 준비되었습니다.')
+  const unreadWorkerResponseCount = workerResponses.filter((response) => response.unread).length
+  const newestWorkerResponse = workerResponses[0]
+  const workerRequestState = getWorkerRequestStateViewModel({
+    // 링크 발급은 실제 전송이 아니다. 응답이 도착한 경우에만 전송 사실이 확인된 것으로 본다.
+    requestSentAt: newestWorkerResponse?.received_at,
+    responseReceivedAt: newestWorkerResponse?.received_at,
+    responseReadAt:
+      newestWorkerResponse && unreadWorkerResponseCount === 0
+        ? newestWorkerResponse.received_at
+        : null,
+    completedAt: task.status === 'COMPLETED' ? task.updated_at : null,
+  })
 
   function handleAgentAction() {
     if (!task) return
@@ -711,16 +785,97 @@ export function CaseDetailPage() {
           aria-labelledby="case-tab-3"
           className={styles.tabPanel}
         >
-          {/* TODO(backend): GET /api/work-items/:id/communication -> CASE_COMMUNICATION 대체 */}
-          <div className={styles.commList}>
-            {CASE_COMMUNICATION.map((entry) => (
-              <div key={entry.id} className={styles.commRow}>
-                <span className={styles.commTime}>{entry.time}</span>
-                <span className={styles.commActor}>{entry.actor}</span>
-                <p className={styles.commMessage}>{entry.message}</p>
-              </div>
-            ))}
-          </div>
+          {workerResponsesStatus === 'loading' && (
+            <EmptyState
+              kind="loading"
+              title="근로자 응답을 불러오는 중입니다"
+              body="잠시만 기다려 주세요."
+            />
+          )}
+          {workerResponsesStatus === 'error' && (
+            <EmptyState
+              kind="error"
+              title="근로자 응답을 불러오지 못했습니다"
+              body={
+                workerResponsesError
+                  ? getErrorMessage(workerResponsesError)
+                  : '네트워크 상태를 확인한 뒤 다시 시도해 주세요.'
+              }
+              actionLabel="다시 시도"
+              onAction={refetchWorkerResponses}
+            />
+          )}
+          {(workerResponsesStatus === 'empty' || workerResponsesStatus === 'success') && (
+            <>
+              <section className={styles.responseOverview} aria-labelledby="worker-response-title">
+                <div className={styles.responseOverviewCopy}>
+                  <p className={styles.responseEyebrow}>근로자 모바일 요청</p>
+                  <div className={styles.responseTitleRow}>
+                    <h2 id="worker-response-title" className={styles.responseTitle}>
+                      응답 현황
+                    </h2>
+                    <StatusLabel tone={WORKER_REQUEST_STATE_TONE[workerRequestState.state]}>
+                      {workerRequestState.label}
+                    </StatusLabel>
+                  </div>
+                  <p className={styles.responseDescription}>{workerRequestState.description}</p>
+                </div>
+                {unreadWorkerResponseCount > 0 && userRole !== 'VIEWER' && (
+                  <Button
+                    variant="secondary"
+                    onClick={handleMarkResponsesRead}
+                    isLoading={markingResponsesRead}
+                  >
+                    응답 확인 완료
+                  </Button>
+                )}
+              </section>
+
+              {workerResponses.length === 0 ? (
+                <EmptyState
+                  kind="empty"
+                  title="도착한 근로자 응답이 없습니다"
+                  body={
+                    issuedWorkerUrl
+                      ? '발급한 링크를 근로자에게 전달한 뒤 응답을 기다려 주세요.'
+                      : '모바일 링크를 발급하고 근로자에게 직접 전달해 주세요.'
+                  }
+                />
+              ) : (
+                <div className={styles.commList} aria-label="근로자 응답 목록">
+                  {workerResponses.map((response) => (
+                    <article
+                      key={response.response_id}
+                      className={`${styles.commRow} ${response.unread ? styles.commRowUnread : ''}`}
+                    >
+                      <div className={styles.commMeta}>
+                        <span className={styles.commTime}>
+                          {formatEventTime(response.received_at)}
+                        </span>
+                        <StatusLabel tone={response.unread ? 'warning' : 'neutral'}>
+                          {response.unread ? '미확인' : '확인됨'}
+                        </StatusLabel>
+                      </div>
+                      <div className={styles.commContent}>
+                        <div className={styles.commHeading}>
+                          <span className={styles.commActor}>근로자</span>
+                          <span className={styles.commType}>
+                            {WORKER_RESPONSE_TYPE_LABEL[response.response_type]}
+                          </span>
+                        </div>
+                        <p className={styles.commMessage}>
+                          {response.message?.trim() || '별도 메시지 없이 응답했습니다.'}
+                        </p>
+                        {response.upload_ids.length > 0 && (
+                          <p className={styles.commFiles}>제출 파일 {response.upload_ids.length}개</p>
+                        )}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
 

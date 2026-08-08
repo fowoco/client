@@ -30,16 +30,3 @@ export const CONTEXT_DRAWER = {
   ],
   hrTodo: ['근로자 안내문 최종 검토 후 승인 요청', '보안 링크 전달 전 담당자 직접 확인'],
 }
-
-export interface CaseCommunicationEntry {
-  id: string
-  time: string
-  actor: string
-  message: string
-}
-
-export const CASE_COMMUNICATION: CaseCommunicationEntry[] = [
-  { id: 'comm-1', time: '오늘 09:12', actor: 'Agent', message: '여권 사본 요청문 초안을 준비했습니다.' },
-  { id: 'comm-2', time: '어제 17:40', actor: '김경민', message: '근로자에게 서류 제출 안내 문자를 발송했습니다.' },
-  { id: 'comm-3', time: '어제 09:05', actor: '응웬반A', message: '서류를 준비 중이라고 답장했습니다.' },
-]

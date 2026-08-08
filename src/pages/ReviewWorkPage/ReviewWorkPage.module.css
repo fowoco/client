@@ -250,11 +250,6 @@
   opacity: 0.65;
 }
 
-.cardLink:focus-visible {
-  outline: 2px solid var(--brand-primary);
-  outline-offset: 3px;
-}
-
 .missingCard {
   padding: var(--fowoco-spacing-20) var(--fowoco-spacing-24);
   background: var(--fowoco-amber-50);
@@ -344,19 +339,110 @@
 }
 
 .candidateCard {
-  padding: 16px 0;
-  border-bottom: 1px solid var(--border-default);
+  padding: var(--fowoco-spacing-16);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
 }
 
 .candidateCardSelected {
-  margin-inline: -12px;
-  padding-inline: 12px;
-  background: var(--surface-subtle);
-  box-shadow: inset 3px 0 0 var(--brand-primary);
+  background: var(--fowoco-teal-50);
+  border: 2px solid var(--brand-primary);
 }
 
-.candidateCard:last-child {
-  border-bottom: 0;
+.candidateCardExcluded {
+  background: var(--surface-default);
+}
+
+.candidateGrid {
+  display: grid;
+  gap: 12px;
+}
+
+.candidateHeader,
+.candidateTitleRow,
+.candidateActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.candidateTitleRow .draftHeadline {
+  flex: 1;
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.45;
+}
+
+.selectedCount {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  color: var(--brand-primary);
+  background: var(--fowoco-teal-50);
+  border-radius: var(--fowoco-radius-999);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.candidateCheck {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--fowoco-white, #fff);
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-999);
+  cursor: pointer;
+}
+
+.candidateCheck[aria-pressed='true'] {
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
+}
+
+.candidateCheck:disabled {
+  background: var(--surface-subtle);
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.candidateCheck:focus-visible,
+.cardLink:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
+.candidateDetails {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0 0;
+}
+
+.candidateDetails > div {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.candidateDetails dt {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.candidateDetails dd {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.candidateActions {
+  margin-top: 18px;
 }
 
 .candidateMeta {
@@ -364,25 +450,6 @@
   font-size: 12px;
   overflow-wrap: anywhere;
   color: var(--text-secondary);
-}
-
-.candidateGuide {
-  margin: 8px 0 0;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
-
-.candidateMissing {
-  margin: 8px 0 0;
-  font-size: 12px;
-  color: var(--status-warning);
-}
-
-.candidateChoiceRow {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 12px;
 }
 
 .draftLink {
@@ -403,6 +470,26 @@
   align-items: center;
   gap: 24px;
   margin-top: 24px;
+}
+
+.primaryLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 18px;
+  color: var(--fowoco-white, #fff);
+  background: var(--brand-primary);
+  border-radius: var(--fowoco-radius-6);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.blockedNotice {
+  margin: 12px 0 0;
+  color: var(--status-warning);
+  font-size: 12px;
+  text-align: right;
 }
 
 .editRequest {

@@ -13,7 +13,22 @@ export interface WorkerLinkIssueBody {
 }
 
 export interface WorkerLinkIssueResponse {
-  worker_url: string
+  worker_link_id: string
+  worker_url: string | null
+  expires_at: string
+  delivery_status: WorkerLinkDeliveryStatus
+  sent_at: string | null
+  already_issued: boolean
+}
+
+export type WorkerLinkStatus = 'ACTIVE' | 'EXPIRED' | 'REVOKED'
+export type WorkerLinkDeliveryStatus = 'NOT_SENT' | 'SENT'
+
+export interface WorkerLinkDeliveryResponse {
+  worker_link_id: string
+  link_status: WorkerLinkStatus
+  delivery_status: WorkerLinkDeliveryStatus
+  sent_at: string | null
   expires_at: string
 }
 
@@ -72,6 +87,21 @@ export function issueWorkerLink(
     headers: { 'Idempotency-Key': idempotencyKey },
     body: JSON.stringify(body),
   })
+}
+
+export function fetchTaskWorkerLinkDelivery(
+  taskId: string,
+): Promise<WorkerLinkDeliveryResponse> {
+  return apiFetch<WorkerLinkDeliveryResponse>(
+    `/tasks/${encodeURIComponent(taskId)}/worker-link`,
+  )
+}
+
+export function markWorkerLinkSent(workerLinkId: string): Promise<WorkerLinkDeliveryResponse> {
+  return apiFetch<WorkerLinkDeliveryResponse>(
+    `/worker-links/${encodeURIComponent(workerLinkId)}/sent`,
+    { method: 'POST' },
+  )
 }
 
 export function fetchWorkerLink(token: string): Promise<WorkerLinkViewResponse> {

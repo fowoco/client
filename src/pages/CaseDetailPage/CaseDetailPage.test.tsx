@@ -9,7 +9,10 @@ import type {
   DocumentReadinessResponse,
 } from '../../api/documents'
 import type { TaskDetailResponse } from '../../api/tasks'
-import type { WorkerResponseItemResponse } from '../../api/workerLinks'
+import type {
+  WorkerLinkDeliveryResponse,
+  WorkerResponseItemResponse,
+} from '../../api/workerLinks'
 import { ToastViewport } from '../../components/ui/ToastViewport/ToastViewport'
 import { useAuthStore } from '../../store/authStore'
 import { useToastStore } from '../../store/toastStore'
@@ -128,9 +131,11 @@ function mockTaskAndActivities(
   readinessOverrides: Partial<DocumentReadinessResponse> = {},
   documents: DocumentItemResponse[] = [],
   workerResponses: WorkerResponseItemResponse[] = [],
+  workerLinkDelivery: WorkerLinkDeliveryResponse | null = null,
 ) {
   let responsesReviewed = false
-  vi.mocked(fetch).mockImplementation((input) => {
+  let currentWorkerLinkDelivery = workerLinkDelivery
+  vi.mocked(fetch).mockImplementation((input, init) => {
     const url = String(input)
     if (url.includes('/activities')) return Promise.resolve(jsonResponse(activities))
     if (url.endsWith('/worker-responses/read')) {
@@ -199,12 +204,43 @@ function mockTaskAndActivities(
       )
     }
     if (url.endsWith('/worker-link')) {
+      if (init?.method !== 'POST') {
+        return Promise.resolve(
+          currentWorkerLinkDelivery
+            ? jsonResponse(currentWorkerLinkDelivery)
+            : errorResponse(404, 'WORKER_LINK_RESOURCE_NOT_FOUND', '근로자 링크 없음'),
+        )
+      }
+      currentWorkerLinkDelivery = {
+        worker_link_id: 'L-1',
+        link_status: 'ACTIVE',
+        delivery_status: 'NOT_SENT',
+        sent_at: null,
+        expires_at: '2026-08-07T00:00:00Z',
+      }
       return Promise.resolve(
         jsonResponse(
-          { worker_url: 'worker-token-1', expires_at: '2026-08-07T00:00:00Z' },
+          {
+            worker_link_id: 'L-1',
+            worker_url: 'worker-token-1',
+            expires_at: '2026-08-07T00:00:00Z',
+            delivery_status: 'NOT_SENT',
+            sent_at: null,
+            already_issued: false,
+          },
           { status: 201 },
         ),
       )
+    }
+    if (url.endsWith('/worker-links/L-1/sent')) {
+      currentWorkerLinkDelivery = {
+        worker_link_id: 'L-1',
+        link_status: 'ACTIVE',
+        delivery_status: 'SENT',
+        sent_at: '2026-08-05T01:00:00Z',
+        expires_at: '2026-08-07T00:00:00Z',
+      }
+      return Promise.resolve(jsonResponse(currentWorkerLinkDelivery))
     }
     return Promise.resolve(jsonResponse(task(taskOverrides)))
   })
@@ -221,6 +257,9 @@ function mockTaskError(status: number, code: string, message: string) {
       return Promise.resolve(
         jsonResponse({ items: [], page: 0, size: 100, total_elements: 0, total_pages: 0 }),
       )
+    }
+    if (url.endsWith('/worker-link')) {
+      return Promise.resolve(errorResponse(404, 'WORKER_LINK_RESOURCE_NOT_FOUND', '근로자 링크 없음'))
     }
     return Promise.resolve(errorResponse(status, code, message))
   })
@@ -418,6 +457,34 @@ describe('CaseDetailPage', () => {
 
     expect(screen.getByText('서류대기')).toBeInTheDocument()
     expect(screen.getByText('도착한 근로자 응답이 없습니다')).toBeInTheDocument()
+  })
+
+  it('uses the persisted link delivery status and records delivery after confirmation', async () => {
+    const user = userEvent.setup()
+    mockTaskAndActivities({}, [], {}, [], [], {
+      worker_link_id: 'L-1',
+      link_status: 'ACTIVE',
+      delivery_status: 'NOT_SENT',
+      sent_at: null,
+      expires_at: '2026-08-07T00:00:00Z',
+    })
+    renderPage()
+    await screen.findByText('응웬반A 체류연장 준비')
+
+    await user.click(screen.getByRole('tab', { name: CASE_TABS[3] }))
+
+    expect(screen.getByText('서류대기')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '전달 완료 기록' }))
+    expect(screen.getByRole('dialog', { name: '링크 전달 완료 기록' })).toBeInTheDocument()
+
+    await user.click(screen.getByLabelText('근로자에게 링크를 직접 전달했습니다.'))
+    await user.click(screen.getByRole('button', { name: '전달 완료로 기록' }))
+
+    expect(await screen.findByText('근로자 링크 전달 완료를 기록했습니다.')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText('요청전송')).toBeInTheDocument())
+    expect(
+      vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/worker-links/L-1/sent')),
+    ).toBe(true)
   })
 
   it('does not offer the response review action to a viewer', async () => {
@@ -686,5 +753,6 @@ describe('CaseDetailPage', () => {
     expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/worker-link'))).toBe(
       true,
     )
+    expect(screen.getByRole('button', { name: '전달 완료 기록' })).toBeEnabled()
   })
 })

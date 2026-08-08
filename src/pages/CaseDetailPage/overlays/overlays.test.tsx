@@ -5,6 +5,7 @@ import { ApprovalRequestModal } from './ApprovalRequestModal'
 import { ApprovalDecisionModal } from './ApprovalDecisionModal'
 import { RejectionReasonModal } from './RejectionReasonModal'
 import { ExternalCompletionModal } from './ExternalCompletionModal'
+import { LinkDeliveryConfirmModal } from './LinkDeliveryConfirmModal'
 
 describe('ApprovalRequestModal', () => {
   it('calls onSubmit when the request button is clicked', async () => {
@@ -100,5 +101,28 @@ describe('ExternalCompletionModal', () => {
 
     await user.click(completeButton)
     expect(onComplete).toHaveBeenCalledWith('접수번호', 'HI-2026-0718-032', '')
+  })
+})
+
+describe('LinkDeliveryConfirmModal', () => {
+  it('requires an explicit delivery confirmation before recording', async () => {
+    const user = userEvent.setup()
+    const onConfirm = vi.fn()
+    render(
+      <LinkDeliveryConfirmModal
+        open
+        onClose={vi.fn()}
+        onConfirm={onConfirm}
+      />,
+    )
+
+    const confirmButton = screen.getByRole('button', { name: '전달 완료로 기록' })
+    expect(confirmButton).toBeDisabled()
+
+    await user.click(screen.getByLabelText('근로자에게 링크를 직접 전달했습니다.'))
+    expect(confirmButton).toBeEnabled()
+
+    await user.click(confirmButton)
+    expect(onConfirm).toHaveBeenCalledOnce()
   })
 })

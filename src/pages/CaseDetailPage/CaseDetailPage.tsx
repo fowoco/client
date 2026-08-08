@@ -18,10 +18,13 @@ import {
 import { ApiError, getErrorMessage } from '../../api/errors'
 import { cancelTask, fetchTaskById, updateChecklistItem } from '../../api/tasks'
 import {
+  fetchTaskWorkerLinkDelivery,
   fetchTaskWorkerResponses,
   issueWorkerLink,
   markTaskWorkerResponsesRead,
+  markWorkerLinkSent,
   resolveWorkerPortalUrl,
+  type WorkerLinkDeliveryResponse,
   type WorkerResponseType,
 } from '../../api/workerLinks'
 import { AgentSourceLabel } from '../../components/ui/AgentSourceLabel/AgentSourceLabel'
@@ -49,13 +52,15 @@ import { CASE_TABS, CONTEXT_DRAWER } from './caseDetailData'
 import { ApprovalDecisionModal } from './overlays/ApprovalDecisionModal'
 import { ApprovalRequestModal } from './overlays/ApprovalRequestModal'
 import { ExternalCompletionModal } from './overlays/ExternalCompletionModal'
+import { LinkDeliveryConfirmModal } from './overlays/LinkDeliveryConfirmModal'
 import { LinkReissueModal, type ReissueSubmission } from './overlays/LinkReissueModal'
 import { LinkReissuedModal } from './overlays/LinkReissuedModal'
 import { RejectionReasonModal } from './overlays/RejectionReasonModal'
 
 type ApprovalOverlay = 'none' | 'request' | 'decision' | 'rejection'
 type CompletionOverlay = 'none' | 'external'
-type LinkOverlay = 'none' | 'reissue' | 'reissued'
+type LinkOverlay = 'none' | 'reissue' | 'reissued' | 'delivery'
+type DeliveryConfirmReturn = 'none' | 'reissued'
 
 const CASE_TAB_ITEMS = CASE_TABS.map((label) => ({ id: label, label }))
 
@@ -91,6 +96,22 @@ const WORKER_REQUEST_STATE_TONE: Record<WorkerRequestState, StatusTone> = {
   COMPLETED: 'success',
 }
 
+async function fetchTaskWorkerLinkDeliveryOrNull(
+  taskId: string,
+): Promise<WorkerLinkDeliveryResponse | null> {
+  try {
+    return await fetchTaskWorkerLinkDelivery(taskId)
+  } catch (error) {
+    if (
+      error instanceof ApiError &&
+      (error.status === 404 || error.code === 'WORKER_LINK_RESOURCE_NOT_FOUND')
+    ) {
+      return null
+    }
+    throw error
+  }
+}
+
 export function CaseDetailPage() {
   const { taskId } = useParams()
   const [activeTab, setActiveTab] = useState(CASE_TABS[0])
@@ -101,9 +122,16 @@ export function CaseDetailPage() {
   const [actionPending, setActionPending] = useState(false)
   const [togglingItemId, setTogglingItemId] = useState<string | null>(null)
   const [linkOverlay, setLinkOverlay] = useState<LinkOverlay>('none')
+  const [deliveryConfirmReturn, setDeliveryConfirmReturn] =
+    useState<DeliveryConfirmReturn>('none')
   const [lastReissue, setLastReissue] = useState<ReissueSubmission | null>(null)
   const [issuedWorkerUrl, setIssuedWorkerUrl] = useState<string | null>(null)
   const [issuedExpiresAt, setIssuedExpiresAt] = useState<string | null>(null)
+  const [localWorkerLinkDelivery, setLocalWorkerLinkDelivery] = useState<{
+    taskId: string
+    data: WorkerLinkDeliveryResponse
+  } | null>(null)
+  const [markingLinkSent, setMarkingLinkSent] = useState(false)
   const [markingResponsesRead, setMarkingResponsesRead] = useState(false)
   const moreMenuRef = useRef<HTMLDivElement>(null)
   const userRole = useAuthStore((state) => state.user?.role)
@@ -154,6 +182,32 @@ export function CaseDetailPage() {
     useCallback((page: { items: unknown[] }) => page.items.length === 0, []),
   )
   const workerResponses = workerResponsesPage?.items ?? []
+
+  const workerLinkDeliveryFetcher = useCallback(() => {
+    if (!taskId || userRole === 'VIEWER') return Promise.resolve(null)
+    return fetchTaskWorkerLinkDeliveryOrNull(taskId)
+  }, [taskId, userRole])
+  const {
+    status: workerLinkDeliveryStatus,
+    data: workerLinkDelivery,
+    error: workerLinkDeliveryError,
+    refetch: refetchWorkerLinkDelivery,
+  } = useApiQuery(
+    workerLinkDeliveryFetcher,
+    useCallback((delivery: WorkerLinkDeliveryResponse | null) => delivery === null, []),
+  )
+
+  useEffect(() => {
+    if (!localWorkerLinkDelivery || !workerLinkDelivery) return
+    if (
+      localWorkerLinkDelivery.taskId === taskId &&
+      workerLinkDelivery.worker_link_id === localWorkerLinkDelivery.data.worker_link_id &&
+      (workerLinkDelivery.delivery_status === localWorkerLinkDelivery.data.delivery_status ||
+        workerLinkDelivery.delivery_status === 'SENT')
+    ) {
+      setLocalWorkerLinkDelivery(null)
+    }
+  }, [localWorkerLinkDelivery, taskId, workerLinkDelivery])
 
   useEffect(() => {
     if (!moreMenuOpen) return
@@ -331,16 +385,68 @@ export function CaseDetailPage() {
         crypto.randomUUID(),
       )
       setLastReissue(submission)
-      setIssuedWorkerUrl(resolveWorkerPortalUrl(issued.worker_url, window.location.origin))
+      setIssuedWorkerUrl(
+        issued.worker_url
+          ? resolveWorkerPortalUrl(issued.worker_url, window.location.origin)
+          : null,
+      )
       setIssuedExpiresAt(issued.expires_at)
+      setLocalWorkerLinkDelivery({
+        taskId: task.task_id,
+        data: {
+          worker_link_id: issued.worker_link_id,
+          link_status: 'ACTIVE',
+          delivery_status: issued.delivery_status,
+          sent_at: issued.sent_at,
+          expires_at: issued.expires_at,
+        },
+      })
+      refetchWorkerLinkDelivery()
       setLinkOverlay('reissued')
-      showToast('보안 링크를 발급했습니다. 아직 자동 전송되지는 않았습니다.')
+      showToast(
+        issued.worker_url
+          ? '보안 링크를 발급했습니다. 아직 자동 전송되지는 않았습니다.'
+          : '링크는 이미 발급됐지만 보안상 원문을 다시 표시할 수 없습니다.',
+      )
     } catch (error) {
       showToast(
         error instanceof ApiError ? getErrorMessage(error) : '보안 링크를 발급하지 못했습니다.',
       )
     } finally {
       setActionPending(false)
+    }
+  }
+
+  function handleOpenDeliveryConfirm(returnTo: DeliveryConfirmReturn = 'none') {
+    setDeliveryConfirmReturn(returnTo)
+    setLinkOverlay('delivery')
+  }
+
+  async function handleMarkLinkSent() {
+    if (!task || markingLinkSent) return
+    const currentDelivery =
+      localWorkerLinkDelivery?.taskId === task.task_id
+        ? localWorkerLinkDelivery.data
+        : workerLinkDelivery
+    if (!currentDelivery || currentDelivery.delivery_status === 'SENT') return
+
+    setMarkingLinkSent(true)
+    try {
+      const marked = await markWorkerLinkSent(currentDelivery.worker_link_id)
+      setLocalWorkerLinkDelivery({ taskId: task.task_id, data: marked })
+      refetchWorkerLinkDelivery()
+      refetchActivities()
+      setDeliveryConfirmReturn('none')
+      setLinkOverlay('none')
+      showToast('근로자 링크 전달 완료를 기록했습니다.')
+    } catch (error) {
+      showToast(
+        error instanceof ApiError
+          ? getErrorMessage(error)
+          : '링크 전달 완료를 기록하지 못했습니다.',
+      )
+    } finally {
+      setMarkingLinkSent(false)
     }
   }
 
@@ -425,9 +531,15 @@ export function CaseDetailPage() {
     : (task.description ?? '필수 항목과 서류가 모두 준비되었습니다.')
   const unreadWorkerResponseCount = workerResponses.filter((response) => response.unread).length
   const newestWorkerResponse = workerResponses[0]
+  const currentWorkerLinkDelivery =
+    localWorkerLinkDelivery?.taskId === task.task_id
+      ? localWorkerLinkDelivery.data
+      : workerLinkDelivery
   const workerRequestState = getWorkerRequestStateViewModel({
-    // 링크 발급은 실제 전송이 아니다. 응답이 도착한 경우에만 전송 사실이 확인된 것으로 본다.
-    requestSentAt: newestWorkerResponse?.received_at,
+    requestSentAt:
+      currentWorkerLinkDelivery?.delivery_status === 'SENT'
+        ? (currentWorkerLinkDelivery.sent_at ?? newestWorkerResponse?.received_at)
+        : newestWorkerResponse?.received_at,
     responseReceivedAt: newestWorkerResponse?.received_at,
     responseReadAt:
       newestWorkerResponse && unreadWorkerResponseCount === 0
@@ -785,27 +897,33 @@ export function CaseDetailPage() {
           aria-labelledby="case-tab-3"
           className={styles.tabPanel}
         >
-          {workerResponsesStatus === 'loading' && (
+          {(workerResponsesStatus === 'loading' || workerLinkDeliveryStatus === 'loading') && (
             <EmptyState
               kind="loading"
               title="근로자 응답을 불러오는 중입니다"
               body="잠시만 기다려 주세요."
             />
           )}
-          {workerResponsesStatus === 'error' && (
+          {(workerResponsesStatus === 'error' || workerLinkDeliveryStatus === 'error') && (
             <EmptyState
               kind="error"
-              title="근로자 응답을 불러오지 못했습니다"
+              title="근로자 요청 상태를 불러오지 못했습니다"
               body={
                 workerResponsesError
                   ? getErrorMessage(workerResponsesError)
+                  : workerLinkDeliveryError
+                    ? getErrorMessage(workerLinkDeliveryError)
                   : '네트워크 상태를 확인한 뒤 다시 시도해 주세요.'
               }
               actionLabel="다시 시도"
-              onAction={refetchWorkerResponses}
+              onAction={() => {
+                refetchWorkerResponses()
+                refetchWorkerLinkDelivery()
+              }}
             />
           )}
-          {(workerResponsesStatus === 'empty' || workerResponsesStatus === 'success') && (
+          {(workerResponsesStatus === 'empty' || workerResponsesStatus === 'success') &&
+            (workerLinkDeliveryStatus === 'empty' || workerLinkDeliveryStatus === 'success') && (
             <>
               <section className={styles.responseOverview} aria-labelledby="worker-response-title">
                 <div className={styles.responseOverviewCopy}>
@@ -829,6 +947,16 @@ export function CaseDetailPage() {
                     응답 확인 완료
                   </Button>
                 )}
+                {unreadWorkerResponseCount === 0 &&
+                  currentWorkerLinkDelivery?.delivery_status === 'NOT_SENT' &&
+                  userRole !== 'VIEWER' && (
+                    <Button
+                      variant="secondary"
+                      onClick={() => handleOpenDeliveryConfirm('none')}
+                    >
+                      전달 완료 기록
+                    </Button>
+                  )}
               </section>
 
               {workerResponses.length === 0 ? (
@@ -988,7 +1116,17 @@ export function CaseDetailPage() {
         submission={lastReissue}
         workerUrl={issuedWorkerUrl}
         expiresAt={issuedExpiresAt}
+        canRecordDelivery={
+          Boolean(issuedWorkerUrl) && currentWorkerLinkDelivery?.delivery_status === 'NOT_SENT'
+        }
+        onRecordDelivery={() => handleOpenDeliveryConfirm('reissued')}
         onClose={() => setLinkOverlay('none')}
+      />
+      <LinkDeliveryConfirmModal
+        open={linkOverlay === 'delivery'}
+        submitting={markingLinkSent}
+        onClose={() => setLinkOverlay(deliveryConfirmReturn)}
+        onConfirm={handleMarkLinkSent}
       />
 
       <Drawer

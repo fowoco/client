@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  fetchTaskWorkerLinkDelivery,
   fetchTaskWorkerResponses,
   fetchWorkerLink,
   issueWorkerLink,
+  markWorkerLinkSent,
   markTaskWorkerResponsesRead,
   resolveWorkerPortalUrl,
   submitWorkerResponse,
@@ -24,6 +26,37 @@ describe('worker link APIs', () => {
     const [url, init] = vi.mocked(fetch).mock.calls[0]
     expect(String(url)).toContain('/tasks/T-1/worker-link')
     expect(new Headers(init?.headers).get('Idempotency-Key')).toBe('issue-1')
+  })
+
+  it('gets the current delivery status and records manual delivery', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        jsonResponse({
+          worker_link_id: 'L-1',
+          link_status: 'ACTIVE',
+          delivery_status: 'NOT_SENT',
+          sent_at: null,
+          expires_at: '2026-08-07T00:00:00Z',
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          worker_link_id: 'L-1',
+          link_status: 'ACTIVE',
+          delivery_status: 'SENT',
+          sent_at: '2026-08-05T00:00:00Z',
+          expires_at: '2026-08-07T00:00:00Z',
+        }),
+      )
+
+    await fetchTaskWorkerLinkDelivery('T/1')
+    await markWorkerLinkSent('L/1')
+
+    const calls = vi.mocked(fetch).mock.calls
+    expect(String(calls[0][0])).toContain('/tasks/T%2F1/worker-link')
+    expect(calls[0][1]?.method).toBeUndefined()
+    expect(String(calls[1][0])).toContain('/worker-links/L%2F1/sent')
+    expect(calls[1][1]?.method).toBe('POST')
   })
 
   it('views, uploads and submits through the public token endpoints', async () => {

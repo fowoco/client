@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ApiError, getErrorMessage } from '../../api/errors'
 import {
   createAiRun,
+  decideAiRunCandidates,
   fetchAiRun,
   submitAiRunAnswers,
   type AiRunQuestion,
@@ -26,7 +27,11 @@ interface AiRunReviewProps {
   initialDraft?: WorkRequestDraft | null
 }
 
-function statusPresentation(run: AiRunResponse): { title: string; description: string; tone: StatusTone } {
+function statusPresentation(run: AiRunResponse): {
+  title: string
+  description: string
+  tone: StatusTone
+} {
   if (run.status === 'FAILED') {
     return {
       title: 'Agent가 요청을 완료하지 못했습니다.',
@@ -34,7 +39,11 @@ function statusPresentation(run: AiRunResponse): { title: string; description: s
       tone: 'critical',
     }
   }
-  if (run.status === 'QUEUED' || run.status === 'RUNNING' || run.analysis_outcome === 'CONTEXT_REQUIRED') {
+  if (
+    run.status === 'QUEUED' ||
+    run.status === 'RUNNING' ||
+    run.analysis_outcome === 'CONTEXT_REQUIRED'
+  ) {
     return {
       title: 'Agent가 요청을 분석하고 있습니다.',
       description: '등록된 근로자 정보와 처리 절차를 확인하고 있습니다.',
@@ -51,7 +60,7 @@ function statusPresentation(run: AiRunResponse): { title: string; description: s
   if (run.candidates.length > 1) {
     return {
       title: `${run.candidates.length}개의 업무를 찾았습니다.`,
-      description: '서로 독립된 업무 후보입니다. 실제로 만들 후보만 포함해 주세요.',
+      description: '후보를 비교한 뒤 이번에 실제 업무로 만들 하나를 선택해 주세요.',
       tone: 'warning',
     }
   }
@@ -70,20 +79,22 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
   const navigate = useNavigate()
   const [run, setRun] = useState(initialRun)
   const [answers, setAnswers] = useState<Record<string, string>>(() =>
-    Object.fromEntries(initialRun.questions.map((question) => [question.slot_key, question.answer ?? ''])),
+    Object.fromEntries(
+      initialRun.questions.map((question) => [question.slot_key, question.answer ?? '']),
+    ),
   )
-  const [selectedCandidateIds, setSelectedCandidateIds] = useState<Set<string>>(
-    () => new Set(initialRun.candidates.map((candidate) => candidate.candidate_id)),
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(() =>
+    initialRun.candidates.length === 1 && initialRun.candidates[0].missing_slots.length === 0
+      ? initialRun.candidates[0].candidate_id
+      : null,
   )
   const [submitting, setSubmitting] = useState(false)
   const [retrying, setRetrying] = useState(false)
+  const [deciding, setDeciding] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const decisionKeys = useRef(new Map<string, string>())
   const presentation = statusPresentation(run)
   const hasCandidates = run.candidates.length > 0
-  const candidateIds = useMemo(
-    () => run.candidates.map((candidate) => candidate.candidate_id),
-    [run.candidates],
-  )
 
   const catalogFetcher = useCallback(() => {
     if (!hasCandidates) {
@@ -108,14 +119,16 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
   const { data: workerPage } = useApiQuery(workerFetcher)
 
   const workflowNames = useMemo(
-    () => new Map((catalog?.workflows ?? []).map((workflow) => [workflow.workflow_id, workflow.name])),
+    () =>
+      new Map((catalog?.workflows ?? []).map((workflow) => [workflow.workflow_id, workflow.name])),
     [catalog],
   )
   const workerNames = useMemo(
-    () => new Map((workerPage?.items ?? []).map((worker) => [worker.worker_id, worker.display_name])),
+    () =>
+      new Map((workerPage?.items ?? []).map((worker) => [worker.worker_id, worker.display_name])),
     [workerPage],
   )
-  const selectedCount = selectedCandidateIds.size
+  const selectedCount = selectedCandidateId ? 1 : 0
   const editRequestState = {
     request: initialDraft?.request ?? run.instruction,
     mode: initialDraft?.mode ?? ('nl' as const),
@@ -132,7 +145,11 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
         if (!cancelled) setRun(latest)
       } catch (pollError) {
         if (!cancelled) {
-          setError(pollError instanceof ApiError ? getErrorMessage(pollError) : '분석 상태를 확인하지 못했습니다.')
+          setError(
+            pollError instanceof ApiError
+              ? getErrorMessage(pollError)
+              : '분석 상태를 확인하지 못했습니다.',
+          )
         }
       }
     }, 1200)
@@ -144,12 +161,19 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
   }, [run])
 
   useEffect(() => {
-    setAnswers(Object.fromEntries(run.questions.map((question) => [question.slot_key, question.answer ?? ''])))
+    setAnswers(
+      Object.fromEntries(
+        run.questions.map((question) => [question.slot_key, question.answer ?? '']),
+      ),
+    )
   }, [run.questions])
 
   useEffect(() => {
-    setSelectedCandidateIds(new Set(candidateIds))
-  }, [candidateIds])
+    const onlyCandidate = run.candidates.length === 1 ? run.candidates[0] : null
+    setSelectedCandidateId(
+      onlyCandidate && onlyCandidate.missing_slots.length === 0 ? onlyCandidate.candidate_id : null,
+    )
+  }, [run.candidates])
 
   const canSubmitAnswers = useMemo(
     () =>
@@ -169,7 +193,9 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
       setRun(await submitAiRunAnswers(run.ai_run_id, run.version, submittedAnswers))
     } catch (submitError) {
       setError(
-        submitError instanceof ApiError ? getErrorMessage(submitError) : '추가 정보를 제출하지 못했습니다.',
+        submitError instanceof ApiError
+          ? getErrorMessage(submitError)
+          : '추가 정보를 제출하지 못했습니다.',
       )
     } finally {
       setSubmitting(false)
@@ -196,19 +222,59 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
       })
       setRun(retriedRun)
     } catch (retryError) {
-      setError(retryError instanceof ApiError ? getErrorMessage(retryError) : '요청을 다시 분석하지 못했습니다.')
+      setError(
+        retryError instanceof ApiError
+          ? getErrorMessage(retryError)
+          : '요청을 다시 분석하지 못했습니다.',
+      )
     } finally {
       setRetrying(false)
     }
   }
 
   function toggleCandidate(candidateId: string) {
-    setSelectedCandidateIds((current) => {
-      const next = new Set(current)
-      if (next.has(candidateId)) next.delete(candidateId)
-      else next.add(candidateId)
-      return next
-    })
+    setSelectedCandidateId((current) => (current === candidateId ? null : candidateId))
+  }
+
+  async function handleDecideCandidates() {
+    if (deciding || run.analysis_outcome !== 'REVIEW_REQUIRED' || !selectedCandidateId) return
+
+    const selectedCandidate = run.candidates.find(
+      (candidate) => candidate.candidate_id === selectedCandidateId,
+    )
+    if (!selectedCandidate || selectedCandidate.missing_slots.length > 0) return
+
+    setDeciding(true)
+    setError(null)
+    try {
+      let idempotencyKey = decisionKeys.current.get(selectedCandidateId)
+      if (!idempotencyKey) {
+        idempotencyKey = globalThis.crypto.randomUUID()
+        decisionKeys.current.set(selectedCandidateId, idempotencyKey)
+      }
+      const result = await decideAiRunCandidates(
+        run.ai_run_id,
+        run.version,
+        run.candidates.map((candidate) => ({
+          candidate_id: candidate.candidate_id,
+          action: candidate.candidate_id === selectedCandidateId ? 'ACCEPT' : 'DISCARD',
+        })),
+        idempotencyKey,
+      )
+      const firstTaskId = result.task_ids[0]
+      navigate(firstTaskId ? `/tasks/${encodeURIComponent(firstTaskId)}` : '/tasks', {
+        replace: true,
+        state: { createdTaskIds: result.task_ids, caseId: result.case_id },
+      })
+    } catch (decisionError) {
+      setError(
+        decisionError instanceof ApiError
+          ? getErrorMessage(decisionError)
+          : '업무 후보를 확정하지 못했습니다.',
+      )
+    } finally {
+      setDeciding(false)
+    }
   }
 
   return (
@@ -231,12 +297,20 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
       </div>
 
       <ol className={styles.stepIndicator}>
-        <li className={`${styles.stepItem} ${styles.stepItemDone}`}><span>✓</span>요청 입력</li>
-        <li className={`${styles.stepItem} ${styles.stepItemDone}`}><span>✓</span>Agent 분석</li>
-        <li className={`${styles.stepItem} ${run.analysis_outcome === 'NEEDS_INFO' ? styles.stepItemCurrent : styles.stepItemDone}`}>
+        <li className={`${styles.stepItem} ${styles.stepItemDone}`}>
+          <span>✓</span>요청 입력
+        </li>
+        <li className={`${styles.stepItem} ${styles.stepItemDone}`}>
+          <span>✓</span>Agent 분석
+        </li>
+        <li
+          className={`${styles.stepItem} ${run.analysis_outcome === 'NEEDS_INFO' ? styles.stepItemCurrent : styles.stepItemDone}`}
+        >
           <span>{run.analysis_outcome === 'NEEDS_INFO' ? '3' : '✓'}</span>정보 확인
         </li>
-        <li className={`${styles.stepItem} ${run.analysis_outcome === 'REVIEW_REQUIRED' ? styles.stepItemCurrent : ''}`}>
+        <li
+          className={`${styles.stepItem} ${run.analysis_outcome === 'REVIEW_REQUIRED' ? styles.stepItemCurrent : ''}`}
+        >
           <span>4</span>후보 검토
         </li>
       </ol>
@@ -264,8 +338,12 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
               <h2 className={styles.missingTitle}>HR이 확인할 정보 {run.questions.length}개</h2>
               {run.questions.map((question) => (
                 <div key={question.slot_key} className={styles.questionField}>
-                  <label htmlFor={`ai-question-${question.slot_key}`} className={styles.missingQuestion}>
-                    {question.label}{question.required ? ' *' : ''}
+                  <label
+                    htmlFor={`ai-question-${question.slot_key}`}
+                    className={styles.missingQuestion}
+                  >
+                    {question.label}
+                    {question.required ? ' *' : ''}
                   </label>
                   <input
                     id={`ai-question-${question.slot_key}`}
@@ -273,24 +351,37 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
                     className={styles.questionInput}
                     value={answers[question.slot_key] ?? ''}
                     onChange={(event) =>
-                      setAnswers((current) => ({ ...current, [question.slot_key]: event.target.value }))
+                      setAnswers((current) => ({
+                        ...current,
+                        [question.slot_key]: event.target.value,
+                      }))
                     }
                   />
                 </div>
               ))}
-              <p className={styles.missingWarning}>답변은 현재 분석 실행에 저장되며 새 분석 시도로 이어집니다.</p>
+              <p className={styles.missingWarning}>
+                답변은 현재 분석 실행에 저장되며 새 분석 시도로 이어집니다.
+              </p>
             </div>
           )}
 
           {run.status === 'FAILED' && (
             <div className={styles.errorCard} role="alert">
               <h2 className={styles.missingTitle}>분석을 계속할 수 없습니다</h2>
-              <p className={styles.missingQuestion}>오류 코드: {run.error_code ?? 'UNKNOWN_ERROR'}</p>
-              <p className={styles.emptyState}>업무는 생성되지 않았습니다. 원문은 그대로 유지됩니다.</p>
+              <p className={styles.missingQuestion}>
+                오류 코드: {run.error_code ?? 'UNKNOWN_ERROR'}
+              </p>
+              <p className={styles.emptyState}>
+                업무는 생성되지 않았습니다. 원문은 그대로 유지됩니다.
+              </p>
             </div>
           )}
 
-          {error && <p className={styles.fieldError} role="alert">{error}</p>}
+          {error && (
+            <p className={styles.fieldError} role="alert">
+              {error}
+            </p>
+          )}
         </div>
 
         <aside className={styles.draftPanel}>
@@ -300,16 +391,21 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
               <p className={styles.draftBadge}>후보일 뿐 아직 실제 업무가 아닙니다</p>
             </div>
             {run.candidates.length > 1 && (
-              <span className={styles.selectedCount}>{selectedCount}개 포함</span>
+              <span className={styles.selectedCount}>
+                {selectedCandidateId ? '1개 선택' : '선택 필요'}
+              </span>
             )}
           </div>
 
           {run.candidates.length === 0 ? (
-            <p className={styles.emptyState}>분석이 완료되고 필요한 정보가 채워지면 후보가 표시됩니다.</p>
+            <p className={styles.emptyState}>
+              분석이 완료되고 필요한 정보가 채워지면 후보가 표시됩니다.
+            </p>
           ) : (
             <div className={run.candidates.length > 1 ? styles.candidateGrid : undefined}>
               {run.candidates.map((candidate) => {
-                const selected = selectedCandidateIds.has(candidate.candidate_id)
+                const selected = selectedCandidateId === candidate.candidate_id
+                const candidateReady = candidate.missing_slots.length === 0
                 const workflowName = workflowNames.get(candidate.workflow_id)
                 const workerName = candidate.worker_id ? workerNames.get(candidate.worker_id) : null
                 return (
@@ -322,28 +418,63 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
                         type="button"
                         className={styles.candidateCheck}
                         aria-pressed={selected}
-                        aria-label={`${workflowName ?? '업무 후보'} ${selected ? '제외' : '포함'}`}
+                        aria-label={`${workflowName ?? '업무 후보'} ${selected ? '선택 해제' : '선택'}`}
+                        disabled={!candidateReady || deciding}
                         onClick={() => toggleCandidate(candidate.candidate_id)}
                       >
                         {selected ? '✓' : ''}
                       </button>
-                      <p className={styles.draftHeadline}>{workflowName ?? '처리 절차 이름 확인 필요'}</p>
+                      <p className={styles.draftHeadline}>
+                        {workflowName ?? '처리 절차 이름 확인 필요'}
+                      </p>
                     </div>
                     <dl className={styles.candidateDetails}>
-                      <div><dt>요청 유형</dt><dd>{intentLabel(run.detected_intent)}</dd></div>
-                      <div><dt>대상</dt><dd>{workerName ?? (candidate.worker_id ? '근로자 이름 확인 중' : '대상 확인 필요')}</dd></div>
-                      <div><dt>추천 처리 절차</dt><dd>{workflowName ?? '처리 절차 조회 필요'}</dd></div>
+                      <div>
+                        <dt>요청 유형</dt>
+                        <dd>{intentLabel(run.detected_intent)}</dd>
+                      </div>
+                      <div>
+                        <dt>대상</dt>
+                        <dd>
+                          {workerName ??
+                            (candidate.worker_id ? '근로자 이름 확인 중' : '대상 확인 필요')}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>추천 처리 절차</dt>
+                        <dd>{workflowName ?? '처리 절차 조회 필요'}</dd>
+                      </div>
                       {Object.entries(candidate.extracted_slots).map(([key, value], index) => (
-                        <div key={key}><dt>{slotLabel(key)}{slotLabel(key) === '추출 정보' ? ` ${index + 1}` : ''}</dt><dd>{value}</dd></div>
+                        <div key={key}>
+                          <dt>
+                            {slotLabel(key)}
+                            {slotLabel(key) === '추출 정보' ? ` ${index + 1}` : ''}
+                          </dt>
+                          <dd>{value}</dd>
+                        </div>
                       ))}
                       {candidate.missing_slots.length > 0 && (
-                        <div><dt>누락 정보</dt><dd>{candidate.missing_slots.map(slotLabel).join(', ')}</dd></div>
+                        <div>
+                          <dt>누락 정보</dt>
+                          <dd>{candidate.missing_slots.map(slotLabel).join(', ')}</dd>
+                        </div>
                       )}
                     </dl>
                     <div className={styles.candidateActions}>
-                      <Link to="/tasks/new" state={editRequestState} className={styles.cardLink}>내용 수정</Link>
-                      <button type="button" className={styles.cardLink} onClick={() => toggleCandidate(candidate.candidate_id)}>
-                        {selected ? '제외' : '다시 포함'}
+                      <Link to="/tasks/new" state={editRequestState} className={styles.cardLink}>
+                        내용 수정
+                      </Link>
+                      <button
+                        type="button"
+                        className={styles.cardLink}
+                        disabled={!candidateReady || deciding}
+                        onClick={() => toggleCandidate(candidate.candidate_id)}
+                      >
+                        {candidateReady
+                          ? selected
+                            ? '선택 해제'
+                            : '이 후보 선택'
+                          : '정보 보완 필요'}
                       </button>
                     </div>
                   </section>
@@ -355,26 +486,38 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
       </div>
 
       <div className={styles.actions}>
-        <Link to="/tasks/new" state={editRequestState} className={styles.editRequest}>요청 수정</Link>
+        <Link to="/tasks/new" state={editRequestState} className={styles.editRequest}>
+          요청 수정
+        </Link>
         {run.analysis_outcome === 'NEEDS_INFO' ? (
           <Button onClick={handleSubmitAnswers} disabled={!canSubmitAnswers} isLoading={submitting}>
             답변하고 다시 분석
           </Button>
         ) : run.status === 'FAILED' ? (
-          <Button onClick={handleRetry} isLoading={retrying}>같은 요청 다시 분석</Button>
+          <Button onClick={handleRetry} isLoading={retrying}>
+            같은 요청 다시 분석
+          </Button>
         ) : (
-          <Button disabled>
-            선택한 {selectedCount}개 업무 생성
+          <Button
+            disabled={run.analysis_outcome !== 'REVIEW_REQUIRED' || selectedCount === 0}
+            isLoading={deciding}
+            onClick={handleDecideCandidates}
+          >
+            선택한 업무 생성
           </Button>
         )}
       </div>
 
-      {run.analysis_outcome === 'REVIEW_REQUIRED' && (
+      {run.analysis_outcome === 'REVIEW_REQUIRED' && run.candidates.length > 1 && (
         <p className={styles.blockedNotice} role="status">
-          후보 확정 API가 아직 없어 업무 생성은 차단되어 있습니다. 선택 결과는 현재 화면에서만 검토할 수 있습니다.
+          한 번에 하나의 후보만 실제 업무로 만들 수 있습니다. 나머지 후보는 이번 결정에서
+          제외됩니다.
         </p>
       )}
-      <p className={styles.footnote}>분석 근거는 API가 실제 근거 데이터를 제공할 때만 표시합니다. 근거 없는 확률 점수는 사용하지 않습니다.</p>
+      <p className={styles.footnote}>
+        분석 근거는 API가 실제 근거 데이터를 제공할 때만 표시합니다. 근거 없는 확률 점수는 사용하지
+        않습니다.
+      </p>
     </div>
   )
 }

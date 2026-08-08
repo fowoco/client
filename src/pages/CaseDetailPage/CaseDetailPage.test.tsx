@@ -8,12 +8,10 @@ import type {
   DocumentItemResponse,
   DocumentPageResponse,
   DocumentReadinessResponse,
+  DocumentRequestDraftResponse,
 } from '../../api/documents'
 import type { TaskDetailResponse } from '../../api/tasks'
-import type {
-  WorkerLinkDeliveryResponse,
-  WorkerResponseItemResponse,
-} from '../../api/workerLinks'
+import type { WorkerLinkDeliveryResponse, WorkerResponseItemResponse } from '../../api/workerLinks'
 import { ToastViewport } from '../../components/ui/ToastViewport/ToastViewport'
 import { useAuthStore } from '../../store/authStore'
 import { useToastStore } from '../../store/toastStore'
@@ -181,9 +179,11 @@ function mockTaskAndActivities(
   workerResponses: WorkerResponseItemResponse[] = [],
   workerLinkDelivery: WorkerLinkDeliveryResponse | null = null,
   caseProjection: CaseProjectionResponse | null = null,
+  savedDocumentRequestDraft: DocumentRequestDraftResponse | null = null,
 ) {
   let responsesReviewed = false
   let currentWorkerLinkDelivery = workerLinkDelivery
+  let currentDocumentRequestDraft = savedDocumentRequestDraft
   vi.mocked(fetch).mockImplementation((input, init) => {
     const url = String(input)
     if (url.includes('/activities')) return Promise.resolve(jsonResponse(activities))
@@ -222,9 +222,35 @@ function mockTaskAndActivities(
       )
     }
     if (url.includes('/document-request-draft')) {
-      return Promise.resolve(
-        jsonResponse({ draft_id: 'draft-1', version: 1, review_status: 'PENDING' }),
-      )
+      if (init?.method !== 'PUT') {
+        return Promise.resolve(
+          currentDocumentRequestDraft
+            ? jsonResponse(currentDocumentRequestDraft)
+            : errorResponse(404, 'DOCUMENT_REQUEST_DRAFT_NOT_FOUND', '초안 없음'),
+        )
+      }
+      const body = JSON.parse(String(init.body)) as {
+        language: string
+        document_types: DocumentRequestDraftResponse['document_types']
+        message: string
+        expected_version: number
+      }
+      if (
+        currentDocumentRequestDraft &&
+        body.expected_version !== currentDocumentRequestDraft.version
+      ) {
+        return Promise.resolve(errorResponse(409, 'VERSION_CONFLICT', '초안 버전 충돌'))
+      }
+      currentDocumentRequestDraft = {
+        draft_id: currentDocumentRequestDraft?.draft_id ?? 'draft-1',
+        language: body.language,
+        document_types: body.document_types,
+        message: body.message,
+        version: currentDocumentRequestDraft ? currentDocumentRequestDraft.version + 1 : 0,
+        review_status: 'DRAFT',
+        updated_at: '2026-08-08T00:00:00Z',
+      }
+      return Promise.resolve(jsonResponse(currentDocumentRequestDraft))
     }
     if (url.includes('/documents?'))
       return Promise.resolve(jsonResponse(documentsResponse(documents)))
@@ -338,7 +364,9 @@ function mockTaskError(status: number, code: string, message: string) {
       )
     }
     if (url.endsWith('/worker-link')) {
-      return Promise.resolve(errorResponse(404, 'WORKER_LINK_RESOURCE_NOT_FOUND', '근로자 링크 없음'))
+      return Promise.resolve(
+        errorResponse(404, 'WORKER_LINK_RESOURCE_NOT_FOUND', '근로자 링크 없음'),
+      )
     }
     return Promise.resolve(errorResponse(status, code, message))
   })
@@ -461,9 +489,7 @@ describe('CaseDetailPage', () => {
     const user = userEvent.setup()
     const createObjectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:file-1')
     const revokeObjectUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
-    const clickAnchor = vi
-      .spyOn(HTMLAnchorElement.prototype, 'click')
-      .mockImplementation(() => {})
+    const clickAnchor = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
     mockTaskAndActivities({}, [], {}, [
       {
         worker_document_id: 'doc-1',
@@ -499,24 +525,92 @@ describe('CaseDetailPage', () => {
     expect(await screen.findByText('누락 1건 · 만료 0건')).toBeInTheDocument()
 
     await user.click(screen.getByRole('tab', { name: CASE_TABS[2] }))
-    await user.click(await screen.findByRole('button', { name: '요청 초안 저장 →' }))
+    await user.click(await screen.findByRole('button', { name: '요청 초안 저장' }))
 
     expect(await screen.findByText('서류 요청 초안을 저장했습니다.')).toBeInTheDocument()
+    const saveCall = vi
+      .mocked(fetch)
+      .mock.calls.find(
+        ([url, init]) => String(url).includes('/document-request-draft') && init?.method === 'PUT',
+      )
+    expect(JSON.parse(String(saveCall?.[1]?.body))).toMatchObject({
+      document_types: ['ARC'],
+      message: '다음 서류를 제출해 주세요: 외국인등록증.',
+      expected_version: 0,
+    })
+  })
+
+  it('restores and updates a saved document request draft', async () => {
+    const user = userEvent.setup()
+    mockTaskAndActivities(
+      {},
+      [],
+      { missing: ['ARC'], completion_blocked: true },
+      [],
+      [],
+      null,
+      null,
+      {
+        draft_id: 'draft-1',
+        language: 'vi',
+        document_types: ['PASSPORT_COPY', 'CONTRACT'],
+        message: 'Vui lòng nộp hộ chiếu và hợp đồng lao động.',
+        version: 3,
+        review_status: 'DRAFT',
+        updated_at: '2026-08-08T00:00:00Z',
+      },
+    )
+    renderPage()
+    await screen.findByText('응웬반A 체류연장 준비')
+    await user.click(screen.getByRole('tab', { name: CASE_TABS[2] }))
+
+    expect(
+      await screen.findByDisplayValue('Vui lòng nộp hộ chiếu và hợp đồng lao động.'),
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText('안내 언어')).toHaveValue('vi')
+    expect(screen.getByText('저장본 v3')).toBeInTheDocument()
+
+    const message = screen.getByLabelText('근로자 안내문')
+    await user.clear(message)
+    await user.type(message, '수정된 안내문')
+    await user.click(screen.getByRole('button', { name: '요청 초안 저장' }))
+
+    const updateCall = await waitFor(() => {
+      const call = vi
+        .mocked(fetch)
+        .mock.calls.find(
+          ([url, init]) =>
+            String(url).includes('/document-request-draft') && init?.method === 'PUT',
+        )
+      expect(call).toBeDefined()
+      return call!
+    })
+    expect(JSON.parse(String(updateCall[1]?.body))).toMatchObject({
+      message: '수정된 안내문',
+      expected_version: 3,
+    })
+    expect(await screen.findByText('저장본 v4')).toBeInTheDocument()
   })
 
   it('shows real unread worker responses and marks them as reviewed', async () => {
     const user = userEvent.setup()
-    mockTaskAndActivities({}, [], {}, [], [
-      {
-        response_id: 'response-1',
-        response_type: 'DOCUMENT_SUBMITTED',
-        message: '여권 사본을 제출했습니다.',
-        upload_ids: ['upload-1'],
-        conversation_status: 'NEEDS_FOLLOWUP',
-        unread: true,
-        received_at: '2026-07-20T01:00:00Z',
-      },
-    ])
+    mockTaskAndActivities(
+      {},
+      [],
+      {},
+      [],
+      [
+        {
+          response_id: 'response-1',
+          response_type: 'DOCUMENT_SUBMITTED',
+          message: '여권 사본을 제출했습니다.',
+          upload_ids: ['upload-1'],
+          conversation_status: 'NEEDS_FOLLOWUP',
+          unread: true,
+          received_at: '2026-07-20T01:00:00Z',
+        },
+      ],
+    )
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
@@ -584,17 +678,23 @@ describe('CaseDetailPage', () => {
       user: { name: 'viewer', workplace: 'FOWOCO', role: 'VIEWER' },
       status: 'ready',
     })
-    mockTaskAndActivities({}, [], {}, [], [
-      {
-        response_id: 'response-1',
-        response_type: 'QUESTION',
-        message: '어떤 서류가 필요한가요?',
-        upload_ids: [],
-        conversation_status: 'NEEDS_FOLLOWUP',
-        unread: true,
-        received_at: '2026-07-20T01:00:00Z',
-      },
-    ])
+    mockTaskAndActivities(
+      {},
+      [],
+      {},
+      [],
+      [
+        {
+          response_id: 'response-1',
+          response_type: 'QUESTION',
+          message: '어떤 서류가 필요한가요?',
+          upload_ids: [],
+          conversation_status: 'NEEDS_FOLLOWUP',
+          unread: true,
+          received_at: '2026-07-20T01:00:00Z',
+        },
+      ],
+    )
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
@@ -625,11 +725,7 @@ describe('CaseDetailPage', () => {
 
   it('blocks completion and offers retry when document readiness cannot be verified', async () => {
     const user = userEvent.setup()
-    mockTaskAndActivities(
-      {},
-      [],
-      errorResponse(503, 'SERVICE_UNAVAILABLE', '서류 상태 확인 지연'),
-    )
+    mockTaskAndActivities({}, [], errorResponse(503, 'SERVICE_UNAVAILABLE', '서류 상태 확인 지연'))
     renderPage()
 
     expect(await screen.findByText('조회 실패')).toBeInTheDocument()
@@ -639,9 +735,7 @@ describe('CaseDetailPage', () => {
     await user.click(screen.getByRole('button', { name: '다시 조회 →' }))
 
     expect(
-      vi.mocked(fetch).mock.calls.filter(([url]) =>
-        String(url).includes('/document-readiness'),
-      ),
+      vi.mocked(fetch).mock.calls.filter(([url]) => String(url).includes('/document-readiness')),
     ).toHaveLength(2)
   })
 
@@ -830,9 +924,7 @@ describe('CaseDetailPage', () => {
     expect(await within(drawer).findByText('Case 현황')).toBeInTheDocument()
     expect(within(drawer).getByText('응웬반A')).toBeInTheDocument()
     expect(
-      vi.mocked(fetch).mock.calls.some(([url]) =>
-        String(url).endsWith('/cases/C-1/projection'),
-      ),
+      vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/cases/C-1/projection')),
     ).toBe(true)
   })
 

@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { fetchDocuments, patchWorkerDocument, registerWorkerDocument } from './documents'
+import {
+  fetchDocumentRequestDraft,
+  fetchDocuments,
+  patchWorkerDocument,
+  registerWorkerDocument,
+  upsertDocumentRequestDraft,
+} from './documents'
 
 function jsonResponse(body: unknown) {
   return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })
@@ -85,5 +91,57 @@ describe('patchWorkerDocument', () => {
     const [url, init] = vi.mocked(fetch).mock.calls[0]
     expect(url).toContain('/workers/W-1/documents/doc-1')
     expect(init?.method).toBe('PATCH')
+  })
+})
+
+describe('document request draft', () => {
+  it('GETs the saved content and version for recovery', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      jsonResponse({
+        draft_id: 'draft-1',
+        language: 'vi',
+        document_types: ['PASSPORT_COPY', 'CONTRACT'],
+        message: 'Vui lòng nộp hồ sơ.',
+        version: 3,
+        review_status: 'DRAFT',
+        updated_at: '2026-08-08T00:00:00Z',
+      }),
+    )
+
+    const draft = await fetchDocumentRequestDraft('T/1')
+
+    expect(draft.version).toBe(3)
+    const [url, init] = vi.mocked(fetch).mock.calls[0]
+    expect(url).toContain('/tasks/T%2F1/document-request-draft')
+    expect(init?.method).toBeUndefined()
+  })
+
+  it('PUTs the restored expected version with the edited message', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      jsonResponse({
+        draft_id: 'draft-1',
+        language: 'ko',
+        document_types: ['ARC'],
+        message: '외국인등록증을 제출해 주세요.',
+        version: 2,
+        review_status: 'DRAFT',
+        updated_at: '2026-08-08T00:00:00Z',
+      }),
+    )
+
+    await upsertDocumentRequestDraft('T/1', {
+      language: 'ko',
+      document_types: ['ARC'],
+      message: '외국인등록증을 제출해 주세요.',
+      expected_version: 1,
+    })
+
+    const [url, init] = vi.mocked(fetch).mock.calls[0]
+    expect(url).toContain('/tasks/T%2F1/document-request-draft')
+    expect(init?.method).toBe('PUT')
+    expect(JSON.parse(String(init?.body))).toMatchObject({
+      message: '외국인등록증을 제출해 주세요.',
+      expected_version: 1,
+    })
   })
 })

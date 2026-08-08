@@ -65,12 +65,22 @@ export interface DocumentRequestUpsertBody {
 
 export interface DocumentRequestDraftResponse {
   draft_id: string
+  language: string
+  document_types: DocumentType[]
+  message: string | null
   version: number
   review_status: string
+  updated_at: string
 }
 
-// 초안 저장만 하고 실제 발송·Worker Link 생성은 하지 않는다 (#176 스코프 아님).
-// 최초 생성 시 expected_version은 관례상 0을 보낸다.
+export function fetchDocumentRequestDraft(taskId: string): Promise<DocumentRequestDraftResponse> {
+  return apiFetch<DocumentRequestDraftResponse>(
+    `/tasks/${encodeURIComponent(taskId)}/document-request-draft`,
+  )
+}
+
+// 초안 저장만 하고 실제 발송·Worker Link 생성은 하지 않는다. 최초 생성 시
+// expected_version은 0, 이후에는 fetchDocumentRequestDraft가 반환한 최신 version을 보낸다.
 export function upsertDocumentRequestDraft(
   taskId: string,
   body: DocumentRequestUpsertBody,

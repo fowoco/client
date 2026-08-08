@@ -1,4 +1,5 @@
 import { apiFetch } from './client'
+import type { DocumentType } from './documents'
 
 export type WorkerResponseType =
   | 'ACKNOWLEDGED'
@@ -34,7 +35,9 @@ export interface WorkerLinkDeliveryResponse {
 
 export interface WorkerLinkViewResponse {
   guidance: string
+  language: string
   due_date: string | null
+  requested_document_types: DocumentType[]
   allowed_responses: WorkerResponseType[]
 }
 

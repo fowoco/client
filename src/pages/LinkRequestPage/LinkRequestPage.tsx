@@ -5,8 +5,22 @@ import { fetchWorkerLink, submitWorkerResponse } from '../../api/workerLinks'
 import { MobileShell } from '../../components/mobile/MobileShell'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { useApiQuery } from '../../hooks/useApiQuery'
+import { DOCUMENT_TYPE_LABEL } from '../../utils/documentLabels'
 import { getOperationalDateViewModel } from '../../view-models/dateViewModel'
 import styles from './LinkRequestPage.module.css'
+
+const LANGUAGE_LABEL: Record<string, string> = {
+  ko: '한국어',
+  vi: '베트남어',
+  en: '영어',
+  zh: '중국어',
+  th: '태국어',
+  id: '인도네시아어',
+  km: '크메르어',
+  mn: '몽골어',
+  uz: '우즈베크어',
+  ne: '네팔어',
+}
 
 export function LinkRequestPage() {
   const { token } = useParams()
@@ -98,13 +112,19 @@ function WorkerLinkRequest({ token }: { token: string }) {
   }
 
   if (status === 'error' || !data) {
+    const contentNotReady =
+      error instanceof ApiError && error.code === 'WORKER_LINK_CONTENT_NOT_READY'
     return (
       <MobileShell right={<span>보안 링크</span>}>
         <EmptyState
           kind="error"
-          title="요청 내용을 불러오지 못했습니다"
+          title={contentNotReady ? '요청 내용을 준비하고 있습니다' : '요청 내용을 불러오지 못했습니다'}
           body={
-            error instanceof ApiError ? getErrorMessage(error) : '네트워크 상태를 확인해 주세요.'
+            contentNotReady
+              ? '회사 담당자가 안내문을 준비 중입니다. 잠시 후 같은 링크에서 다시 확인해 주세요.'
+              : error instanceof ApiError
+                ? getErrorMessage(error)
+                : '네트워크 상태를 확인해 주세요.'
           }
           actionLabel="다시 시도"
           onAction={refetch}
@@ -114,6 +134,7 @@ function WorkerLinkRequest({ token }: { token: string }) {
   }
 
   const due = getOperationalDateViewModel('TASK_DUE', data.due_date)
+  const requestedDocumentTypes = [...new Set(data.requested_document_types)]
   const canContinue =
     data.allowed_responses.includes('ACKNOWLEDGED') ||
     data.allowed_responses.includes('DOCUMENT_SUBMITTED')
@@ -133,10 +154,22 @@ function WorkerLinkRequest({ token }: { token: string }) {
         확인해 주세요
       </h1>
       <p className={styles.deadline}>{due.display}</p>
+      <p className={styles.language}>{LANGUAGE_LABEL[data.language] ?? data.language} 안내</p>
 
       <hr className={styles.divider} />
 
       <p className={styles.body}>{data.guidance}</p>
+
+      <section className={styles.requestedDocuments} aria-labelledby="requested-documents-title">
+        <p id="requested-documents-title" className={styles.requestedDocumentsTitle}>
+          제출할 서류 {requestedDocumentTypes.length}개
+        </p>
+        <ul className={styles.requestedDocumentsList}>
+          {requestedDocumentTypes.map((type) => (
+            <li key={type}>{DOCUMENT_TYPE_LABEL[type]}</li>
+          ))}
+        </ul>
+      </section>
 
       <div className={styles.privacy}>
         <p className={styles.privacyTitle}>이 업무에 필요한 정보만 표시됩니다.</p>

@@ -404,6 +404,7 @@
 .documentRow {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 16px;
   padding: var(--fowoco-spacing-16) var(--fowoco-spacing-24);
   background: var(--surface-default);
@@ -467,6 +468,143 @@
   color: var(--text-secondary);
   font-size: 13px;
   line-height: 20px;
+}
+
+.documentRequestStatus {
+  margin: 16px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.documentRequestError {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 16px;
+  padding: var(--fowoco-spacing-12) var(--fowoco-spacing-16);
+  background: var(--fowoco-red-50);
+  border-radius: var(--fowoco-radius-8);
+}
+
+.documentRequestError p {
+  margin: 0;
+  color: var(--status-critical);
+  font-size: 13px;
+}
+
+.documentRequestError button {
+  flex-shrink: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--status-critical);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.documentRequestCard {
+  margin-top: 16px;
+  padding: var(--fowoco-spacing-20) var(--fowoco-spacing-24);
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
+}
+
+.documentRequestHeader,
+.documentRequestFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.documentRequestEyebrow {
+  margin: 0 0 4px;
+  color: var(--brand-primary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.documentRequestTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 16px;
+}
+
+.documentRequestVersion {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.documentRequestTypes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.documentRequestTypes span {
+  padding: 6px 10px;
+  background: var(--surface-subtle);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.documentRequestLabel {
+  display: block;
+  margin: 18px 0 8px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.documentRequestSelect,
+.documentRequestTextarea {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.documentRequestTextarea {
+  min-height: 104px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.documentRequestSelect:focus-visible,
+.documentRequestTextarea:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
+.documentRequestFooter {
+  margin-top: 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.documentRequestAction {
+  min-height: 40px;
+  padding: 0 16px;
+  background: var(--brand-primary);
+  border: none;
+  border-radius: var(--fowoco-radius-8);
+  color: var(--fowoco-white);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.documentRequestAction:disabled {
+  cursor: wait;
+  opacity: 0.6;
 }
 
 .commList {

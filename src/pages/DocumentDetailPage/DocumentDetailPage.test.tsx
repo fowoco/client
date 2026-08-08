@@ -44,7 +44,7 @@ function renderPage(documentId: string) {
       <Routes>
         <Route path="/documents/:documentId" element={<DocumentDetailPage />} />
         <Route path="/documents" element={<p>서류 목록</p>} />
-        <Route path="/workers/:workerId" element={<p>근로자 상세</p>} />
+        <Route path="/workers/:workerId/detail" element={<p>근로자 상세</p>} />
       </Routes>
     </MemoryRouter>,
   )
@@ -55,6 +55,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
 
@@ -75,6 +76,38 @@ describe('DocumentDetailPage', () => {
     await user.click(await screen.findByRole('button', { name: '응웬반A 정보 →' }))
 
     expect(await screen.findByText('근로자 상세')).toBeInTheDocument()
+  })
+
+  it('downloads the attached original file through the authenticated file API', async () => {
+    const user = userEvent.setup()
+    const fileDocuments = [
+      document({
+        worker_document_id: 'D-1',
+        display_name: '응웬반A',
+        submission_status: 'SUBMITTED',
+        file_id: 'file-1',
+      }),
+    ]
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse(pageResponse(fileDocuments)))
+      .mockResolvedValueOnce(
+        new Response(new Blob(['pdf']), {
+          headers: { 'Content-Disposition': 'attachment; filename="arc.pdf"' },
+        }),
+      )
+    const createObjectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:file-1')
+    const revokeObjectUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+    const clickAnchor = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => {})
+    renderPage('D-1')
+
+    await user.click(await screen.findByRole('button', { name: '원본 다운로드' }))
+
+    expect(createObjectUrl).toHaveBeenCalledTimes(1)
+    expect(clickAnchor).toHaveBeenCalledTimes(1)
+    expect(revokeObjectUrl).toHaveBeenCalledWith('blob:file-1')
+    expect(String(vi.mocked(fetch).mock.calls[1][0])).toContain('/files/file-1/content')
   })
 
   it('shows an empty state when the documentId does not match any document', async () => {

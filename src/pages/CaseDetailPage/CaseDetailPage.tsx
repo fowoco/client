@@ -13,11 +13,15 @@ import {
 import { fetchTaskActivities } from '../../api/audit'
 import { fetchCaseProjection, type CaseProjectionResponse } from '../../api/cases'
 import {
+  fetchDocumentRequestDraft,
   fetchDocumentReadiness,
   fetchDocuments,
   upsertDocumentRequestDraft,
+  type DocumentRequestDraftResponse,
+  type DocumentType,
 } from '../../api/documents'
 import { ApiError, getErrorMessage } from '../../api/errors'
+import { downloadFile } from '../../api/files'
 import { cancelTask, fetchTaskById, updateChecklistItem } from '../../api/tasks'
 import {
   fetchTaskWorkerLinkDelivery,
@@ -42,6 +46,8 @@ import { useAuthStore } from '../../store/authStore'
 import { useToastStore } from '../../store/toastStore'
 import { ACTOR_TYPE_TO_AGENT_SOURCE, getAuditActionLabel } from '../../utils/auditLabels'
 import { formatEventTime } from '../../utils/datetime'
+import { saveBlobAsFile } from '../../utils/fileDownload'
+import { DOCUMENT_TYPE_LABEL } from '../../utils/documentLabels'
 import { TASK_SOURCE_LABEL, TASK_STATUS_LABEL, TASK_STATUS_TONE } from '../../utils/taskStatus'
 import { getDocumentViewModel } from '../../view-models/documentViewModel'
 import { getOperationalDateViewModel } from '../../view-models/dateViewModel'
@@ -128,6 +134,53 @@ async function fetchTaskWorkerLinkDeliveryOrNull(
   }
 }
 
+interface DocumentRequestDraftForm {
+  taskId: string
+  language: string
+  documentTypes: DocumentType[]
+  message: string
+}
+
+const GUIDANCE_LANGUAGES = [
+  { value: 'ko', label: '한국어' },
+  { value: 'vi', label: '베트남어' },
+  { value: 'en', label: '영어' },
+  { value: 'zh', label: '중국어' },
+  { value: 'th', label: '태국어' },
+  { value: 'id', label: '인도네시아어' },
+  { value: 'km', label: '크메르어' },
+  { value: 'mn', label: '몽골어' },
+  { value: 'uz', label: '우즈베크어' },
+  { value: 'ne', label: '네팔어' },
+]
+
+function uniqueDocumentTypes(types: DocumentType[]): DocumentType[] {
+  return [...new Set(types)]
+}
+
+function defaultDocumentRequestMessage(documentTypes: DocumentType[]): string {
+  if (documentTypes.length === 0) return ''
+  return `다음 서류를 제출해 주세요: ${documentTypes
+    .map((type) => DOCUMENT_TYPE_LABEL[type])
+    .join(', ')}.`
+}
+
+async function fetchDocumentRequestDraftOrNull(
+  taskId: string,
+): Promise<DocumentRequestDraftResponse | null> {
+  try {
+    return await fetchDocumentRequestDraft(taskId)
+  } catch (error) {
+    if (
+      error instanceof ApiError &&
+      (error.status === 404 || error.code === 'DOCUMENT_REQUEST_DRAFT_NOT_FOUND')
+    ) {
+      return null
+    }
+    throw error
+  }
+}
+
 export function CaseDetailPage() {
   const { taskId } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -140,8 +193,7 @@ export function CaseDetailPage() {
   const [actionPending, setActionPending] = useState(false)
   const [togglingItemId, setTogglingItemId] = useState<string | null>(null)
   const [linkOverlay, setLinkOverlay] = useState<LinkOverlay>('none')
-  const [deliveryConfirmReturn, setDeliveryConfirmReturn] =
-    useState<DeliveryConfirmReturn>('none')
+  const [deliveryConfirmReturn, setDeliveryConfirmReturn] = useState<DeliveryConfirmReturn>('none')
   const [lastReissue, setLastReissue] = useState<ReissueSubmission | null>(null)
   const [issuedWorkerUrl, setIssuedWorkerUrl] = useState<string | null>(null)
   const [issuedExpiresAt, setIssuedExpiresAt] = useState<string | null>(null)
@@ -151,6 +203,14 @@ export function CaseDetailPage() {
   } | null>(null)
   const [markingLinkSent, setMarkingLinkSent] = useState(false)
   const [markingResponsesRead, setMarkingResponsesRead] = useState(false)
+  const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null)
+  const [savingDocumentRequestDraft, setSavingDocumentRequestDraft] = useState(false)
+  const [documentRequestDraftForm, setDocumentRequestDraftForm] =
+    useState<DocumentRequestDraftForm | null>(null)
+  const [documentRequestDraftVersion, setDocumentRequestDraftVersion] = useState<{
+    taskId: string
+    version: number
+  } | null>(null)
   const moreMenuRef = useRef<HTMLDivElement>(null)
   const userRole = useAuthStore((state) => state.user?.role)
   const showToast = useToastStore((state) => state.showToast)
@@ -178,6 +238,41 @@ export function CaseDetailPage() {
     error: readinessError,
     refetch: refetchReadiness,
   } = useApiQuery(readinessFetcher)
+
+  const documentRequestDraftFetcher = useCallback(() => {
+    if (!taskId || userRole === 'VIEWER') return Promise.resolve(null)
+    return fetchDocumentRequestDraftOrNull(taskId)
+  }, [taskId, userRole])
+  const {
+    status: documentRequestDraftStatus,
+    data: documentRequestDraft,
+    error: documentRequestDraftError,
+    refetch: refetchDocumentRequestDraft,
+  } = useApiQuery(
+    documentRequestDraftFetcher,
+    useCallback((draft: DocumentRequestDraftResponse | null) => draft === null, []),
+  )
+
+  useEffect(() => {
+    if (!taskId || !readiness || documentRequestDraftStatus === 'loading') return
+    if (documentRequestDraftStatus === 'error') return
+
+    setDocumentRequestDraftForm((current) => {
+      if (current?.taskId === taskId) return current
+      const documentTypes = documentRequestDraft
+        ? documentRequestDraft.document_types
+        : uniqueDocumentTypes([...readiness.missing, ...readiness.expired])
+      return {
+        taskId,
+        language: documentRequestDraft?.language ?? 'ko',
+        documentTypes,
+        message: documentRequestDraft?.message ?? defaultDocumentRequestMessage(documentTypes),
+      }
+    })
+    setDocumentRequestDraftVersion(
+      documentRequestDraft ? { taskId, version: documentRequestDraft.version } : null,
+    )
+  }, [documentRequestDraft, documentRequestDraftStatus, readiness, taskId])
 
   const workerId = task?.worker_id
   const documentsFetcher = useCallback(() => {
@@ -366,11 +461,7 @@ export function CaseDetailPage() {
       refetchActivities()
       const detail =
         error instanceof ApiError ? getErrorMessage(error) : '업무를 완료하지 못했습니다.'
-      showToast(
-        externalSubmissionRecorded
-          ? `외부 제출 기록은 저장됐습니다. ${detail}`
-          : detail,
-      )
+      showToast(externalSubmissionRecorded ? `외부 제출 기록은 저장됐습니다. ${detail}` : detail)
     } finally {
       setActionPending(false)
     }
@@ -427,16 +518,55 @@ export function CaseDetailPage() {
   }
 
   async function handleSaveDocumentRequestDraft() {
-    if (!task || !readiness) return
+    if (!task || !documentRequestDraftForm || savingDocumentRequestDraft) return
+    const message = documentRequestDraftForm.message.trim()
+    if (!message) {
+      showToast('근로자에게 표시할 안내문을 입력해 주세요.')
+      return
+    }
+    if (documentRequestDraftForm.documentTypes.length === 0) {
+      showToast('요청할 서류가 없습니다.')
+      return
+    }
+    setSavingDocumentRequestDraft(true)
     try {
-      await upsertDocumentRequestDraft(task.task_id, {
-        language: 'ko',
-        document_types: [...readiness.missing, ...readiness.expired],
-        expected_version: 0,
+      const savedDraft = await upsertDocumentRequestDraft(task.task_id, {
+        language: documentRequestDraftForm.language,
+        document_types: documentRequestDraftForm.documentTypes,
+        message,
+        expected_version:
+          documentRequestDraftVersion?.taskId === task.task_id
+            ? documentRequestDraftVersion.version
+            : 0,
       })
+      setDocumentRequestDraftVersion({ taskId: task.task_id, version: savedDraft.version })
+      setDocumentRequestDraftForm((current) =>
+        current?.taskId === task.task_id ? { ...current, message } : current,
+      )
       showToast('서류 요청 초안을 저장했습니다.')
-    } catch {
-      showToast('서류 요청 초안을 저장하지 못했습니다.')
+    } catch (error) {
+      showToast(
+        error instanceof ApiError
+          ? getErrorMessage(error)
+          : '서류 요청 초안을 저장하지 못했습니다.',
+      )
+    } finally {
+      setSavingDocumentRequestDraft(false)
+    }
+  }
+
+  async function handleDownloadDocument(fileId: string, fallbackName: string) {
+    if (downloadingFileId) return
+    setDownloadingFileId(fileId)
+    try {
+      const downloaded = await downloadFile(fileId)
+      saveBlobAsFile(downloaded.blob, downloaded.file_name ?? fallbackName)
+    } catch (error) {
+      showToast(
+        error instanceof ApiError ? getErrorMessage(error) : '첨부 파일을 내려받지 못했습니다.',
+      )
+    } finally {
+      setDownloadingFileId(null)
     }
   }
 
@@ -831,9 +961,9 @@ export function CaseDetailPage() {
                       ? '조회 실패'
                       : !readiness
                         ? '확인할 정보 없음'
-                    : readiness.completion_blocked
-                      ? `누락 ${readiness.missing.length}건 · 만료 ${readiness.expired.length}건`
-                      : '모두 확인됨'
+                        : readiness.completion_blocked
+                          ? `누락 ${readiness.missing.length}건 · 만료 ${readiness.expired.length}건`
+                          : '모두 확인됨'
                 }
                 tone={
                   readinessStatus === 'error'
@@ -974,25 +1104,133 @@ export function CaseDetailPage() {
             <div className={styles.documentList}>
               {documents.map((document) => {
                 const view = getDocumentViewModel(document)
+                const fileId = document.file_id
                 return (
                   <div key={view.id} className={styles.documentRow}>
                     <span className={styles.documentName}>{view.typeLabel}</span>
                     <StatusLabel tone={view.statusTone}>{view.statusLabel}</StatusLabel>
                     <span className={styles.documentUpdatedAt}>{view.expiry.display}</span>
+                    {fileId && (
+                      <button
+                        type="button"
+                        className={styles.contextLink}
+                        disabled={downloadingFileId !== null}
+                        onClick={() => handleDownloadDocument(fileId, view.typeLabel)}
+                      >
+                        {downloadingFileId === fileId ? '다운로드 중…' : '다운로드'}
+                      </button>
+                    )}
                   </div>
                 )
               })}
             </div>
           )}
-          {readiness && (readiness.missing.length > 0 || readiness.expired.length > 0) && (
-            <button
-              type="button"
-              className={styles.contextLink}
-              onClick={handleSaveDocumentRequestDraft}
-            >
-              요청 초안 저장 →
-            </button>
+          {userRole !== 'VIEWER' && documentRequestDraftStatus === 'loading' && (
+            <p className={styles.documentRequestStatus} role="status">
+              저장된 요청 초안을 확인하고 있습니다.
+            </p>
           )}
+          {userRole !== 'VIEWER' && documentRequestDraftStatus === 'error' && (
+            <div className={styles.documentRequestError} role="alert">
+              <p>
+                {documentRequestDraftError
+                  ? getErrorMessage(documentRequestDraftError)
+                  : '저장된 요청 초안을 불러오지 못했습니다.'}
+              </p>
+              <button type="button" onClick={refetchDocumentRequestDraft}>
+                다시 시도
+              </button>
+            </div>
+          )}
+          {userRole !== 'VIEWER' &&
+            documentRequestDraftStatus !== 'error' &&
+            documentRequestDraftForm?.taskId === task.task_id &&
+            documentRequestDraftForm.documentTypes.length > 0 && (
+              <section
+                className={styles.documentRequestCard}
+                aria-labelledby="document-request-title"
+              >
+                <div className={styles.documentRequestHeader}>
+                  <div>
+                    <p className={styles.documentRequestEyebrow}>근로자 모바일 요청</p>
+                    <h2 id="document-request-title" className={styles.documentRequestTitle}>
+                      서류 요청 초안
+                    </h2>
+                  </div>
+                  <span className={styles.documentRequestVersion}>
+                    {documentRequestDraftVersion?.taskId === task.task_id
+                      ? `저장본 v${documentRequestDraftVersion.version}`
+                      : '새 초안'}
+                  </span>
+                </div>
+
+                <div className={styles.documentRequestTypes} aria-label="요청 서류">
+                  {documentRequestDraftForm.documentTypes.map((type) => (
+                    <span key={type}>{DOCUMENT_TYPE_LABEL[type]}</span>
+                  ))}
+                </div>
+
+                <label className={styles.documentRequestLabel} htmlFor="document-request-language">
+                  안내 언어
+                </label>
+                <select
+                  id="document-request-language"
+                  className={styles.documentRequestSelect}
+                  value={documentRequestDraftForm.language}
+                  onChange={(event) =>
+                    setDocumentRequestDraftForm((current) =>
+                      current?.taskId === task.task_id
+                        ? { ...current, language: event.target.value }
+                        : current,
+                    )
+                  }
+                >
+                  {!GUIDANCE_LANGUAGES.some(
+                    (language) => language.value === documentRequestDraftForm.language,
+                  ) && (
+                    <option value={documentRequestDraftForm.language}>
+                      {documentRequestDraftForm.language}
+                    </option>
+                  )}
+                  {GUIDANCE_LANGUAGES.map((language) => (
+                    <option key={language.value} value={language.value}>
+                      {language.label}
+                    </option>
+                  ))}
+                </select>
+
+                <label className={styles.documentRequestLabel} htmlFor="document-request-message">
+                  근로자 안내문
+                </label>
+                <textarea
+                  id="document-request-message"
+                  className={styles.documentRequestTextarea}
+                  maxLength={1000}
+                  rows={4}
+                  value={documentRequestDraftForm.message}
+                  onChange={(event) =>
+                    setDocumentRequestDraftForm((current) =>
+                      current?.taskId === task.task_id
+                        ? { ...current, message: event.target.value }
+                        : current,
+                    )
+                  }
+                />
+
+                <div className={styles.documentRequestFooter}>
+                  <span>{documentRequestDraftForm.message.length}/1000</span>
+                  <button
+                    type="button"
+                    className={styles.documentRequestAction}
+                    disabled={savingDocumentRequestDraft}
+                    aria-busy={savingDocumentRequestDraft}
+                    onClick={handleSaveDocumentRequestDraft}
+                  >
+                    {savingDocumentRequestDraft ? '저장 중…' : '요청 초안 저장'}
+                  </button>
+                </div>
+              </section>
+            )}
         </div>
       )}
 
@@ -1019,7 +1257,7 @@ export function CaseDetailPage() {
                   ? getErrorMessage(workerResponsesError)
                   : workerLinkDeliveryError
                     ? getErrorMessage(workerLinkDeliveryError)
-                  : '네트워크 상태를 확인한 뒤 다시 시도해 주세요.'
+                    : '네트워크 상태를 확인한 뒤 다시 시도해 주세요.'
               }
               actionLabel="다시 시도"
               onAction={() => {
@@ -1030,86 +1268,88 @@ export function CaseDetailPage() {
           )}
           {(workerResponsesStatus === 'empty' || workerResponsesStatus === 'success') &&
             (workerLinkDeliveryStatus === 'empty' || workerLinkDeliveryStatus === 'success') && (
-            <>
-              <section className={styles.responseOverview} aria-labelledby="worker-response-title">
-                <div className={styles.responseOverviewCopy}>
-                  <p className={styles.responseEyebrow}>근로자 모바일 요청</p>
-                  <div className={styles.responseTitleRow}>
-                    <h2 id="worker-response-title" className={styles.responseTitle}>
-                      응답 현황
-                    </h2>
-                    <StatusLabel tone={WORKER_REQUEST_STATE_TONE[workerRequestState.state]}>
-                      {workerRequestState.label}
-                    </StatusLabel>
+              <>
+                <section
+                  className={styles.responseOverview}
+                  aria-labelledby="worker-response-title"
+                >
+                  <div className={styles.responseOverviewCopy}>
+                    <p className={styles.responseEyebrow}>근로자 모바일 요청</p>
+                    <div className={styles.responseTitleRow}>
+                      <h2 id="worker-response-title" className={styles.responseTitle}>
+                        응답 현황
+                      </h2>
+                      <StatusLabel tone={WORKER_REQUEST_STATE_TONE[workerRequestState.state]}>
+                        {workerRequestState.label}
+                      </StatusLabel>
+                    </div>
+                    <p className={styles.responseDescription}>{workerRequestState.description}</p>
                   </div>
-                  <p className={styles.responseDescription}>{workerRequestState.description}</p>
-                </div>
-                {unreadWorkerResponseCount > 0 && userRole !== 'VIEWER' && (
-                  <Button
-                    variant="secondary"
-                    onClick={handleMarkResponsesRead}
-                    isLoading={markingResponsesRead}
-                  >
-                    응답 확인 완료
-                  </Button>
-                )}
-                {unreadWorkerResponseCount === 0 &&
-                  currentWorkerLinkDelivery?.delivery_status === 'NOT_SENT' &&
-                  userRole !== 'VIEWER' && (
+                  {unreadWorkerResponseCount > 0 && userRole !== 'VIEWER' && (
                     <Button
                       variant="secondary"
-                      onClick={() => handleOpenDeliveryConfirm('none')}
+                      onClick={handleMarkResponsesRead}
+                      isLoading={markingResponsesRead}
                     >
-                      전달 완료 기록
+                      응답 확인 완료
                     </Button>
                   )}
-              </section>
+                  {unreadWorkerResponseCount === 0 &&
+                    currentWorkerLinkDelivery?.delivery_status === 'NOT_SENT' &&
+                    userRole !== 'VIEWER' && (
+                      <Button variant="secondary" onClick={() => handleOpenDeliveryConfirm('none')}>
+                        전달 완료 기록
+                      </Button>
+                    )}
+                </section>
 
-              {workerResponses.length === 0 ? (
-                <EmptyState
-                  kind="empty"
-                  title="도착한 근로자 응답이 없습니다"
-                  body={
-                    issuedWorkerUrl
-                      ? '발급한 링크를 근로자에게 전달한 뒤 응답을 기다려 주세요.'
-                      : '모바일 링크를 발급하고 근로자에게 직접 전달해 주세요.'
-                  }
-                />
-              ) : (
-                <div className={styles.commList} aria-label="근로자 응답 목록">
-                  {workerResponses.map((response) => (
-                    <article
-                      key={response.response_id}
-                      className={`${styles.commRow} ${response.unread ? styles.commRowUnread : ''}`}
-                    >
-                      <div className={styles.commMeta}>
-                        <span className={styles.commTime}>
-                          {formatEventTime(response.received_at)}
-                        </span>
-                        <StatusLabel tone={response.unread ? 'warning' : 'neutral'}>
-                          {response.unread ? '미확인' : '확인됨'}
-                        </StatusLabel>
-                      </div>
-                      <div className={styles.commContent}>
-                        <div className={styles.commHeading}>
-                          <span className={styles.commActor}>근로자</span>
-                          <span className={styles.commType}>
-                            {WORKER_RESPONSE_TYPE_LABEL[response.response_type]}
+                {workerResponses.length === 0 ? (
+                  <EmptyState
+                    kind="empty"
+                    title="도착한 근로자 응답이 없습니다"
+                    body={
+                      issuedWorkerUrl
+                        ? '발급한 링크를 근로자에게 전달한 뒤 응답을 기다려 주세요.'
+                        : '모바일 링크를 발급하고 근로자에게 직접 전달해 주세요.'
+                    }
+                  />
+                ) : (
+                  <div className={styles.commList} aria-label="근로자 응답 목록">
+                    {workerResponses.map((response) => (
+                      <article
+                        key={response.response_id}
+                        className={`${styles.commRow} ${response.unread ? styles.commRowUnread : ''}`}
+                      >
+                        <div className={styles.commMeta}>
+                          <span className={styles.commTime}>
+                            {formatEventTime(response.received_at)}
                           </span>
+                          <StatusLabel tone={response.unread ? 'warning' : 'neutral'}>
+                            {response.unread ? '미확인' : '확인됨'}
+                          </StatusLabel>
                         </div>
-                        <p className={styles.commMessage}>
-                          {response.message?.trim() || '별도 메시지 없이 응답했습니다.'}
-                        </p>
-                        {response.upload_ids.length > 0 && (
-                          <p className={styles.commFiles}>제출 파일 {response.upload_ids.length}개</p>
-                        )}
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
+                        <div className={styles.commContent}>
+                          <div className={styles.commHeading}>
+                            <span className={styles.commActor}>근로자</span>
+                            <span className={styles.commType}>
+                              {WORKER_RESPONSE_TYPE_LABEL[response.response_type]}
+                            </span>
+                          </div>
+                          <p className={styles.commMessage}>
+                            {response.message?.trim() || '별도 메시지 없이 응답했습니다.'}
+                          </p>
+                          {response.upload_ids.length > 0 && (
+                            <p className={styles.commFiles}>
+                              제출 파일 {response.upload_ids.length}개
+                            </p>
+                          )}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
         </div>
       )}
 
@@ -1239,13 +1479,8 @@ export function CaseDetailPage() {
         onConfirm={handleMarkLinkSent}
       />
 
-      <Drawer
-        open={contextDrawerOpen}
-        onClose={handleCloseContext}
-        title="관련 Context"
-      >
-        {caseId &&
-          (caseProjectionStatus === 'loading' || caseProjectionStatus === 'empty') && (
+      <Drawer open={contextDrawerOpen} onClose={handleCloseContext} title="관련 Context">
+        {caseId && (caseProjectionStatus === 'loading' || caseProjectionStatus === 'empty') && (
           <EmptyState
             kind="loading"
             title="Case 정보를 불러오는 중입니다"
@@ -1344,7 +1579,9 @@ export function CaseDetailPage() {
                 <div className={styles.timeline}>
                   {activityRows.slice(0, 3).map((entry, index) => (
                     <div key={entry.audit_event_id} className={styles.timelineRow}>
-                      <span className={styles.timelineDate}>{formatEventTime(entry.created_at)}</span>
+                      <span className={styles.timelineDate}>
+                        {formatEventTime(entry.created_at)}
+                      </span>
                       <span
                         className={`${styles.timelineDot} ${index === 0 ? styles.timelineDotHighlighted : ''}`}
                       />

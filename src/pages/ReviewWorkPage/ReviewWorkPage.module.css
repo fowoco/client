@@ -244,6 +244,12 @@
   cursor: pointer;
 }
 
+.cardLink:disabled {
+  color: var(--text-secondary);
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 .missingCard {
   padding: var(--fowoco-spacing-20) var(--fowoco-spacing-24);
   background: var(--fowoco-amber-50);
@@ -389,13 +395,25 @@
   color: var(--fowoco-white, #fff);
   background: var(--surface-default);
   border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-4);
+  border-radius: var(--fowoco-radius-999);
   cursor: pointer;
 }
 
 .candidateCheck[aria-pressed='true'] {
   background: var(--brand-primary);
   border-color: var(--brand-primary);
+}
+
+.candidateCheck:disabled {
+  background: var(--surface-subtle);
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.candidateCheck:focus-visible,
+.cardLink:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
 }
 
 .candidateDetails {

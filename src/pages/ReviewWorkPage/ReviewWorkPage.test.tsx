@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AiRunResponse } from '../../api/aiRuns'
 import type { WorkRequestDraft } from '../CreateWorkPage/workRequestDraft'
@@ -21,14 +21,32 @@ const CATALOG = {
   source_repository: 'fowoco/knowledge',
   generated_at: '2026-08-04T00:00:00Z',
   workflows: [
-    { workflow_id: 'WF-STY-001', name: '체류기간 연장 처리', intent: 'EXPIRY_RENEWAL', sensitivity: 'NORMAL', supported_task_types: [], required_slots: [], checklist_items: [], completion_evidence: [], source_ids: [] },
-    { workflow_id: 'WF-PAY-001', name: '급여 자료 확인', intent: 'PAYROLL_EXPLANATION', sensitivity: 'NORMAL', supported_task_types: [], required_slots: [], checklist_items: [], completion_evidence: [], source_ids: [] },
+    {
+      workflow_id: 'WF-STY-001',
+      name: '체류기간 연장 처리',
+      intent: 'EXPIRY_RENEWAL',
+      sensitivity: 'NORMAL',
+      supported_task_types: [],
+      required_slots: [],
+      checklist_items: [],
+      completion_evidence: [],
+      source_ids: [],
+    },
+    {
+      workflow_id: 'WF-PAY-001',
+      name: '급여 자료 확인',
+      intent: 'PAYROLL_EXPLANATION',
+      sensitivity: 'NORMAL',
+      supported_task_types: [],
+      required_slots: [],
+      checklist_items: [],
+      completion_evidence: [],
+      source_ids: [],
+    },
   ],
 }
 const WORKERS = {
-  items: [
-    { worker_id: 'W-1', display_name: '응웬반A' },
-  ],
+  items: [{ worker_id: 'W-1', display_name: '응웬반A' }],
   page: 0,
   size: 100,
   total_elements: 1,
@@ -46,7 +64,13 @@ function needsInfoRun(overrides: Partial<AiRunResponse> = {}): AiRunResponse {
     attempt_count: 2,
     version: 2,
     questions: [
-      { slot_key: 'due_at', label: '신청 목표일을 입력해 주세요.', input_type: 'DATE', required: true, answer: null },
+      {
+        slot_key: 'due_at',
+        label: '신청 목표일을 입력해 주세요.',
+        input_type: 'DATE',
+        required: true,
+        answer: null,
+      },
     ],
     candidates: [],
     created_at: '2026-08-04T00:00:00Z',
@@ -74,7 +98,11 @@ afterEach(() => {
 function renderPage(aiRun?: AiRunResponse, path = '/tasks/new/review', draft?: WorkRequestDraft) {
   render(
     <MemoryRouter initialEntries={[aiRun ? { pathname: path, state: { aiRun, draft } } : path]}>
-      <ReviewWorkPage />
+      <Routes>
+        <Route path="/tasks/new/review" element={<ReviewWorkPage />} />
+        <Route path="/tasks/:taskId" element={<p>생성된 업무 상세</p>} />
+        <Route path="/tasks" element={<p>업무함</p>} />
+      </Routes>
     </MemoryRouter>,
   )
 }
@@ -116,7 +144,8 @@ describe('ReviewWorkPage', () => {
     })
     vi.mocked(fetch).mockImplementation((input) => {
       const url = String(input)
-      if (url.includes('/answers')) return Promise.resolve(jsonResponse(completedRun, { status: 202 }))
+      if (url.includes('/answers'))
+        return Promise.resolve(jsonResponse(completedRun, { status: 202 }))
       if (url.includes('/workflow-catalogs')) return Promise.resolve(jsonResponse(CATALOG))
       if (url.includes('/workers')) return Promise.resolve(jsonResponse(WORKERS))
       return Promise.resolve(jsonResponse(completedRun))
@@ -137,37 +166,87 @@ describe('ReviewWorkPage', () => {
     })
   })
 
-  it('lets HR include and exclude independent candidates without pretending to create tasks', async () => {
+  it('accepts one candidate, discards the others, and opens the created task', async () => {
     const compoundRun = needsInfoRun({
       analysis_outcome: 'REVIEW_REQUIRED',
       questions: [],
       candidates: [
-        { candidate_id: 'C-1', candidate_ref: 'candidate-1', worker_id: 'W-1', workflow_id: 'WF-STY-001', extracted_slots: { due_at: '2026-08-31' }, missing_slots: [], confidence: 0.92 },
-        { candidate_id: 'C-2', candidate_ref: 'candidate-2', worker_id: 'W-1', workflow_id: 'WF-PAY-001', extracted_slots: {}, missing_slots: [], confidence: 0.72 },
+        {
+          candidate_id: 'C-1',
+          candidate_ref: 'candidate-1',
+          worker_id: 'W-1',
+          workflow_id: 'WF-STY-001',
+          extracted_slots: { due_at: '2026-08-31' },
+          missing_slots: [],
+          confidence: 0.92,
+        },
+        {
+          candidate_id: 'C-2',
+          candidate_ref: 'candidate-2',
+          worker_id: 'W-1',
+          workflow_id: 'WF-PAY-001',
+          extracted_slots: {},
+          missing_slots: [],
+          confidence: 0.72,
+        },
       ],
     })
     vi.mocked(fetch).mockImplementation((input) => {
       const url = String(input)
       if (url.includes('/workflow-catalogs')) return Promise.resolve(jsonResponse(CATALOG))
       if (url.includes('/workers')) return Promise.resolve(jsonResponse(WORKERS))
+      if (url.includes('/candidate-decisions')) {
+        return Promise.resolve(
+          jsonResponse({
+            decision_batch_id: 'BATCH-1',
+            ai_run_id: compoundRun.ai_run_id,
+            case_id: 'CASE-1',
+            task_ids: ['TASK-1'],
+            decisions: [
+              { candidate_id: 'C-1', action: 'ACCEPT' },
+              { candidate_id: 'C-2', action: 'DISCARD' },
+            ],
+            run_version: 3,
+          }),
+        )
+      }
       return Promise.resolve(jsonResponse(compoundRun))
     })
     const user = userEvent.setup()
     renderPage(compoundRun, undefined, DRAFT)
 
     expect(screen.getByText('2개의 업무를 찾았습니다.')).toBeInTheDocument()
-    expect(screen.getByText('2개 포함')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '선택한 2개 업무 생성' })).toBeDisabled()
+    expect(screen.getByText('선택 필요')).toBeInTheDocument()
+    const createButton = screen.getByRole('button', { name: '선택한 업무 생성' })
+    expect(createButton).toBeDisabled()
 
     await waitFor(() => expect(screen.getAllByText('급여 자료 확인').length).toBeGreaterThan(0))
-    await user.click(screen.getByRole('button', { name: '급여 자료 확인 제외' }))
+    await user.click(screen.getByRole('button', { name: '체류기간 연장 처리 선택' }))
 
-    expect(screen.getByText('1개 포함')).toBeInTheDocument()
-    expect(screen.getByText(/후보 확정 API가 아직 없어/)).toBeInTheDocument()
+    expect(screen.getByText('1개 선택')).toBeInTheDocument()
+    expect(createButton).toBeEnabled()
+    await user.click(createButton)
+
+    expect(await screen.findByText('생성된 업무 상세')).toBeInTheDocument()
+    const decisionCall = vi
+      .mocked(fetch)
+      .mock.calls.find(([url]) => String(url).includes('/candidate-decisions'))
+    expect(JSON.parse(String(decisionCall?.[1]?.body))).toEqual({
+      expected_run_version: 2,
+      decisions: [
+        { candidate_id: 'C-1', action: 'ACCEPT' },
+        { candidate_id: 'C-2', action: 'DISCARD' },
+      ],
+    })
   })
 
   it('retries a failed analysis with the unchanged original request', async () => {
-    const failedRun = needsInfoRun({ status: 'FAILED', analysis_outcome: null, questions: [], error_code: 'AI_RUNTIME_FAILED' })
+    const failedRun = needsInfoRun({
+      status: 'FAILED',
+      analysis_outcome: null,
+      questions: [],
+      error_code: 'AI_RUNTIME_FAILED',
+    })
     const retriedRun = needsInfoRun({ ai_run_id: 'A-2', attempt_count: 1, version: 1 })
     vi.mocked(fetch).mockResolvedValue(jsonResponse(retriedRun, { status: 202 }))
     const user = userEvent.setup()
@@ -176,13 +255,22 @@ describe('ReviewWorkPage', () => {
     await user.click(screen.getByRole('button', { name: '같은 요청 다시 분석' }))
 
     await waitFor(() => {
-      const retryCall = vi.mocked(fetch).mock.calls.find(([url]) => String(url).endsWith('/ai-runs'))
-      expect(JSON.parse((retryCall?.[1] as RequestInit).body as string)).toEqual({ instruction: DRAFT.request })
+      const retryCall = vi
+        .mocked(fetch)
+        .mock.calls.find(([url]) => String(url).endsWith('/ai-runs'))
+      expect(JSON.parse((retryCall?.[1] as RequestInit).body as string)).toEqual({
+        instruction: DRAFT.request,
+      })
     })
   })
 
   it('restores the AI run from the URL after a refresh', async () => {
-    const savedRun = needsInfoRun({ ai_run_id: 'A-RESTORED', request_id: 'R-RESTORED', attempt_count: 1, version: 1 })
+    const savedRun = needsInfoRun({
+      ai_run_id: 'A-RESTORED',
+      request_id: 'R-RESTORED',
+      attempt_count: 1,
+      version: 1,
+    })
     vi.mocked(fetch).mockResolvedValue(jsonResponse(savedRun))
 
     renderPage(undefined, '/tasks/new/review?aiRunId=A-RESTORED')

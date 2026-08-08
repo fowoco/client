@@ -433,10 +433,90 @@
   scrollbar-width: thin;
 }
 
-.capNotice {
-  margin: -2px 0 0;
-  font-size: 11px;
+.sectionEmpty {
+  margin: 0;
+  padding: 16px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
+  font-size: 12px;
   color: var(--text-secondary);
+}
+
+.upcomingExpiry {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.expiryList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.expiryItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 58px;
+  padding: 10px 12px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-left: 3px solid var(--border-strong);
+  border-radius: var(--fowoco-radius-8);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.expiryItem:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.expiryItem > span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.expiryItem strong {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.expiryItem small,
+.expiryItem em {
+  font-size: 11px;
+  font-style: normal;
+  color: var(--text-secondary);
+}
+
+.expiryItem em {
+  flex: 0 0 auto;
+}
+
+.expiryItem_critical {
+  border-left-color: var(--status-critical);
+}
+
+.expiryItem_warning {
+  border-left-color: var(--status-warning);
+}
+
+.expiryItem_info {
+  border-left-color: var(--status-info);
 }
 
 .agentPrepared {
@@ -531,17 +611,39 @@
 }
 
 .preparedSection li {
-  display: grid;
-  grid-template-columns: 16px minmax(0, 1fr);
-  column-gap: 8px;
-  align-items: center;
+  display: block;
   min-height: 20px;
   font-size: 13px;
   line-height: 20px;
   color: var(--text-primary);
 }
 
-.preparedSection li strong {
+.preparedItemButton {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  column-gap: 8px;
+  align-items: center;
+  width: 100%;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.preparedItemButton:hover strong {
+  color: var(--brand-primary);
+}
+
+.preparedItemButton:focus-visible,
+.expiryItem:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
+.preparedItemButton strong {
   font-weight: 500;
 }
 
@@ -598,6 +700,10 @@
 
   .metricStrip {
     gap: 12px;
+  }
+
+  .expiryList {
+    grid-template-columns: 1fr;
   }
 
   .priorityBody {

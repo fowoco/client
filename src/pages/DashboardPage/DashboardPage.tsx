@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchTasks } from '../../api/tasks'
+import { fetchDashboardToday, type DashboardTodayResponse } from '../../api/dashboard'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { WorkItemRow } from '../../components/ui/WorkItemRow/WorkItemRow'
 import { useApiQuery } from '../../hooks/useApiQuery'
@@ -13,20 +13,43 @@ import {
   buildDashboardMetrics,
   buildDashboardWorkItems,
   buildPriorityApproval,
+  buildUpcomingExpiries,
 } from './dashboardData'
 
 export function DashboardPage() {
   const navigate = useNavigate()
   const [agentRequest, setAgentRequest] = useState('')
-  const taskFetcher = useCallback(() => fetchTasks({ size: 100 }), [])
-  const isEmpty = useCallback((page: { items: unknown[] }) => page.items.length === 0, [])
-  const { status, data: taskPage, error, refetch } = useApiQuery(taskFetcher, isEmpty)
-  const tasks = useMemo(() => taskPage?.items ?? [], [taskPage])
-  const metrics = useMemo(() => buildDashboardMetrics(tasks), [tasks])
-  const workItems = useMemo(() => buildDashboardWorkItems(tasks), [tasks])
-  const priorityApproval = useMemo(() => buildPriorityApproval(tasks), [tasks])
-  const agentPrepared = useMemo(() => buildAgentPrepared(tasks), [tasks])
-  const pendingApprovalCount = metrics.find((metric) => metric.id === 'pending-approval')?.value ?? 0
+  const todayFetcher = useCallback(() => fetchDashboardToday('Asia/Seoul'), [])
+  const isEmpty = useCallback(
+    (today: DashboardTodayResponse) =>
+      today.priority_tasks.length === 0 &&
+      today.upcoming_7_days.length === 0 &&
+      today.recommendations.connected_count === 0 &&
+      Object.values(today.summary_counts).every((count) => count === 0),
+    [],
+  )
+  const { status, data: today, error, refetch } = useApiQuery(todayFetcher, isEmpty)
+  const metrics = useMemo(() => (today ? buildDashboardMetrics(today.summary_counts) : []), [today])
+  const workItems = useMemo(
+    () => (today ? buildDashboardWorkItems(today.priority_tasks) : []),
+    [today],
+  )
+  const priorityApproval = useMemo(
+    () => (today ? buildPriorityApproval(today.priority_tasks) : null),
+    [today],
+  )
+  const agentPrepared = useMemo(
+    () =>
+      today
+        ? buildAgentPrepared(today.recommendations)
+        : { connectedCount: 0, prepared: [], review: [], afterApproval: [] },
+    [today],
+  )
+  const upcomingExpiries = useMemo(
+    () => (today ? buildUpcomingExpiries(today.upcoming_7_days) : []),
+    [today],
+  )
+  const pendingApprovalCount = today?.approval_count ?? 0
 
   const headline =
     status === 'success'
@@ -47,7 +70,7 @@ export function DashboardPage() {
       <header className={styles.pageHeader}>
         <h1 className={styles.headline}>{headline}</h1>
         <p className={styles.description}>
-          Task API의 최신 상태와 기한을 기준으로 지금 확인할 업무를 정리합니다.
+          Today API의 최신 상태와 기한을 기준으로 지금 확인할 업무를 정리합니다.
         </p>
       </header>
 
@@ -95,7 +118,7 @@ export function DashboardPage() {
           <EmptyState
             kind="loading"
             title="업무 현황을 불러오는 중입니다"
-            body="Task API에서 최신 업무 상태를 확인하고 있습니다."
+            body="Today API에서 최신 업무 상태를 확인하고 있습니다."
             note="처리 중 · 중복 실행 차단"
           />
         </div>
@@ -162,10 +185,7 @@ export function DashboardPage() {
                       <span>{priorityApproval.meta}</span>
                       <span>{priorityApproval.note}</span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/tasks/${priorityApproval.id}`)}
-                    >
+                    <button type="button" onClick={() => navigate(`/tasks/${priorityApproval.id}`)}>
                       승인 검토
                     </button>
                   </div>
@@ -194,23 +214,50 @@ export function DashboardPage() {
                 <p>지금 할 일 · {workItems.length}건</p>
               </div>
               <div className={styles.workItemList}>
-                {workItems.map((item) => (
-                  <WorkItemRow
-                    key={item.id}
-                    title={item.title}
-                    statusLabel={item.status}
-                    statusTone={item.statusTone}
-                    detailItems={[item.schedule]}
-                    nextAction={item.nextAction}
-                    urgency={item.urgency}
-                    onClick={() => navigate(`/tasks/${item.id}`)}
-                  />
-                ))}
+                {workItems.length > 0 ? (
+                  workItems.map((item) => (
+                    <WorkItemRow
+                      key={item.id}
+                      title={item.title}
+                      statusLabel={item.status}
+                      statusTone={item.statusTone}
+                      detailItems={[item.schedule]}
+                      nextAction={item.nextAction}
+                      urgency={item.urgency}
+                      onClick={() => navigate(`/tasks/${item.id}`)}
+                    />
+                  ))
+                ) : (
+                  <p className={styles.sectionEmpty}>오늘 우선 처리할 업무가 없습니다.</p>
+                )}
               </div>
-              {taskPage && taskPage.total_elements > 100 && (
-                <p className={styles.capNotice}>
-                  최근 100건 기준입니다. 전체 업무는 업무함에서 확인해 주세요.
-                </p>
+            </section>
+
+            <section className={styles.upcomingExpiry} aria-labelledby="upcoming-expiry-title">
+              <div className={styles.sectionHeader}>
+                <h2 id="upcoming-expiry-title">7일 이내 만료</h2>
+                <p>체류·계약·서류 · {upcomingExpiries.length}건</p>
+              </div>
+              {upcomingExpiries.length > 0 ? (
+                <ul className={styles.expiryList}>
+                  {upcomingExpiries.map((item, index) => (
+                    <li key={`${item.workerId}-${item.label}-${index}`}>
+                      <button
+                        type="button"
+                        className={`${styles.expiryItem} ${styles[`expiryItem_${item.urgency}`]}`}
+                        onClick={() => navigate(`/workers/${item.workerId}/detail`)}
+                      >
+                        <span>
+                          <strong>{item.workerName}</strong>
+                          <small>{item.label}</small>
+                        </span>
+                        <em>{item.dateLabel} ›</em>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className={styles.sectionEmpty}>7일 이내 만료 예정 항목이 없습니다.</p>
               )}
             </section>
           </div>
@@ -225,7 +272,10 @@ export function DashboardPage() {
                 연결된 업무 {agentPrepared.connectedCount}건 · 담당자 확인 필요{' '}
                 {agentPrepared.review.length}건
               </strong>
-              <p>Task 상태만 표시하며, 문서 준비와 승인 결과는 각 API 응답을 따릅니다.</p>
+              <p>
+                승인 대기 {today?.approval_count ?? 0}건 · 근로자 응답{' '}
+                {today?.worker_response_count ?? 0}건
+              </p>
             </div>
 
             <div className={styles.preparedSections}>
@@ -235,8 +285,14 @@ export function DashboardPage() {
                   <ul>
                     {agentPrepared.prepared.map((item) => (
                       <li key={item.id}>
-                        <span className={styles.doneMark}>✓</span>
-                        <strong>{item.label}</strong>
+                        <button
+                          type="button"
+                          className={styles.preparedItemButton}
+                          onClick={() => navigate(`/tasks/${item.id}`)}
+                        >
+                          <span className={styles.doneMark}>✓</span>
+                          <strong>{item.label}</strong>
+                        </button>
                       </li>
                     ))}
                   </ul>
@@ -251,9 +307,15 @@ export function DashboardPage() {
                   <ul>
                     {agentPrepared.review.map((item) => (
                       <li key={item.id} className={styles.describedItem}>
-                        <span className={styles.reviewMark}>!</span>
-                        <strong>{item.label}</strong>
-                        <p>{item.description}</p>
+                        <button
+                          type="button"
+                          className={styles.preparedItemButton}
+                          onClick={() => navigate(`/tasks/${item.id}`)}
+                        >
+                          <span className={styles.reviewMark}>!</span>
+                          <strong>{item.label}</strong>
+                          <p>{item.description}</p>
+                        </button>
                       </li>
                     ))}
                   </ul>
@@ -268,9 +330,15 @@ export function DashboardPage() {
                   <ul>
                     {agentPrepared.afterApproval.map((item) => (
                       <li key={item.id} className={styles.describedItem}>
-                        <span className={styles.nextMark}>→</span>
-                        <strong>{item.label}</strong>
-                        <p>{item.description}</p>
+                        <button
+                          type="button"
+                          className={styles.preparedItemButton}
+                          onClick={() => navigate(`/tasks/${item.id}`)}
+                        >
+                          <span className={styles.nextMark}>→</span>
+                          <strong>{item.label}</strong>
+                          <p>{item.description}</p>
+                        </button>
                       </li>
                     ))}
                   </ul>

@@ -202,6 +202,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
 
@@ -309,6 +310,11 @@ describe('CaseDetailPage', () => {
 
   it('switches to the document tab and shows real document content', async () => {
     const user = userEvent.setup()
+    const createObjectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:file-1')
+    const revokeObjectUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+    const clickAnchor = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => {})
     mockTaskAndActivities({}, [], {}, [
       {
         worker_document_id: 'doc-1',
@@ -327,6 +333,12 @@ describe('CaseDetailPage', () => {
 
     expect(await screen.findByText('여권 사본')).toBeInTheDocument()
     expect(screen.getByText('완료')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '다운로드' }))
+
+    expect(createObjectUrl).toHaveBeenCalledTimes(1)
+    expect(clickAnchor).toHaveBeenCalledTimes(1)
+    expect(revokeObjectUrl).toHaveBeenCalledWith('blob:file-1')
   })
 
   it('shows the document-readiness gate and saves a document request draft when documents are missing', async () => {

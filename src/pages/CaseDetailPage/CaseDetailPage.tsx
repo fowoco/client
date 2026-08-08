@@ -16,6 +16,7 @@ import {
   upsertDocumentRequestDraft,
 } from '../../api/documents'
 import { ApiError, getErrorMessage } from '../../api/errors'
+import { downloadFile } from '../../api/files'
 import { cancelTask, fetchTaskById, updateChecklistItem } from '../../api/tasks'
 import { issueWorkerLink, resolveWorkerPortalUrl } from '../../api/workerLinks'
 import { AgentSourceLabel } from '../../components/ui/AgentSourceLabel/AgentSourceLabel'
@@ -30,6 +31,7 @@ import { useApiQuery } from '../../hooks/useApiQuery'
 import { useToastStore } from '../../store/toastStore'
 import { ACTOR_TYPE_TO_AGENT_SOURCE, AUDIT_ACTION_LABEL } from '../../utils/auditLabels'
 import { formatEventTime } from '../../utils/datetime'
+import { saveBlobAsFile } from '../../utils/fileDownload'
 import { TASK_SOURCE_LABEL, TASK_STATUS_LABEL, TASK_STATUS_TONE } from '../../utils/taskStatus'
 import { getDocumentViewModel } from '../../view-models/documentViewModel'
 import { getOperationalDateViewModel } from '../../view-models/dateViewModel'
@@ -270,6 +272,23 @@ export function CaseDetailPage() {
       showToast('서류 요청 초안을 저장했습니다.')
     } catch {
       showToast('서류 요청 초안을 저장하지 못했습니다.')
+    }
+  }
+
+  async function handleDownloadDocument(fileId: string, fallbackName: string) {
+    if (downloadingFileId) return
+    setDownloadingFileId(fileId)
+    try {
+      const downloaded = await downloadFile(fileId)
+      saveBlobAsFile(downloaded.blob, downloaded.file_name ?? fallbackName)
+    } catch (error) {
+      showToast(
+        error instanceof ApiError
+          ? getErrorMessage(error)
+          : '첨부 파일을 내려받지 못했습니다.',
+      )
+    } finally {
+      setDownloadingFileId(null)
     }
   }
 
@@ -682,11 +701,22 @@ export function CaseDetailPage() {
             <div className={styles.documentList}>
               {documents.map((document) => {
                 const view = getDocumentViewModel(document)
+                const fileId = document.file_id
                 return (
                   <div key={view.id} className={styles.documentRow}>
                     <span className={styles.documentName}>{view.typeLabel}</span>
                     <StatusLabel tone={view.statusTone}>{view.statusLabel}</StatusLabel>
                     <span className={styles.documentUpdatedAt}>{view.expiry.display}</span>
+                    {fileId && (
+                      <button
+                        type="button"
+                        className={styles.contextLink}
+                        disabled={downloadingFileId !== null}
+                        onClick={() => handleDownloadDocument(fileId, view.typeLabel)}
+                      >
+                        {downloadingFileId === fileId ? '다운로드 중…' : '다운로드'}
+                      </button>
+                    )}
                   </div>
                 )
               })}

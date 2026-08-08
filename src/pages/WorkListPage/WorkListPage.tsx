@@ -222,6 +222,7 @@ export function WorkListPage() {
             <WorkInboxDetail
               group={selectedGroup}
               onOpenTask={(taskId) => navigate(`/tasks/${taskId}`)}
+              onOpenTaskContext={(taskId) => navigate(`/tasks/${taskId}?context=open`)}
               onCreateWork={(workerId, workerDisplayName) =>
                 navigate('/tasks/new', {
                   state: {

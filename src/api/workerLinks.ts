@@ -13,7 +13,22 @@ export interface WorkerLinkIssueBody {
 }
 
 export interface WorkerLinkIssueResponse {
-  worker_url: string
+  worker_link_id: string
+  worker_url: string | null
+  expires_at: string
+  delivery_status: WorkerLinkDeliveryStatus
+  sent_at: string | null
+  already_issued: boolean
+}
+
+export type WorkerLinkStatus = 'ACTIVE' | 'EXPIRED' | 'REVOKED'
+export type WorkerLinkDeliveryStatus = 'NOT_SENT' | 'SENT'
+
+export interface WorkerLinkDeliveryResponse {
+  worker_link_id: string
+  link_status: WorkerLinkStatus
+  delivery_status: WorkerLinkDeliveryStatus
+  sent_at: string | null
   expires_at: string
 }
 
@@ -42,6 +57,26 @@ export interface WorkerResponseSubmitResponse {
   received_at: string
 }
 
+export type WorkerConversationStatus = 'WAITING_WORKER' | 'NEEDS_FOLLOWUP' | 'REOPENED'
+
+export interface WorkerResponseItemResponse {
+  response_id: string
+  response_type: WorkerResponseType
+  message: string | null
+  upload_ids: string[]
+  conversation_status: WorkerConversationStatus
+  unread: boolean
+  received_at: string
+}
+
+export interface WorkerResponsePageResponse {
+  items: WorkerResponseItemResponse[]
+  page: number
+  size: number
+  total_elements: number
+  total_pages: number
+}
+
 export function issueWorkerLink(
   taskId: string,
   body: WorkerLinkIssueBody,
@@ -52,6 +87,21 @@ export function issueWorkerLink(
     headers: { 'Idempotency-Key': idempotencyKey },
     body: JSON.stringify(body),
   })
+}
+
+export function fetchTaskWorkerLinkDelivery(
+  taskId: string,
+): Promise<WorkerLinkDeliveryResponse> {
+  return apiFetch<WorkerLinkDeliveryResponse>(
+    `/tasks/${encodeURIComponent(taskId)}/worker-link`,
+  )
+}
+
+export function markWorkerLinkSent(workerLinkId: string): Promise<WorkerLinkDeliveryResponse> {
+  return apiFetch<WorkerLinkDeliveryResponse>(
+    `/worker-links/${encodeURIComponent(workerLinkId)}/sent`,
+    { method: 'POST' },
+  )
 }
 
 export function fetchWorkerLink(token: string): Promise<WorkerLinkViewResponse> {
@@ -93,6 +143,24 @@ export function submitWorkerResponse(
       body: JSON.stringify(body),
       skipAuthRetry: true,
     },
+  )
+}
+
+export function fetchTaskWorkerResponses(
+  taskId: string,
+  page = 0,
+  size = 20,
+): Promise<WorkerResponsePageResponse> {
+  const query = new URLSearchParams({ page: String(page), size: String(size) })
+  return apiFetch<WorkerResponsePageResponse>(
+    `/tasks/${encodeURIComponent(taskId)}/worker-responses?${query.toString()}`,
+  )
+}
+
+export function markTaskWorkerResponsesRead(taskId: string): Promise<void> {
+  return apiFetch<void>(
+    `/tasks/${encodeURIComponent(taskId)}/worker-responses/read`,
+    { method: 'POST' },
   )
 }
 

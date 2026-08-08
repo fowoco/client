@@ -34,6 +34,7 @@ export const AUDIT_ACTION_LABEL: Record<AuditAction, string> = {
   OUTBOX_MANUAL_RETRY_REQUESTED: '실패한 이벤트의 재처리를 요청했습니다.',
   WORKER_LINK_RESPONSE_SUBMITTED: '근로자가 모바일 링크로 응답했습니다.',
   WORKER_LINK_RESPONSES_REVIEWED: '근로자 응답을 확인했습니다.',
+  WORKER_LINK_SENT: '근로자에게 모바일 링크를 전달했습니다.',
   WORKER_LINK_ACCESSED: '근로자가 모바일 링크를 열었습니다.',
   USER_AGREEMENTS_RECORDED: '사용자 약관 동의를 기록했습니다.',
   PASSWORD_RESET_REQUESTED: '비밀번호 재설정을 요청했습니다.',

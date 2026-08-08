@@ -8,6 +8,9 @@ describe('getWorkerRequestStateViewModel', () => {
     expect(getWorkerRequestStateViewModel({
       requestSentAt: '2026-08-04T01:00:00Z', responseReceivedAt: '2026-08-04T02:00:00Z',
     }).label).toBe('승인대기')
+    expect(getWorkerRequestStateViewModel({
+      responseReceivedAt: '2026-08-04T02:00:00Z', responseReadAt: '2026-08-04T03:00:00Z',
+    })).toMatchObject({ label: '요청전송', description: expect.stringContaining('후속 업무') })
     expect(getWorkerRequestStateViewModel({ completedAt: '2026-08-04T03:00:00Z' }).label).toBe('완료')
   })
 })

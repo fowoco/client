@@ -18,7 +18,7 @@ function jsonResponse(body: unknown, status = 200) {
 
 function task(): TaskDetailResponse {
   return {
-    task_id: 'T-1', worker_id: 'W-1', case_id: null, task_type: 'STAY_PERIOD_EXTENSION',
+    task_id: 'T-1', target_type: 'WORKER', worker_id: 'W-1', case_id: null, task_type: 'STAY_PERIOD_EXTENSION',
     workflow_id: 'wf-stay', workflow_catalog_version: '3', title: '체류기간 연장', description: '안내',
     business_data: { office: '수원' }, source: 'MANUAL', status: 'DRAFT', due_date: '2026-08-10',
     content_revision: 2, version: 7, missing_required_slots: [], checklist_items: [], created_by: 'U-1',
@@ -35,7 +35,7 @@ describe('approval APIs', () => {
       expected_version: 7,
       ai_snapshot: null,
       hr_snapshot: {
-        worker_id: 'W-1', task_type: 'STAY_PERIOD_EXTENSION', workflow_id: 'wf-stay',
+        target_type: 'WORKER', worker_id: 'W-1', task_type: 'STAY_PERIOD_EXTENSION', workflow_id: 'wf-stay',
         title: '체류기간 연장', description: '안내', due_date: '2026-08-10', business_data: { office: '수원' },
       },
       changed_fields: ['task_content'],

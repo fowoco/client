@@ -70,9 +70,9 @@ function pageResponse(items: DocumentItemResponse[]): DocumentPageResponse {
   return { items, page: 0, size: 100, total_elements: items.length }
 }
 
-function renderPage() {
+function renderPage(initialEntry = '/documents') {
   render(
-    <MemoryRouter initialEntries={['/documents']}>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
         <Route path="/documents" element={<DocumentListPage />} />
         <Route path="/documents/:documentId" element={<p>서류 상세</p>} />
@@ -128,6 +128,25 @@ describe('DocumentListPage', () => {
       expect(screen.queryByText('수라즈C')).not.toBeInTheDocument()
     })
     expect(screen.getByText('쩐티B')).toBeInTheDocument()
+  })
+
+  it('requests and explains a worker-scoped document view from the work inbox', async () => {
+    const user = userEvent.setup()
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse(pageResponse([DOCUMENTS[0]])))
+      .mockResolvedValueOnce(jsonResponse(pageResponse(DOCUMENTS)))
+    renderPage('/documents?workerId=W-1')
+
+    expect(
+      await screen.findByText('업무함에서 선택한 근로자의 문서만 표시합니다.'),
+    ).toBeInTheDocument()
+    expect(String(vi.mocked(fetch).mock.calls[0][0])).toContain('workerId=W-1')
+
+    await user.click(screen.getByRole('button', { name: '전체 문서 보기' }))
+
+    await waitFor(() => expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2))
+    expect(String(vi.mocked(fetch).mock.calls[1][0])).not.toContain('workerId=')
+    expect(screen.queryByText('업무함에서 선택한 근로자의 문서만 표시합니다.')).not.toBeInTheDocument()
   })
 
   it('filters documents by tab', async () => {

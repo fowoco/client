@@ -32,6 +32,8 @@ describe('fetchTasks', () => {
 
     await fetchTasks({
       status: 'READY_FOR_REVIEW',
+      targetType: 'COMPANY',
+      source: 'SYSTEM_DDAY',
       caseId: 'CASE-17',
       keyword: '체류연장',
       page: 1,
@@ -40,7 +42,10 @@ describe('fetchTasks', () => {
 
     const [url] = vi.mocked(fetch).mock.calls[0]
     expect(url).toContain('status=READY_FOR_REVIEW')
-    expect(url).toContain('caseId=CASE-17')
+    expect(url).toContain('target_type=COMPANY')
+    expect(url).toContain('source=SYSTEM_DDAY')
+    expect(url).toContain('case_id=CASE-17')
+    expect(url).not.toContain('caseId=')
     expect(url).toContain('keyword=%EC%B2%B4%EB%A5%98%EC%97%B0%EC%9E%A5')
     expect(url).toContain('page=1&size=20')
   })
@@ -75,6 +80,25 @@ describe('createTask', () => {
       task_type: 'STAY_PERIOD_EXTENSION',
       workflow_id: 'wf-stay-extension',
       title: '체류연장 준비',
+    })
+  })
+
+  it('supports a company task without worker_id', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ task_id: 'T-company' }, 201))
+
+    await createTask({
+      target_type: 'COMPANY',
+      task_type: 'PAYROLL_EXPLANATION',
+      workflow_id: 'wf-payroll-explanation',
+      title: '급여명세서 설명 준비',
+    })
+
+    const [, init] = vi.mocked(fetch).mock.calls[0]
+    expect(JSON.parse(init?.body as string)).toEqual({
+      target_type: 'COMPANY',
+      task_type: 'PAYROLL_EXPLANATION',
+      workflow_id: 'wf-payroll-explanation',
+      title: '급여명세서 설명 준비',
     })
   })
 })

@@ -41,6 +41,11 @@ export const TASK_TYPE_LABEL: Record<TaskType, string> = {
   RECONTRACT: '재계약',
   EMPLOYMENT_PERIOD_EXTENSION: '고용기간 연장',
   STAY_PERIOD_EXTENSION: '체류기간 연장',
+  DOCUMENT_REQUEST: '서류 요청',
+  WORKER_ONBOARDING: '신규 근로자 등록',
+  PAYROLL_EXPLANATION: '급여명세서 설명',
+  EMPLOYMENT_CHANGE: '고용변동 신고',
+  WORK_INSTRUCTION: '업무·근무일정 안내',
 }
 
 export const TASK_SOURCE_LABEL: Record<TaskSource, string> = {

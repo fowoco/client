@@ -70,15 +70,20 @@ describe('workInboxModel', () => {
     expect(model.groups.map((group) => group.workerId).sort()).toEqual(['W-1', 'W-2'])
   })
 
-  it('returns no worker groups when there are no cases', () => {
+  it('keeps registered workers visible when they have no cases', () => {
     const model = buildWorkInboxModel({
       workers: [worker('W-1')],
       cases: [],
     })
 
-    expect(model.allGroups).toEqual([])
-    expect(model.groups).toEqual([])
-    expect(model.selectedGroup).toBeNull()
+    expect(model.groups).toHaveLength(1)
+    expect(model.groups[0]).toMatchObject({
+      workerId: 'W-1',
+      primaryCase: null,
+      activeCaseCount: 0,
+      historyCaseCount: 0,
+    })
+    expect(model.selectedGroup?.workerId).toBe('W-1')
   })
 
   it('keeps worker as null when /workers does not include the case owner, without dropping the case', () => {
@@ -103,7 +108,7 @@ describe('workInboxModel', () => {
     })
 
     expect(model.groups[0].cases).toHaveLength(3)
-    expect(model.groups[0].primaryCase.case_id).toBe('CASE-2')
+    expect(model.groups[0].primaryCase?.case_id).toBe('CASE-2')
   })
 
   it('ranks cases by priority, due date, then case id', () => {
@@ -135,6 +140,38 @@ describe('workInboxModel', () => {
     expect(model.groups.map((group) => group.workerId)).toEqual(['W-2', 'W-1', 'W-3'])
   })
 
+  it('places workers with active work before workers with only history or no cases', () => {
+    const model = buildWorkInboxModel({
+      workers: [worker('W-1'), worker('W-2'), worker('W-3')],
+      cases: [
+        caseSummary('C-1', 'W-1', undefined, { priority: 'LOW' }),
+        caseSummary('C-2', 'W-2', undefined, {
+          priority: 'URGENT',
+          display_status: 'COMPLETED',
+        }),
+      ],
+    })
+
+    expect(model.groups.map((group) => group.workerId)).toEqual(['W-1', 'W-2', 'W-3'])
+    expect(model.groups[1]).toMatchObject({ activeCaseCount: 0, historyCaseCount: 1 })
+  })
+
+  it('filters active and no-work workers without dropping completed history', () => {
+    const input = {
+      workers: [worker('W-1'), worker('W-2'), worker('W-3')],
+      cases: [
+        caseSummary('C-1', 'W-1'),
+        caseSummary('C-2', 'W-2', undefined, { display_status: 'CANCELLED' as const }),
+      ],
+    }
+
+    const active = buildWorkInboxModel({ ...input, filter: 'active' })
+    const noWork = buildWorkInboxModel({ ...input, filter: 'no-work' })
+
+    expect(active.groups.map((group) => group.workerId)).toEqual(['W-1'])
+    expect(noWork.groups.map((group) => group.workerId)).toEqual(['W-2', 'W-3'])
+  })
+
   it('normalizes Unicode, letter case, and whitespace when searching all supported fields', () => {
     const workers = [worker('W-1', '김 민지'), worker('W-2', 'Nguyen An')]
     const cases = [
@@ -154,6 +191,16 @@ describe('workInboxModel', () => {
     expect(normalizeWorkInboxSearch('  ＶＩＳＡ   김  ')).toBe('visa 김')
     expect(titleResult.groups.map((group) => group.workerId)).toEqual(['W-1'])
     expect(workerNameResult.groups.map((group) => group.workerId)).toEqual(['W-2'])
+  })
+
+  it('searches registered workers even when they do not have cases', () => {
+    const model = buildWorkInboxModel({
+      workers: [worker('W-1', '김민지'), worker('W-2', '응우옌 안')],
+      cases: [],
+      query: '응우옌',
+    })
+
+    expect(model.groups.map((group) => group.workerId)).toEqual(['W-2'])
   })
 
   it('supports deterministic due-date and worker-name sorting', () => {

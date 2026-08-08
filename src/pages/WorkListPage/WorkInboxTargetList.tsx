@@ -55,10 +55,16 @@ export function WorkInboxTargetList({
 
       <div className={styles.targetList} role="listbox" aria-label="업무 대상 근로자">
         {groups.map((group, index) => {
-          const currentTask = group.primaryCase.current_task
-          const due = getDuePresentation(currentTask?.due_date ?? group.primaryCase.due_date)
-          const reviewStage = getReviewStageLink(currentTask?.status ?? 'DRAFT')
+          const primaryCase = group.primaryCase
+          const currentTask = primaryCase?.current_task ?? null
+          const due = primaryCase
+            ? getDuePresentation(currentTask?.due_date ?? primaryCase.due_date)
+            : null
+          const reviewStage = primaryCase
+            ? getReviewStageLink(currentTask?.status ?? 'DRAFT')
+            : null
           const selected = group.workerId === selectedWorkerId
+          const hasActiveWork = group.activeCaseCount > 0
 
           return (
             <div
@@ -76,16 +82,26 @@ export function WorkInboxTargetList({
             >
               <span className={styles.targetOptionTop}>
                 <span className={styles.targetName}>{group.workerDisplayName}</span>
-                <Link
-                  to={reviewStage.href}
-                  className={`${statusLabelStyles.label} ${statusLabelStyles[reviewStage.tone]}`}
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  {reviewStage.label}
-                </Link>
+                {hasActiveWork && reviewStage ? (
+                  <Link
+                    to={reviewStage.href}
+                    className={`${statusLabelStyles.label} ${statusLabelStyles[reviewStage.tone]}`}
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    {reviewStage.label}
+                  </Link>
+                ) : (
+                  <span className={`${statusLabelStyles.label} ${statusLabelStyles.neutral}`}>
+                    업무 없음
+                  </span>
+                )}
               </span>
               <span className={styles.targetMeta}>
-                {currentTask ? getWorkflowLabel(currentTask) : group.primaryCase.title} · {due.label}
+                {hasActiveWork && primaryCase && due
+                  ? `${currentTask ? getWorkflowLabel(currentTask) : primaryCase.title} · ${due.label}`
+                  : group.historyCaseCount > 0
+                    ? `완료·취소 이력 ${group.historyCaseCount}건`
+                    : '새 업무를 요청할 수 있습니다'}
               </span>
             </div>
           )

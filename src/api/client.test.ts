@@ -60,6 +60,16 @@ describe('apiFetch', () => {
     expect(result).toBeUndefined()
   })
 
+  it('returns undefined for a success response with an empty body regardless of status code', async () => {
+    // password-reset-requests처럼 202를 body 없이 반환하는 엔드포인트도 있다 — 204만 특별 취급하면
+    // response.json()이 빈 문자열을 파싱하려다 실패한다.
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 202 }))
+
+    const result = await apiFetch('/auth/password-reset-requests', { method: 'POST' })
+
+    expect(result).toBeUndefined()
+  })
+
   it('throws an ApiError parsed from the response body on failure', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(errorBody(), { status: 404 }))
 

@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { apiFetch } from '../../api/client'
+import { ApiError, getErrorMessage } from '../../api/errors'
 import { Button } from '../../components/ui/Button/Button'
 import { MailIcon } from '../../components/ui/icons/FieldIcons'
 import styles from './ForgotPasswordPage.module.css'
@@ -10,7 +12,7 @@ export function ForgotPasswordPage() {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setError('이메일 형식을 확인해 주세요.')
@@ -18,7 +20,23 @@ export function ForgotPasswordPage() {
     }
     setError('')
     setSubmitting(true)
-    navigate('/email-sent', { state: { email } })
+    try {
+      // 서버는 계정 존재 여부를 드러내지 않도록 항상 202를 반환한다 — 성공하면 무조건 안내 화면으로 이동한다.
+      await apiFetch('/auth/password-reset-requests', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+        skipAuthRetry: true,
+      })
+      navigate('/email-sent', { state: { email } })
+    } catch (requestError) {
+      setError(
+        requestError instanceof ApiError
+          ? getErrorMessage(requestError)
+          : '요청을 처리하지 못했습니다.',
+      )
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (

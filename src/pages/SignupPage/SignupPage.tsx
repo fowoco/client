@@ -24,6 +24,9 @@ interface SignupResponseBody {
   email: string
 }
 
+// 화면에 표시된 약관 버전. 약관 문구가 바뀌면 같이 올린다.
+const TERMS_VERSION = '1.0'
+
 const SERVER_FIELD_TO_SCREEN_FIELD: Record<string, keyof FieldErrors> = {
   company_name: 'workplace',
   display_name: 'name',
@@ -84,6 +87,11 @@ export function SignupPage() {
           display_name: name,
           email,
           password,
+          agreements: {
+            service_terms: { agreed: termsAgreed, version: TERMS_VERSION },
+            privacy_policy: { agreed: privacyAgreed, version: TERMS_VERSION },
+            marketing: { agreed: marketingOptIn, version: TERMS_VERSION },
+          },
         }),
         skipAuthRetry: true,
       })

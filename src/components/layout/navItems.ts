@@ -1,3 +1,4 @@
+import agentIcon from './nav-icons/agent.svg'
 import documentsIcon from './nav-icons/documents.svg'
 import settingsIcon from './nav-icons/settings.svg'
 import todayIcon from './nav-icons/today.svg'
@@ -16,5 +17,6 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Today', to: '/dashboard', iconSrc: todayIcon },
   { label: '업무함', to: '/tasks', iconSrc: workIcon },
   { label: '문서함', to: '/documents', iconSrc: documentsIcon },
+  { label: 'Agent 기록', to: '/agent', iconSrc: agentIcon },
   { label: '설정', to: '/profile', iconSrc: settingsIcon },
 ]

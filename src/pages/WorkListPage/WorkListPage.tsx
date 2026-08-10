@@ -12,7 +12,9 @@ import { WorkInboxDetail } from './WorkInboxDetail'
 import { WorkInboxTargetList } from './WorkInboxTargetList'
 import {
   buildWorkInboxModel,
+  parseWorkInboxFocus,
   type WorkInboxFilter,
+  type WorkInboxFocus,
   type WorkInboxSort,
 } from './workInboxModel'
 import styles from './WorkListPage.module.css'
@@ -29,6 +31,13 @@ const FILTER_OPTIONS: { value: WorkInboxFilter; label: string }[] = [
   { value: 'no-work', label: '업무 없음' },
 ]
 
+const FOCUS_LABEL: Record<WorkInboxFocus, string> = {
+  'pending-approval': '승인 대기',
+  'due-today': '오늘 마감',
+  'needs-info': '정보 보완',
+  'worker-response': '응답 대기',
+}
+
 function isCasePageEmpty(page: CasePageResponse): boolean {
   return page.items.length === 0
 }
@@ -41,6 +50,7 @@ export function WorkListPage() {
   const [filter, setFilter] = useState<WorkInboxFilter>('all')
   const debouncedQuery = useDebouncedValue(query)
   const selectedWorkerId = searchParams.get('workerId')
+  const focus = parseWorkInboxFocus(searchParams.get('focus'))
 
   const casesFetcher = useCallback(() => fetchCases({ size: 100 }), [])
   const workersFetcher = useCallback(() => fetchWorkers({ size: 100 }), [])
@@ -57,8 +67,9 @@ export function WorkListPage() {
         selectedWorkerId,
         sort,
         filter,
+        focus,
       }),
-    [casesQuery.data, workersQuery.data, debouncedQuery, selectedWorkerId, sort, filter],
+    [casesQuery.data, workersQuery.data, debouncedQuery, selectedWorkerId, sort, filter, focus],
   )
 
   const selectedGroup = inbox.selectedGroup
@@ -79,6 +90,20 @@ export function WorkListPage() {
   function handleSelectWorker(workerId: string) {
     const nextParams = new URLSearchParams(searchParams)
     nextParams.set('workerId', workerId)
+    setSearchParams(nextParams)
+  }
+
+  function handleFilterChange(nextFilter: WorkInboxFilter) {
+    setFilter(nextFilter)
+    if (!focus) return
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.delete('focus')
+    setSearchParams(nextParams)
+  }
+
+  function handleClearFocus() {
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.delete('focus')
     setSearchParams(nextParams)
   }
 
@@ -128,7 +153,7 @@ export function WorkListPage() {
                 type="button"
                 className={`${styles.statusFilter} ${filter === option.value ? styles.statusFilterActive : ''}`}
                 aria-pressed={filter === option.value}
-                onClick={() => setFilter(option.value)}
+                onClick={() => handleFilterChange(option.value)}
               >
                 {option.label}
               </button>
@@ -144,6 +169,13 @@ export function WorkListPage() {
           />
         </div>
       </div>
+
+      {focus && (
+        <div className={styles.focusNotice} role="status">
+          <span><strong>{FOCUS_LABEL[focus]}</strong> 조건에 해당하는 업무만 표시합니다.</span>
+          <button type="button" onClick={handleClearFocus}>전체 업무 보기</button>
+        </div>
+      )}
 
       {isInitialLoading && (
         <div className={styles.stateWrap}>
@@ -189,7 +221,7 @@ export function WorkListPage() {
           <EmptyState
             kind="empty"
             title="검색 결과가 없습니다"
-            body="검색어나 업무 상태 필터를 바꿔 다시 확인해 보세요."
+            body="검색어나 업무 상태 조건을 바꿔 다시 확인해 보세요."
           />
         </div>
       )}

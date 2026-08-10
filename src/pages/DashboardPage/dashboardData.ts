@@ -26,7 +26,7 @@ export const AI_REQUEST_PROMPT_CHIPS = [
   '근로자 요청',
 ]
 
-export type DashboardMetricTone = 'warning' | 'info' | 'critical' | 'success'
+export type DashboardMetricTone = 'warning' | 'info' | 'critical' | 'neutral'
 
 export interface DashboardMetric {
   id: string
@@ -34,24 +34,20 @@ export interface DashboardMetric {
   value: number
   iconSrc: string
   tone: DashboardMetricTone
+  href: string
 }
 
 export interface DashboardWorkItem {
   id: string
+  workerName: string | null
   title: string
   status: string
   statusTone: WorkItemStatusTone
-  schedule: string
+  deadline: string
+  nextActor: string
   nextAction: string
   urgency: WorkItemUrgency
-}
-
-export interface DashboardPriorityApproval {
-  id: string
-  title: string
-  meta: string
-  note: string
-  requestedLabel: string
+  group: 'actionable' | 'waiting' | 'closed'
 }
 
 export interface DashboardAgentItem {
@@ -77,16 +73,70 @@ export interface DashboardUpcomingExpiry {
 
 const STATUS_PRESENTATION: Record<
   TaskStatus,
-  { label: string; tone: WorkItemStatusTone; action: string }
+  {
+    label: string
+    tone: WorkItemStatusTone
+    actor: string
+    action: string
+    group: DashboardWorkItem['group']
+  }
 > = {
-  DRAFT: { label: '서류 대기', tone: 'neutral', action: '초안 검토' },
-  NEEDS_INFO: { label: '정보 보완', tone: 'warning', action: '정보 확인' },
-  READY_FOR_REVIEW: { label: '승인 대기', tone: 'warning', action: '승인 검토' },
-  APPROVED: { label: '승인 완료', tone: 'primary', action: '실행 확인' },
-  WAITING_WORKER: { label: '요청 전송', tone: 'primary', action: '요청 현황' },
-  WAITING_EXTERNAL: { label: '기관 대기', tone: 'neutral', action: '진행 확인' },
-  COMPLETED: { label: '완료', tone: 'primary', action: '완료 확인' },
-  CANCELLED: { label: '취소', tone: 'neutral', action: '취소 확인' },
+  DRAFT: {
+    label: '서류 대기',
+    tone: 'neutral',
+    actor: '담당자',
+    action: '초안 검토',
+    group: 'actionable',
+  },
+  NEEDS_INFO: {
+    label: '정보 보완',
+    tone: 'warning',
+    actor: '담당자',
+    action: '정보 확인',
+    group: 'actionable',
+  },
+  READY_FOR_REVIEW: {
+    label: '승인 대기',
+    tone: 'warning',
+    actor: '담당자',
+    action: '승인 검토',
+    group: 'actionable',
+  },
+  APPROVED: {
+    label: '승인 완료',
+    tone: 'primary',
+    actor: '담당자',
+    action: '실행 확인',
+    group: 'actionable',
+  },
+  WAITING_WORKER: {
+    label: '요청 전송',
+    tone: 'primary',
+    actor: '근로자',
+    action: '요청 현황',
+    group: 'waiting',
+  },
+  WAITING_EXTERNAL: {
+    label: '기관 대기',
+    tone: 'neutral',
+    actor: '외부기관',
+    action: '진행 확인',
+    group: 'waiting',
+  },
+  COMPLETED: {
+    label: '완료',
+    tone: 'primary',
+    actor: '완료',
+    action: '결과 확인',
+    group: 'closed',
+  },
+  CANCELLED: {
+    label: '취소',
+    tone: 'neutral',
+    actor: '없음',
+    action: '취소 확인',
+    group: 'closed',
+  },
 }
 
 const EXPIRY_CATEGORY_LABEL: Record<UpcomingExpiryCategory, string> = {
@@ -113,63 +163,59 @@ export function buildDashboardMetrics(counts: DashboardSummaryCountsResponse): D
       value: counts.pending_approval,
       iconSrc: metricApprovalIcon,
       tone: 'warning',
+      href: '/tasks?focus=pending-approval',
     },
     {
       id: 'due-today',
       label: '오늘 마감',
       value: counts.due_today,
       iconSrc: metricDueIcon,
-      tone: 'info',
+      tone: counts.due_today > 0 ? 'critical' : 'neutral',
+      href: '/tasks?focus=due-today',
     },
     {
       id: 'needs-info',
       label: '정보 보완',
       value: counts.needs_info,
       iconSrc: metricInfoIcon,
-      tone: 'critical',
+      tone: 'warning',
+      href: '/tasks?focus=needs-info',
     },
     {
       id: 'worker-response',
       label: '응답 대기',
       value: counts.worker_response,
       iconSrc: metricResponseIcon,
-      tone: 'success',
+      tone: 'info',
+      href: '/tasks?focus=worker-response',
     },
   ]
 }
 
 export function buildDashboardWorkItems(
   tasks: DashboardTaskSummaryResponse[],
+  upcomingExpiries: UpcomingExpiryItemResponse[] = [],
 ): DashboardWorkItem[] {
+  const workerNameById = new Map(
+    upcomingExpiries.map((item) => [item.worker_id, item.display_name]),
+  )
+
   return tasks.map((task) => {
     const presentation = STATUS_PRESENTATION[task.status]
     const due = getOperationalDateViewModel('TASK_DUE', task.due_date)
     return {
       id: task.task_id,
+      workerName: workerNameById.get(task.worker_id) ?? null,
       title: task.title,
       status: presentation.label,
       statusTone: presentation.tone,
-      schedule: due.relative ?? '기한 미정',
+      deadline: due.missing ? '처리 기한 미등록' : `처리 기한 ${due.display}`,
+      nextActor: presentation.actor,
       nextAction: presentation.action,
       urgency: getUrgency(task.due_date),
+      group: presentation.group,
     }
   })
-}
-
-export function buildPriorityApproval(
-  tasks: DashboardTaskSummaryResponse[],
-): DashboardPriorityApproval | null {
-  const task = tasks.find((item) => item.status === 'READY_FOR_REVIEW')
-  if (!task) return null
-
-  const due = getOperationalDateViewModel('TASK_DUE', task.due_date)
-  return {
-    id: task.task_id,
-    title: task.title,
-    meta: `${due.relative ?? '기한 미정'} · 승인 대기`,
-    note: 'Server가 오늘 우선 확인할 승인 업무로 정리했습니다.',
-    requestedLabel: due.relative ?? due.display,
-  }
 }
 
 function mapRecommendation(

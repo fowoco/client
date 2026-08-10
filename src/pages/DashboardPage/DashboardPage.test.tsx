@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DashboardTodayResponse } from '../../api/dashboard'
+import { DashboardTodayProvider } from '../../components/layout/DashboardTodayProvider'
 import { DashboardPage } from './DashboardPage'
 import { AI_REQUEST_PROMPT_CHIPS } from './dashboardData'
 
@@ -108,16 +109,23 @@ function WorkCreateProbe() {
   return <p>업무 생성 {prefill}</p>
 }
 
+function WorkListProbe() {
+  const location = useLocation()
+  return <p>{`업무함 ${location.search}`}</p>
+}
+
 function renderPage() {
   return render(
     <MemoryRouter initialEntries={['/dashboard']}>
-      <Routes>
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/tasks/new" element={<WorkCreateProbe />} />
-        <Route path="/tasks" element={<p>업무함</p>} />
-        <Route path="/tasks/:taskId" element={<TaskDetailProbe />} />
-        <Route path="/workers/:workerId/detail" element={<WorkerDetailProbe />} />
-      </Routes>
+      <DashboardTodayProvider>
+        <Routes>
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/tasks/new" element={<WorkCreateProbe />} />
+          <Route path="/tasks" element={<WorkListProbe />} />
+          <Route path="/tasks/:taskId" element={<TaskDetailProbe />} />
+          <Route path="/workers/:workerId/detail" element={<WorkerDetailProbe />} />
+        </Routes>
+      </DashboardTodayProvider>
     </MemoryRouter>,
   )
 }
@@ -139,11 +147,14 @@ describe('DashboardPage', () => {
         name: '지금 확인이 필요한 승인 2건이 있습니다.',
       }),
     ).toBeInTheDocument()
-    expect(screen.getAllByText('2건 ›')).toHaveLength(1)
-    expect(screen.getAllByText('1건 ›')).toHaveLength(2)
-    expect(screen.getAllByText('3건 ›')).toHaveLength(1)
+    expect(screen.getByRole('button', { name: '승인 대기 2건 업무함에서 보기' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '오늘 마감 1건 업무함에서 보기' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '정보 보완 1건 업무함에서 보기' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '응답 대기 3건 업무함에서 보기' })).toBeInTheDocument()
     expect(screen.getAllByText('응웬반A 체류연장 요청문').length).toBeGreaterThan(0)
-    expect(screen.getByText('응웬반A')).toBeInTheDocument()
+    expect(screen.getAllByText('응웬반A').length).toBeGreaterThan(0)
+    expect(screen.getByText(/처리 기한 .*D-1/)).toBeInTheDocument()
+    expect(screen.getAllByText('담당자').length).toBeGreaterThan(0)
     expect(screen.getByText('체류기간 만료')).toBeInTheDocument()
     expect(screen.getByText('여권 사본 만료')).toBeInTheDocument()
 
@@ -162,12 +173,50 @@ describe('DashboardPage', () => {
     expect(screen.getAllByText('Agent 생성 체류연장 초안').length).toBeGreaterThan(0)
   })
 
+  it('keeps the dashboard concise and links to the full work lists', async () => {
+    const previewResponse: DashboardTodayResponse = {
+      ...TODAY_RESPONSE,
+      priority_tasks: Array.from({ length: 5 }, (_, index) => ({
+        ...TODAY_RESPONSE.priority_tasks[0],
+        task_id: `T-PREVIEW-${index + 1}`,
+        worker_id: `W-PREVIEW-${index + 1}`,
+        title: `우선 업무 ${index + 1}`,
+      })),
+      upcoming_7_days: Array.from({ length: 6 }, (_, index) => ({
+        ...TODAY_RESPONSE.upcoming_7_days[0],
+        worker_id: `W-EXPIRY-${index + 1}`,
+        display_name: `만료 근로자 ${index + 1}`,
+      })),
+    }
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(previewResponse))
+
+    renderPage()
+
+    expect(await screen.findByRole('button', { name: '전체 업무 보기' })).toBeInTheDocument()
+    expect(screen.getByText('우선 업무 4')).toBeInTheDocument()
+    expect(screen.queryByText('우선 업무 5')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '전체 6건 보기' })).toBeInTheDocument()
+    expect(screen.getByText('만료 근로자 4')).toBeInTheDocument()
+    expect(screen.queryByText('만료 근로자 5')).not.toBeInTheDocument()
+  })
+
   it('opens the actual Task ID from priority and recommendation items', async () => {
     const user = userEvent.setup()
     renderPage()
 
     await user.click((await screen.findAllByRole('button', { name: '승인 검토' }))[0])
     expect(await screen.findByText('업무 상세 T-1')).toBeInTheDocument()
+  })
+
+  it('opens the work inbox with the selected dashboard condition', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(
+      await screen.findByRole('button', { name: '정보 보완 1건 업무함에서 보기' }),
+    )
+
+    expect(await screen.findByText('업무함 ?focus=needs-info')).toBeInTheDocument()
   })
 
   it('opens the worker detail from an upcoming expiry item', async () => {
@@ -211,11 +260,13 @@ describe('DashboardPage', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(screen.getByRole('button', { name: AI_REQUEST_PROMPT_CHIPS[0] }))
-    const requestInput = screen.getByRole('textbox', { name: 'Agent 업무 요청' })
+    await user.click(screen.getByRole('button', { name: '새 업무 요청' }))
+    await user.click(await screen.findByRole('button', { name: AI_REQUEST_PROMPT_CHIPS[0] }))
+    const requestInput = screen.getByRole('textbox', { name: '업무 내용' })
     expect(requestInput).toHaveValue(AI_REQUEST_PROMPT_CHIPS[0])
+    expect(requestInput).toHaveFocus()
 
-    await user.click(screen.getByRole('button', { name: '업무 요청 계속하기' }))
+    await user.click(screen.getByRole('button', { name: '업무 분석' }))
 
     expect(await screen.findByText(`업무 생성 ${AI_REQUEST_PROMPT_CHIPS[0]}`)).toBeInTheDocument()
   })
@@ -224,7 +275,8 @@ describe('DashboardPage', () => {
     const user = userEvent.setup()
     renderPage()
 
-    const requestInput = screen.getByRole('textbox', { name: 'Agent 업무 요청' })
+    await user.click(screen.getByRole('button', { name: '새 업무 요청' }))
+    const requestInput = await screen.findByRole('textbox', { name: '업무 내용' })
     await user.type(requestInput, '응웬반A 체류기간 연장 준비{Enter}')
 
     expect(await screen.findByText('업무 생성 응웬반A 체류기간 연장 준비')).toBeInTheDocument()

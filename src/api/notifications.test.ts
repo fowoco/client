@@ -43,4 +43,3 @@ describe('notification API', () => {
     expect(init?.method).toBe('POST')
   })
 })
-

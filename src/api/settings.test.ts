@@ -48,7 +48,6 @@ describe('company settings API', () => {
     })
   })
 })
-
 describe('company members API', () => {
   it('gets active members with optional role and approval filters', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ items: [] }))
@@ -62,4 +61,3 @@ describe('company members API', () => {
     expect(String(url)).toContain('active_only=false')
   })
 })
-

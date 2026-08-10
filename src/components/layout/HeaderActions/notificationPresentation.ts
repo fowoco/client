@@ -6,4 +6,3 @@ export function getSafeNotificationRoute(route: string) {
     ? route
     : '/dashboard'
 }
-

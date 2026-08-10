@@ -41,4 +41,3 @@ export function markNotificationRead(notificationId: string): Promise<void> {
     method: 'POST',
   })
 }
-

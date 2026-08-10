@@ -76,4 +76,3 @@ export function fetchCompanyMembers(
   query.set('active_only', String(params.activeOnly ?? true))
   return apiFetch<CompanyMemberListResponse>(`/company-members?${query.toString()}`)
 }
-

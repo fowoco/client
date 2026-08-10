@@ -104,7 +104,6 @@
   background: var(--surface-default);
   border: 1px solid var(--border-default);
   border-radius: var(--fowoco-radius-10);
-  box-shadow: var(--shadow-sm);
   box-shadow: 0 12px 24px rgba(23, 43, 45, 0.14);
 }
 
@@ -112,8 +111,22 @@
   width: 200px;
 }
 
-.panelTitle {
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin: 4px 8px 8px;
+}
+
+.panelHeader span {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--brand-primary);
+}
+
+.panelTitle {
+  margin: 0;
   font-size: 13px;
   font-weight: 700;
   color: var(--text-primary);
@@ -127,9 +140,56 @@
   text-align: center;
 }
 
-.notificationRow {
-  padding: 10px 8px;
+.panelError {
+  padding: 14px 8px;
+  text-align: center;
+}
+
+.panelError p,
+.notificationActionError {
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--status-critical);
+}
+
+.panelError button {
+  margin-top: 8px;
+  padding: 5px 8px;
+  background: transparent;
+  border: 1px solid var(--border-default);
   border-radius: var(--fowoco-radius-6);
+  font: inherit;
+  font-size: 12px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.notificationList {
+  max-height: min(420px, calc(100vh - 140px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.notificationRow {
+  display: block;
+  width: 100%;
+  padding: 10px 8px;
+  background: transparent;
+  border: 0;
+  border-radius: var(--fowoco-radius-6);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.notificationRow:hover {
+  background: var(--surface-subtle);
+}
+
+.notificationRow:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 
 .notificationRowUnread {
@@ -137,16 +197,27 @@
 }
 
 .notificationTitle {
-  margin: 0;
+  display: block;
   font-size: 13px;
   line-height: 19px;
   color: var(--text-primary);
 }
 
 .notificationTime {
-  margin: 4px 0 0;
+  display: block;
+  margin-top: 4px;
   font-size: 11px;
   color: var(--text-secondary);
+}
+
+.notificationActionError {
+  margin: 8px;
+}
+
+.notificationRow:focus-visible,
+.panelError button:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 1px;
 }
 
 .menuItem {

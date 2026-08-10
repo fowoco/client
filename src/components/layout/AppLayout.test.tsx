@@ -24,6 +24,25 @@ const EMPTY_TODAY_RESPONSE = {
   worker_response_count: 0,
 }
 
+const EMPTY_NOTIFICATION_RESPONSE = {
+  items: [],
+  page: 0,
+  size: 20,
+  total_elements: 0,
+  total_pages: 0,
+}
+
+function jsonResponse(body: unknown) {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
+function requestUrl(input: RequestInfo | URL) {
+  return typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+}
+
 function renderLayout() {
   const router = createMemoryRouter(
     [{ element: <AppLayout />, children: [{ path: '/dashboard', element: <p>content</p> }] }],
@@ -49,12 +68,12 @@ beforeEach(() => {
   stubWorkingLocalStorage()
   vi.stubGlobal(
     'fetch',
-    vi.fn().mockResolvedValue(
-      new Response(JSON.stringify(EMPTY_TODAY_RESPONSE), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }),
-    ),
+    vi.fn((input: RequestInfo | URL) => {
+      const url = requestUrl(input)
+      return Promise.resolve(
+        jsonResponse(url.includes('/notifications') ? EMPTY_NOTIFICATION_RESPONSE : EMPTY_TODAY_RESPONSE),
+      )
+    }),
   )
 })
 
@@ -76,20 +95,24 @@ describe('AppLayout', () => {
 
   it('shows server-backed work shortcut counts and routes them to focused inbox views', async () => {
     localStorage.setItem('fowoco.onboarding.completed', 'true')
-    vi.mocked(fetch).mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          ...EMPTY_TODAY_RESPONSE,
-          summary_counts: {
-            pending_approval: 4,
-            due_today: 1,
-            needs_info: 2,
-            worker_response: 3,
-          },
-        }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
-      ),
-    )
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      const url = requestUrl(input)
+      return Promise.resolve(
+        jsonResponse(
+          url.includes('/notifications')
+            ? EMPTY_NOTIFICATION_RESPONSE
+            : {
+                ...EMPTY_TODAY_RESPONSE,
+                summary_counts: {
+                  pending_approval: 4,
+                  due_today: 1,
+                  needs_info: 2,
+                  worker_response: 3,
+                },
+              },
+        ),
+      )
+    })
 
     renderLayout()
 

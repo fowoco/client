@@ -25,27 +25,28 @@ HR 담당자용 관리 대시보드와 근로자용 모바일 안내 화면을 �
 
 ## 한눈에 보기
 
-| | |
-| --- | --- |
-| **무엇을** | E-9 외국인 근로자의 채용 서류·비자·계약·근로 관련 업무를 HR 담당자가 한 곳에서 처리하는 웹 앱 |
-| **누가 쓰나** | 사업장 HR 담당자(관리 화면), 외국인 근로자(모바일 안내 화면, 로그인 불필요) |
-| **핵심 가치** | 반복적인 서류·승인 업무를 AI가 먼저 정리해서 제안하고, 담당자는 검토·승인만 하면 되는 흐름 |
-| **백엔드** | [`fowoco-server`](https://github.com/fowoco/server) (Spring Boot, REST/JSON) |
+|               |                                                                                                               |
+| ------------- | ------------------------------------------------------------------------------------------------------------- |
+| **무엇을**    | E-9 외국인 근로자의 채용 서류·비자·계약·근로 관련 업무를 HR 담당자가 한 곳에서 처리하는 웹 앱                 |
+| **누가 쓰나** | 사업장 HR 담당자(관리 화면), 외국인 근로자(모바일 안내 화면, 로그인 불필요)                                   |
+| **핵심 가치** | 반복적인 서류·승인 업무를 AI가 먼저 정리해서 제안하고, 담당자는 검토·승인만 하면 되는 흐름                    |
+| **백엔드**    | [`fowoco-server`](https://github.com/fowoco/server) (Spring Boot, REST/JSON)                                  |
 | **현재 버전** | v3.0.0 — 자세한 진행 현황은 [wiki: Project-Status](https://github.com/fowoco/client/wiki/Project-Status) 참고 |
 
 ## 기술 스택
 
-| 영역 | 선택 | 비고 |
-| --- | --- | --- |
-| 프레임워크 | React 19 + TypeScript (strict) | [선택 근거](docs/FRONTEND_STACK_DECISION.md) |
-| 빌드 도구 | Vite 8 | 개발 서버 HMR, 프로덕션 빌드 |
-| 라우팅 | React Router v7 | `createBrowserRouter`, 라우트 단위 코드 스플리팅(`lazy`) |
-| 클라이언트 상태 | Zustand | 인증 세션(`authStore`), 전역 토스트(`toastStore`) |
-| 서버 상태 | 커스텀 `useApiQuery` 훅 | `loading/success/empty/error` 상태 모델, `@tanstack/react-query`는 설치만 되어 있고 아직 미적용 |
-| 스타일 | CSS Modules + CSS 커스텀 프로퍼티 | `src/styles/tokens.css`가 색상·간격·타이포 등 디자인 토큰의 단일 소스 |
-| 테스트 | Vitest + Testing Library | 유닛/컴포넌트 테스트, `jsdom` 환경 |
-| 코드 품질 | ESLint (typescript-eslint) + Prettier | |
-| 배포 | Docker + Nginx | `Dockerfile`, `nginx.conf` |
+| 영역            | 선택                                  | 비고                                                                                            |
+| --------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| 프레임워크      | React 19 + TypeScript (strict)        | [선택 근거](docs/FRONTEND_STACK_DECISION.md)                                                    |
+| 빌드 도구       | Vite 8                                | 개발 서버 HMR, 프로덕션 빌드                                                                    |
+| 라우팅          | React Router v7                       | `createBrowserRouter`, 라우트 단위 코드 스플리팅(`lazy`)                                        |
+| 클라이언트 상태 | Zustand                               | 인증 세션(`authStore`), 전역 토스트(`toastStore`)                                               |
+| 서버 상태       | 커스텀 `useApiQuery` 훅               | `loading/success/empty/error` 상태 모델, `@tanstack/react-query`는 설치만 되어 있고 아직 미적용 |
+| 스타일          | CSS Modules + CSS 커스텀 프로퍼티     | `src/styles/tokens.css`가 색상·간격·타이포 등 디자인 토큰의 단일 소스                           |
+| 테스트          | Vitest + Testing Library              | 유닛/컴포넌트 테스트, `jsdom` 환경                                                              |
+| 코드 품질       | ESLint (typescript-eslint) + Prettier |                                                                                                 |
+| 패키지 관리     | bun                                   | 설치·스크립트 실행 전부 bun 사용, Husky+lint-staged로 커밋 전 자동 lint/format                  |
+| 배포            | Docker + Nginx                        | `Dockerfile`, `nginx.conf`                                                                      |
 
 ## 아키텍처
 
@@ -131,11 +132,15 @@ src/
 
 ## 시작하기
 
+패키지 매니저로 [bun](https://bun.sh)을 사용합니다 (`npm install -g bun` 또는 [설치 가이드](https://bun.sh/docs/installation) 참고, Node 버전은 `.nvmrc` 참고).
+
 ```bash
-npm install
+bun install
 cp .env.example .env
-npm run dev
+bun run dev
 ```
+
+첫 `bun install` 시 `.husky/pre-commit` 훅이 자동 등록되어, 커밋할 때 staged 파일에 ESLint/Prettier가 자동 실행됩니다.
 
 ## 로컬 백엔드 연결
 
@@ -148,27 +153,27 @@ npm run dev
 
 ## 스크립트
 
-| 명령 | 설명 |
-| --- | --- |
-| `npm run dev` | 개발 서버 실행 |
-| `npm run build` | 타입체크 + 프로덕션 빌드 |
-| `npm run lint` | ESLint 검사 |
-| `npm run format` | Prettier 포맷팅 |
-| `npm run test` | Vitest 테스트 실행 |
-| `npm run preview` | 빌드 결과 로컬 프리뷰 |
+| 명령              | 설명                     |
+| ----------------- | ------------------------ |
+| `bun run dev`     | 개발 서버 실행           |
+| `bun run build`   | 타입체크 + 프로덕션 빌드 |
+| `bun run lint`    | ESLint 검사              |
+| `bun run format`  | Prettier 포맷팅          |
+| `bun run test`    | Vitest 테스트 실행       |
+| `bun run preview` | 빌드 결과 로컬 프리뷰    |
 
 ## 문서
 
-| 문서 | 내용 |
-| --- | --- |
-| [`docs/FRONTEND_STACK_DECISION.md`](docs/FRONTEND_STACK_DECISION.md) | 프레임워크·상태관리 선택 근거 |
-| [`docs/SCREEN_CATALOG.md`](docs/SCREEN_CATALOG.md) | 화면 목록 (저장소 내부 버전) |
-| [`docs/EMPTY_STATE_COPY_GUIDE.md`](docs/EMPTY_STATE_COPY_GUIDE.md) | 빈 상태/로딩/에러 문구 가이드 |
-| [Wiki: Project-Status](https://github.com/fowoco/client/wiki/Project-Status) | 최신 진행 현황, 릴리스 이력, 알려진 갭 |
-| [Wiki: Screen-Catalog](https://github.com/fowoco/client/wiki/Screen-Catalog) | 화면별 구현 상태·Figma 대응 (최신 갱신본) |
-| [Wiki: Component-Library](https://github.com/fowoco/client/wiki/Component-Library) | 공통 컴포넌트/훅 사용법 |
-| [Wiki: Auth-and-Demo-Account](https://github.com/fowoco/client/wiki/Auth-and-Demo-Account) | 로그인 흐름과 데모 계정 |
-| [Wiki: Accessibility-Audit](https://github.com/fowoco/client/wiki/Accessibility-Audit) | 접근성 점검 결과 |
+| 문서                                                                                       | 내용                                      |
+| ------------------------------------------------------------------------------------------ | ----------------------------------------- |
+| [`docs/FRONTEND_STACK_DECISION.md`](docs/FRONTEND_STACK_DECISION.md)                       | 프레임워크·상태관리 선택 근거             |
+| [`docs/SCREEN_CATALOG.md`](docs/SCREEN_CATALOG.md)                                         | 화면 목록 (저장소 내부 버전)              |
+| [`docs/EMPTY_STATE_COPY_GUIDE.md`](docs/EMPTY_STATE_COPY_GUIDE.md)                         | 빈 상태/로딩/에러 문구 가이드             |
+| [Wiki: Project-Status](https://github.com/fowoco/client/wiki/Project-Status)               | 최신 진행 현황, 릴리스 이력, 알려진 갭    |
+| [Wiki: Screen-Catalog](https://github.com/fowoco/client/wiki/Screen-Catalog)               | 화면별 구현 상태·Figma 대응 (최신 갱신본) |
+| [Wiki: Component-Library](https://github.com/fowoco/client/wiki/Component-Library)         | 공통 컴포넌트/훅 사용법                   |
+| [Wiki: Auth-and-Demo-Account](https://github.com/fowoco/client/wiki/Auth-and-Demo-Account) | 로그인 흐름과 데모 계정                   |
+| [Wiki: Accessibility-Audit](https://github.com/fowoco/client/wiki/Accessibility-Audit)     | 접근성 점검 결과                          |
 
 ## 기여
 

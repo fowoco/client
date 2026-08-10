@@ -1,0 +1,256 @@
+.panel {
+  margin-top: 16px;
+  padding: var(--fowoco-spacing-20) var(--fowoco-spacing-24);
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-10);
+  box-shadow: var(--shadow-sm);
+}
+
+.panel h2 {
+  margin: 0;
+  font-size: 18px;
+  color: var(--text-primary);
+}
+
+.panelHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.panelHeader p,
+.notice {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 19px;
+  color: var(--text-secondary);
+}
+
+.error {
+  margin-top: 14px;
+  padding: 10px 12px;
+  background: var(--fowoco-red-50);
+  border-radius: var(--fowoco-radius-6);
+  font-size: 12px;
+  color: var(--fowoco-red-600);
+}
+
+.stateAction {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--surface-subtle);
+  border-radius: var(--fowoco-radius-8);
+}
+
+.stateAction .notice {
+  margin: 0;
+}
+
+.processing {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--fowoco-teal-50);
+  border-radius: var(--fowoco-radius-8);
+}
+
+.processing strong {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.processing p {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--fowoco-teal-100);
+  border-top-color: var(--brand-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.reviewReasons {
+  margin-top: 16px;
+  padding: 12px 14px;
+  background: var(--fowoco-amber-50);
+  border-radius: var(--fowoco-radius-8);
+}
+
+.reviewReasons strong {
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.reviewReasons ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 19px;
+  color: var(--text-secondary);
+}
+
+.fieldList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+  margin-top: 16px;
+}
+
+.fieldRow {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fieldRow > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fieldRow strong {
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.fieldRow small {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.fieldRow .originalValue {
+  line-height: 17px;
+  color: var(--text-secondary);
+}
+
+.fieldRow input,
+.fieldRow output {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 11px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.fieldRow output {
+  background: var(--surface-subtle);
+}
+
+.fieldRow input:focus-visible,
+.rejectReason textarea:focus-visible {
+  outline: 0;
+  box-shadow: var(--shadow-focus);
+}
+
+.reviewArea {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-default);
+}
+
+.scopeNote {
+  margin: 14px 0 0;
+  font-size: 12px;
+  line-height: 19px;
+  color: var(--text-secondary);
+}
+
+.reviewArea > p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 19px;
+  color: var(--text-secondary);
+}
+
+.reviewArea > .correctionWarning {
+  margin-top: 8px;
+  color: var(--fowoco-red-600);
+}
+
+.rejectReason {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.rejectReason span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.rejectReason textarea {
+  min-height: 72px;
+  padding: 10px 11px;
+  resize: vertical;
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.reviewActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.reviewedNotice {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  background: var(--fowoco-green-50);
+  border-radius: var(--fowoco-radius-6);
+  font-size: 12px;
+  color: var(--fowoco-green-600);
+}
+
+@media (max-width: 720px) {
+  .panel {
+    padding: var(--fowoco-spacing-16);
+  }
+
+  .fieldList {
+    grid-template-columns: 1fr;
+  }
+
+  .stateAction,
+  .reviewActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}

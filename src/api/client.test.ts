@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { apiFetch, getAccessToken, setAccessToken, setAuthExpiredHandler } from './client'
+import {
+  apiFetch,
+  apiFetchBlob,
+  getAccessToken,
+  setAccessToken,
+  setAuthExpiredHandler,
+} from './client'
 import { ApiError } from './errors'
 
 function jsonResponse(body: unknown, init: ResponseInit = {}) {
@@ -50,6 +56,20 @@ describe('apiFetch', () => {
     const [, init] = vi.mocked(fetch).mock.calls[0]
     const headers = init!.headers as Headers
     expect(headers.get('Authorization')).toBe('Bearer token-abc')
+  })
+
+  it('returns a binary response without JSON parsing and requests any content type', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(new Blob(['file-content']), {
+        headers: { 'Content-Type': 'application/pdf' },
+      }),
+    )
+
+    const response = await apiFetchBlob('/files/file-1/content')
+
+    expect((await response.blob()).size).toBeGreaterThan(0)
+    const [, init] = vi.mocked(fetch).mock.calls[0]
+    expect(new Headers(init?.headers).get('Accept')).toBe('*/*')
   })
 
   it('returns undefined for 204 No Content', async () => {

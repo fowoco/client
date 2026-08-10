@@ -5,6 +5,10 @@ import { ApiError, networkApiError, type ApiErrorBody } from './errors'
 // 명시적으로 다루도록 하고, 응답 전체를 자동으로 camelCase 변환하지 않는다.
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
 
+export function getApiUrl(path: string) {
+  return `${API_BASE_URL}${path}`
+}
+
 let accessToken: string | null = null
 
 export function setAccessToken(token: string | null) {
@@ -70,7 +74,7 @@ async function parseErrorBody(response: Response, path: string): Promise<ApiErro
 
 async function rawFetch(path: string, init: RequestInit): Promise<Response> {
   const headers = new Headers(init.headers)
-  headers.set('Accept', 'application/json')
+  if (!headers.has('Accept')) headers.set('Accept', 'application/json')
   if (init.body && !headers.has('Content-Type') && !(init.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json')
   }
@@ -78,7 +82,7 @@ async function rawFetch(path: string, init: RequestInit): Promise<Response> {
     headers.set('Authorization', `Bearer ${accessToken}`)
   }
 
-  return fetch(`${API_BASE_URL}${path}`, {
+  return fetch(getApiUrl(path), {
     ...init,
     headers,
     credentials: 'include',
@@ -90,7 +94,10 @@ export interface ApiFetchOptions extends RequestInit {
   skipAuthRetry?: boolean
 }
 
-export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
+async function requestWithAuth(
+  path: string,
+  options: ApiFetchOptions = {},
+): Promise<Response> {
   const { skipAuthRetry, ...init } = options
 
   let response: Response
@@ -119,6 +126,12 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
     throw await parseErrorBody(response, path)
   }
 
+  return response
+}
+
+export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
+  const response = await requestWithAuth(path, options)
+
   // 204는 물론이고, password-reset-requests처럼 body 없이 202만 내려주는 응답도 있어
   // status 코드로만 분기하지 않고 실제 body가 비어있는지로 판단한다.
   const text = await response.text()
@@ -127,4 +140,13 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
   }
 
   return JSON.parse(text) as T
+}
+
+export function apiFetchBlob(path: string, options: ApiFetchOptions = {}): Promise<Response> {
+  const headers = new Headers(options.headers)
+  headers.set('Accept', '*/*')
+  return requestWithAuth(path, {
+    ...options,
+    headers,
+  })
 }

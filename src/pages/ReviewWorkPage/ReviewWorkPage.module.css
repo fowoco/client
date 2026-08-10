@@ -80,7 +80,8 @@
   padding: var(--fowoco-spacing-24);
   background: var(--surface-default);
   border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-8);
+  border-radius: var(--fowoco-radius-10);
+  box-shadow: var(--shadow-sm);
 }
 
 .panelTitle {
@@ -309,6 +310,12 @@
   color: var(--text-secondary);
 }
 
+.fieldError {
+  margin: var(--fowoco-spacing-12) 0 0;
+  color: var(--fowoco-red-600);
+  font-size: 13px;
+}
+
 .actionDock {
   display: flex;
   align-items: center;
@@ -318,7 +325,8 @@
   padding: var(--fowoco-spacing-16) var(--fowoco-spacing-20);
   background: var(--surface-default);
   border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-8);
+  border-radius: var(--fowoco-radius-10);
+  box-shadow: var(--shadow-sm);
 }
 
 @media (max-width: 640px) {

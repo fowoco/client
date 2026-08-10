@@ -2,7 +2,8 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { TaskPageResponse, TaskSummaryResponse } from '../../api/tasks'
+import type { DashboardTodayResponse } from '../../api/dashboard'
+import { DashboardTodayProvider } from '../../components/layout/DashboardTodayProvider'
 import { DashboardPage } from './DashboardPage'
 import { AI_REQUEST_PROMPT_CHIPS } from './dashboardData'
 
@@ -24,75 +25,82 @@ function dateFromToday(offset: number) {
   return `${year}-${month}-${day}`
 }
 
-function task(
-  taskId: string,
-  overrides: Partial<TaskSummaryResponse> = {},
-): TaskSummaryResponse {
-  return {
-    task_id: taskId,
-    worker_id: 'W-1',
-    case_id: null,
-    task_type: 'STAY_PERIOD_EXTENSION',
-    workflow_id: 'WF-1',
-    workflow_catalog_version: '1',
-    title: `업무 ${taskId}`,
-    source: 'MANUAL',
-    status: 'DRAFT',
-    due_date: null,
-    content_revision: 1,
-    version: 1,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    ...overrides,
-  }
+const TODAY_RESPONSE: DashboardTodayResponse = {
+  summary_counts: {
+    pending_approval: 2,
+    due_today: 1,
+    needs_info: 1,
+    worker_response: 3,
+  },
+  priority_tasks: [
+    {
+      task_id: 'T-1',
+      worker_id: 'W-1',
+      title: '응웬반A 체류연장 요청문',
+      status: 'READY_FOR_REVIEW',
+      due_date: dateFromToday(1),
+    },
+    {
+      task_id: 'T-2',
+      worker_id: 'W-2',
+      title: '계약 정보 보완',
+      status: 'NEEDS_INFO',
+      due_date: dateFromToday(5),
+    },
+  ],
+  upcoming_7_days: [
+    {
+      worker_id: 'W-1',
+      display_name: '응웬반A',
+      category: 'STAY_EXPIRY',
+      expiry_date: dateFromToday(3),
+      document_type: null,
+    },
+    {
+      worker_id: 'W-2',
+      display_name: '아디 수르야',
+      category: 'DOCUMENT_EXPIRY',
+      expiry_date: dateFromToday(6),
+      document_type: 'PASSPORT_COPY',
+    },
+  ],
+  recommendations: {
+    connected_count: 4,
+    prepared: [{ task_id: 'T-3', title: 'Agent 생성 체류연장 초안', status: 'DRAFT' }],
+    review: [{ task_id: 'T-2', title: '계약 정보 보완', status: 'NEEDS_INFO' }],
+    after_approval: [{ task_id: 'T-4', title: '외국인등록증 사본 제출', status: 'WAITING_WORKER' }],
+  },
+  approval_count: 2,
+  worker_response_count: 3,
 }
 
-const TASKS = [
-  task('T-1', {
-    title: '응웬반A 체류연장 요청문',
-    source: 'AI_CANDIDATE',
-    status: 'READY_FOR_REVIEW',
-    due_date: dateFromToday(1),
-  }),
-  task('T-2', {
-    title: '계약 정보 보완',
-    status: 'NEEDS_INFO',
-    due_date: dateFromToday(5),
-  }),
-  task('T-3', {
-    title: '외국인등록증 사본 제출',
-    status: 'WAITING_WORKER',
-    due_date: dateFromToday(0),
-  }),
-  task('T-4', {
-    title: 'Agent 생성 체류연장 초안',
-    source: 'AI_CANDIDATE',
-    status: 'DRAFT',
-    due_date: dateFromToday(10),
-  }),
-  task('T-5', {
-    title: '완료된 업무',
-    status: 'COMPLETED',
-    due_date: dateFromToday(-1),
-  }),
-]
-
-function taskPage(
-  items: TaskSummaryResponse[],
-  totalElements = items.length,
-): TaskPageResponse {
-  return {
-    items,
-    page: 0,
-    size: 100,
-    total_elements: totalElements,
-    total_pages: totalElements > 100 ? 2 : 1,
-  }
+const EMPTY_RESPONSE: DashboardTodayResponse = {
+  summary_counts: {
+    pending_approval: 0,
+    due_today: 0,
+    needs_info: 0,
+    worker_response: 0,
+  },
+  priority_tasks: [],
+  upcoming_7_days: [],
+  recommendations: {
+    connected_count: 0,
+    prepared: [],
+    review: [],
+    after_approval: [],
+  },
+  approval_count: 0,
+  worker_response_count: 0,
 }
 
 function TaskDetailProbe() {
   const { taskId } = useParams()
   return <p>업무 상세 {taskId}</p>
+}
+
+function WorkerDetailProbe() {
+  const { workerId } = useParams()
+  return <p>근로자 상세 {workerId}</p>
 }
 
 function WorkCreateProbe() {
@@ -101,21 +109,29 @@ function WorkCreateProbe() {
   return <p>업무 생성 {prefill}</p>
 }
 
+function WorkListProbe() {
+  const location = useLocation()
+  return <p>{`업무함 ${location.search}`}</p>
+}
+
 function renderPage() {
   return render(
     <MemoryRouter initialEntries={['/dashboard']}>
-      <Routes>
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/tasks/new" element={<WorkCreateProbe />} />
-        <Route path="/tasks" element={<p>업무함</p>} />
-        <Route path="/tasks/:taskId" element={<TaskDetailProbe />} />
-      </Routes>
+      <DashboardTodayProvider>
+        <Routes>
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/tasks/new" element={<WorkCreateProbe />} />
+          <Route path="/tasks" element={<WorkListProbe />} />
+          <Route path="/tasks/:taskId" element={<TaskDetailProbe />} />
+          <Route path="/workers/:workerId/detail" element={<WorkerDetailProbe />} />
+        </Routes>
+      </DashboardTodayProvider>
     </MemoryRouter>,
   )
 }
 
 beforeEach(() => {
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(taskPage(TASKS))))
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(TODAY_RESPONSE)))
 })
 
 afterEach(() => {
@@ -123,43 +139,108 @@ afterEach(() => {
 })
 
 describe('DashboardPage', () => {
-  it('renders metrics and work rows from the Task API response', async () => {
+  it('renders the Server Today projection without calculating from the Task list', async () => {
     renderPage()
 
     expect(
       await screen.findByRole('heading', {
-        name: '지금 확인이 필요한 승인 1건이 있습니다.',
+        name: '오늘의 업무를 확인하세요.',
       }),
     ).toBeInTheDocument()
-    expect(screen.getAllByText('1건 ›')).toHaveLength(4)
+    expect(screen.getByRole('button', { name: '승인 대기 2건 업무함에서 보기' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '오늘 마감 1건 업무함에서 보기' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '정보 보완 1건 업무함에서 보기' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '응답 대기 3건 업무함에서 보기' })).toBeInTheDocument()
     expect(screen.getAllByText('응웬반A 체류연장 요청문').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('외국인등록증 사본 제출').length).toBeGreaterThan(0)
-    expect(screen.queryByText('완료된 업무')).not.toBeInTheDocument()
+    expect(screen.getAllByText('응웬반A').length).toBeGreaterThan(0)
+    expect(screen.getByText(/처리 기한 .*D-1/)).toBeInTheDocument()
+    expect(screen.getAllByText('담당자').length).toBeGreaterThan(0)
+    expect(screen.getByText('체류기간 만료')).toBeInTheDocument()
+    expect(screen.getByText('여권 사본 만료')).toBeInTheDocument()
 
     const requestedUrl = String(vi.mocked(fetch).mock.calls[0][0])
-    expect(requestedUrl).toContain('/tasks?')
-    expect(requestedUrl).toContain('size=100')
+    expect(requestedUrl).toContain('/dashboard/today?timezone=Asia%2FSeoul')
+    expect(requestedUrl).not.toContain('/tasks?')
   })
 
-  it('uses actual Task status groups in the Agent prepared panel', async () => {
+  it('renders the recommendation groups returned by the Today API', async () => {
     renderPage()
 
     expect(await screen.findByText('Agent 생성 초안 · 1건')).toBeInTheDocument()
-    expect(screen.getByText('담당자 확인 필요 · 2건')).toBeInTheDocument()
+    expect(screen.getByText('담당자 확인 필요 · 1건')).toBeInTheDocument()
     expect(screen.getByText('응답·기관 대기 · 1건')).toBeInTheDocument()
+    expect(screen.getByText('연결된 업무 4건')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Agent 작업 공간' })).toBeInTheDocument()
     expect(screen.getAllByText('Agent 생성 체류연장 초안').length).toBeGreaterThan(0)
   })
 
-  it('opens the actual Task ID from the priority approval', async () => {
+  it('keeps the dashboard hierarchy focused on the three main work regions', async () => {
+    renderPage()
+
+    expect(
+      await screen.findByRole('region', { name: 'Agent에게 새 업무 요청' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: '담당자 우선 업무' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Agent 작업 공간' })).toBeInTheDocument()
+    expect(screen.queryByText('현재 화면 정보')).not.toBeInTheDocument()
+    expect(screen.queryByText('7일 기한')).not.toBeInTheDocument()
+  })
+
+  it('keeps the dashboard concise and links to the full work lists', async () => {
+    const previewResponse: DashboardTodayResponse = {
+      ...TODAY_RESPONSE,
+      priority_tasks: Array.from({ length: 5 }, (_, index) => ({
+        ...TODAY_RESPONSE.priority_tasks[0],
+        task_id: `T-PREVIEW-${index + 1}`,
+        worker_id: `W-PREVIEW-${index + 1}`,
+        title: `우선 업무 ${index + 1}`,
+      })),
+      upcoming_7_days: Array.from({ length: 6 }, (_, index) => ({
+        ...TODAY_RESPONSE.upcoming_7_days[0],
+        worker_id: `W-EXPIRY-${index + 1}`,
+        display_name: `만료 근로자 ${index + 1}`,
+      })),
+    }
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(previewResponse))
+
+    renderPage()
+
+    expect(await screen.findByRole('button', { name: '전체 업무 보기' })).toBeInTheDocument()
+    expect(screen.getByText('우선 업무 4')).toBeInTheDocument()
+    expect(screen.queryByText('우선 업무 5')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '전체 6건 보기' })).toBeInTheDocument()
+    expect(screen.getByText('만료 근로자 4')).toBeInTheDocument()
+    expect(screen.queryByText('만료 근로자 5')).not.toBeInTheDocument()
+  })
+
+  it('opens the actual Task ID from priority and recommendation items', async () => {
     const user = userEvent.setup()
     renderPage()
 
     await user.click((await screen.findAllByRole('button', { name: '승인 검토' }))[0])
-
     expect(await screen.findByText('업무 상세 T-1')).toBeInTheDocument()
   })
 
-  it('shows the loading state while the Task API is pending', () => {
+  it('opens the work inbox with the selected dashboard condition', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(
+      await screen.findByRole('button', { name: '정보 보완 1건 업무함에서 보기' }),
+    )
+
+    expect(await screen.findByText('업무함 ?focus=needs-info')).toBeInTheDocument()
+  })
+
+  it('opens the worker detail from an upcoming expiry item', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: /응웬반A.*체류기간 만료/ }))
+    expect(await screen.findByText('근로자 상세 W-1')).toBeInTheDocument()
+  })
+
+  it('shows the loading state while the Today API is pending', () => {
     vi.mocked(fetch).mockReturnValue(new Promise(() => {}))
     renderPage()
 
@@ -167,18 +248,18 @@ describe('DashboardPage', () => {
     expect(screen.queryByText(/지금 확인이 필요한 승인/)).not.toBeInTheDocument()
   })
 
-  it('shows an honest empty state when no task exists', async () => {
-    vi.mocked(fetch).mockResolvedValue(jsonResponse(taskPage([])))
+  it('shows an honest empty state when the Today projection is empty', async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(EMPTY_RESPONSE))
     renderPage()
 
     expect(await screen.findByText('등록된 업무가 없습니다')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '업무 만들기' })).toBeInTheDocument()
   })
 
-  it('shows an error state and retries the Task API request', async () => {
+  it('shows an error state and retries the Today API request', async () => {
     vi.mocked(fetch)
       .mockRejectedValueOnce(new TypeError('network'))
-      .mockResolvedValueOnce(jsonResponse(taskPage(TASKS)))
+      .mockResolvedValueOnce(jsonResponse(TODAY_RESPONSE))
     const user = userEvent.setup()
     renderPage()
 
@@ -188,22 +269,16 @@ describe('DashboardPage', () => {
     expect((await screen.findAllByText('응웬반A 체류연장 요청문')).length).toBeGreaterThan(0)
   })
 
-  it('renders a safe cap notice when the API has more than 100 tasks', async () => {
-    vi.mocked(fetch).mockResolvedValue(jsonResponse(taskPage(TASKS, 101)))
-    renderPage()
-
-    expect(await screen.findByText(/최근 100건 기준입니다/)).toBeInTheDocument()
-  })
-
   it('fills the input from a prompt chip and forwards it on submit', async () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(screen.getByRole('button', { name: AI_REQUEST_PROMPT_CHIPS[0] }))
-    const requestInput = screen.getByRole('textbox', { name: 'Agent 업무 요청' })
+    await user.click(await screen.findByRole('button', { name: AI_REQUEST_PROMPT_CHIPS[0] }))
+    const requestInput = screen.getByRole('textbox', { name: '업무 내용' })
     expect(requestInput).toHaveValue(AI_REQUEST_PROMPT_CHIPS[0])
+    expect(requestInput).toHaveFocus()
 
-    await user.click(screen.getByRole('button', { name: '업무 요청 계속하기' }))
+    await user.click(screen.getByRole('button', { name: '업무 분석' }))
 
     expect(await screen.findByText(`업무 생성 ${AI_REQUEST_PROMPT_CHIPS[0]}`)).toBeInTheDocument()
   })
@@ -212,7 +287,7 @@ describe('DashboardPage', () => {
     const user = userEvent.setup()
     renderPage()
 
-    const requestInput = screen.getByRole('textbox', { name: 'Agent 업무 요청' })
+    const requestInput = await screen.findByRole('textbox', { name: '업무 내용' })
     await user.type(requestInput, '응웬반A 체류기간 연장 준비{Enter}')
 
     expect(await screen.findByText('업무 생성 응웬반A 체류기간 연장 준비')).toBeInTheDocument()

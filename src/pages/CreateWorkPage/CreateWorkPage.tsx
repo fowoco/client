@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { ApiError, getErrorMessage } from '../../api/errors'
+import { createAiRun } from '../../api/aiRuns'
 import { Button } from '../../components/ui/Button/Button'
 import { WorkflowStepIndicator } from '../../components/ui/WorkflowStepIndicator/WorkflowStepIndicator'
 import { useToastStore } from '../../store/toastStore'
@@ -19,6 +21,11 @@ import {
   type InfoSourceTone,
 } from './createWorkData'
 import { ImportWizardModal } from './importWizard/ImportWizardModal'
+import {
+  saveActiveWorkRequestDraft,
+  saveAiRunWorkRequestDraft,
+  type WorkRequestDraft,
+} from './workRequestDraft'
 
 const TASK_STATUS_TONE: Record<string, string> = {
   current: 'pillBrand',
@@ -36,14 +43,40 @@ export function CreateWorkPage() {
   const navigate = useNavigate()
   const location = useLocation()
   // HOME-001 대시보드의 AI 요청 프롬프트 칩에서 넘어온 경우 선택한 문구를 원본 요청으로 보여준다.
-  const prefill = (location.state as { prefill?: string } | null)?.prefill
-  const originalRequest = prefill ?? DEFAULT_ORIGINAL_REQUEST
+  const routeState = location.state as { prefill?: string; request?: string } | null
+  const originalRequest = routeState?.request ?? routeState?.prefill ?? DEFAULT_ORIGINAL_REQUEST
   const [importWizardOpen, setImportWizardOpen] = useState(false)
+  const [analyzing, setAnalyzing] = useState(false)
+  const [analysisError, setAnalysisError] = useState<string | null>(null)
   const showToast = useToastStore((state) => state.showToast)
 
-  function handleAnalyze() {
-    // TODO(backend): POST /api/work-items/analyze { request } -> 분류·필수정보 확인 결과 반영
-    navigate('/tasks/new/review')
+  async function handleAnalyze() {
+    const instruction = originalRequest.trim()
+    if (instruction === '' || analyzing) return
+
+    setAnalyzing(true)
+    setAnalysisError(null)
+    try {
+      // UI 분류값이나 Intent 코드를 붙이지 않고 사용자가 입력한 원문만 전달한다.
+      const aiRun = await createAiRun(instruction, globalThis.crypto.randomUUID())
+      const draft: WorkRequestDraft = {
+        request: originalRequest,
+        mode: 'nl',
+        workerId: '',
+        attachments: [],
+      }
+      saveActiveWorkRequestDraft(draft)
+      saveAiRunWorkRequestDraft(aiRun.ai_run_id, draft)
+      navigate(`/tasks/new/review?aiRunId=${encodeURIComponent(aiRun.ai_run_id)}`, {
+        state: { aiRun, draft },
+      })
+    } catch (error) {
+      setAnalysisError(
+        error instanceof ApiError ? getErrorMessage(error) : '요청을 분석하지 못했습니다.',
+      )
+    } finally {
+      setAnalyzing(false)
+    }
   }
 
   function handleEditRequest() {
@@ -164,9 +197,17 @@ export function CreateWorkPage() {
           <Button variant="secondary" onClick={handleEditRequest}>
             원문 수정
           </Button>
-          <Button onClick={handleAnalyze}>정보 보완</Button>
+          <Button onClick={handleAnalyze} isLoading={analyzing} disabled={originalRequest.trim() === ''}>
+            정보 보완
+          </Button>
         </div>
       </div>
+
+      {analysisError && (
+        <p className={styles.fieldError} role="alert">
+          {analysisError}
+        </p>
+      )}
 
       <ImportWizardModal open={importWizardOpen} onClose={() => setImportWizardOpen(false)} />
     </div>

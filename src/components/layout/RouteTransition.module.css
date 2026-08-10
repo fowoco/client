@@ -2,6 +2,24 @@
   animation: fadeIn var(--fowoco-motion-base) var(--fowoco-easing-decelerate);
 }
 
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--fowoco-spacing-8);
+  min-height: 240px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.loadingDot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--fowoco-radius-999);
+  background: var(--brand-primary);
+  animation: loadingPulse 900ms ease-in-out infinite alternate;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -11,5 +29,24 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes loadingPulse {
+  from {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade,
+  .loadingDot {
+    animation: none;
   }
 }

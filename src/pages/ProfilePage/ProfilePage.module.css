@@ -32,7 +32,8 @@
   padding: var(--fowoco-spacing-24);
   background: var(--surface-default);
   border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-8);
+  border-radius: var(--fowoco-radius-10);
+  box-shadow: var(--shadow-sm);
 }
 
 .avatar {
@@ -128,7 +129,8 @@
   padding: var(--fowoco-spacing-20);
   background: var(--surface-default);
   border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-8);
+  border-radius: var(--fowoco-radius-10);
+  box-shadow: var(--shadow-sm);
 }
 
 .cardTitle {

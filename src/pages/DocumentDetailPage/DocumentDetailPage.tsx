@@ -1,21 +1,32 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { fetchDocuments } from '../../api/documents'
-import { getErrorMessage } from '../../api/errors'
+import { ApiError, getErrorMessage } from '../../api/errors'
+import { downloadFile } from '../../api/files'
 import { Button } from '../../components/ui/Button/Button'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import { useApiQuery } from '../../hooks/useApiQuery'
+import { useToastStore } from '../../store/toastStore'
+import { saveBlobAsFile } from '../../utils/fileDownload'
 import { getDocumentViewModel } from '../../view-models/documentViewModel'
+import { DocumentOcrPanel } from './DocumentOcrPanel'
 import styles from './DocumentDetailPage.module.css'
 
 export function DocumentDetailPage() {
   const { documentId } = useParams()
   const navigate = useNavigate()
+  const [downloading, setDownloading] = useState(false)
+  const showToast = useToastStore((state) => state.showToast)
 
   // GET /api/v1/documents/{id} 단건 조회가 없어서(#57 조사 결과), 목록을 통째로 받아
   // worker_document_id로 찾는다.
-  const { status: fetchStatus, data, error, refetch } = useApiQuery(useCallback(() => fetchDocuments({ size: 100 }), []))
+  const {
+    status: fetchStatus,
+    data,
+    error,
+    refetch,
+  } = useApiQuery(useCallback(() => fetchDocuments({ size: 100 }), []))
   const document = data?.items.find((item) => item.worker_document_id === documentId) ?? null
 
   if (fetchStatus === 'loading') {
@@ -48,12 +59,34 @@ export function DocumentDetailPage() {
   if (!document) {
     return (
       <div className={styles.stateWrap}>
-        <EmptyState kind="empty" title="서류를 찾을 수 없습니다" body="서류 목록에서 다시 확인해 주세요." />
+        <EmptyState
+          kind="empty"
+          title="서류를 찾을 수 없습니다"
+          body="서류 목록에서 다시 확인해 주세요."
+        />
       </div>
     )
   }
 
   const view = getDocumentViewModel(document)
+  const fileId = document.file_id
+
+  async function handleDownload() {
+    if (!fileId || downloading) return
+    setDownloading(true)
+    try {
+      const downloaded = await downloadFile(fileId)
+      saveBlobAsFile(downloaded.blob, downloaded.file_name ?? view.typeLabel)
+    } catch (downloadError) {
+      showToast(
+        downloadError instanceof ApiError
+          ? getErrorMessage(downloadError)
+          : '첨부 파일을 내려받지 못했습니다.',
+      )
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   return (
     <div>
@@ -72,11 +105,19 @@ export function DocumentDetailPage() {
       </p>
 
       <div className={styles.sectionCard}>
-        <h2 className={styles.cardTitle}>첨부 미리보기</h2>
-        {/* TODO(backend): file_id로 실제 파일을 내려받는 API가 아직 없음 */}
+        <h2 className={styles.cardTitle}>첨부 파일</h2>
         <div className={styles.previewBox}>
           <p className={styles.previewFileName}>{view.typeLabel}</p>
-          <p className={styles.previewNote}>{view.fileLabel} · 미리보기 API 연결 전입니다.</p>
+          <p className={styles.previewNote}>
+            {fileId
+              ? '사업장 권한을 확인한 뒤 원본 파일을 내려받습니다.'
+              : '이 문서에는 연결된 파일이 없습니다.'}
+          </p>
+          {fileId && (
+            <Button variant="secondary" disabled={downloading} onClick={handleDownload}>
+              {downloading ? '다운로드 중…' : '원본 다운로드'}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -86,21 +127,18 @@ export function DocumentDetailPage() {
           <button
             type="button"
             className={styles.relatedLink}
-            onClick={() => navigate(`/workers/${document.worker_id}`)}
+            onClick={() => navigate(`/workers/${document.worker_id}/detail`)}
           >
             {document.display_name ?? '근로자'} 정보 →
           </button>
         </div>
       </div>
 
-      <div className={styles.actionDock}>
-        <Button variant="secondary" disabled>
-          반려
-        </Button>
-        <Button disabled>
-          {view.reviewable ? '확인 완료 API 대기' : view.actionLabel}
-        </Button>
-      </div>
+      <DocumentOcrPanel
+        documentId={document.worker_document_id}
+        documentType={document.document_type}
+        fileId={document.file_id}
+      />
     </div>
   )
 }

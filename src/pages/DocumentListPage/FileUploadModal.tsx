@@ -1,10 +1,8 @@
-import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from 'react'
+import { useRef, useState, type ChangeEvent, type DragEvent } from 'react'
+import { ApiError, getErrorMessage } from '../../api/errors'
+import { uploadFile } from '../../api/files'
 import { Modal } from '../../components/ui/Modal/Modal'
 import styles from './FileUploadModal.module.css'
-
-// TODO(backend): server에 파일 업로드 API가 아직 없다(#158 조사 결과 — MultipartFile을 받는
-// 컨트롤러가 fowoco/server에 전혀 없음). API가 생기면 이 setTimeout 시뮬레이션을
-// POST /api/v1/files(multipart)로 교체하고, 반환된 file_id를 문서 분석/AiRun 로직에 전달한다.
 
 type UploadStatus = 'uploading' | 'done' | 'error'
 
@@ -18,8 +16,7 @@ interface UploadEntry {
 }
 
 const ALLOWED_EXTENSIONS = ['.hwp', '.hwpx']
-const MAX_SIZE_BYTES = 10 * 1024 * 1024
-const UPLOAD_DELAY_MS = 900
+const MAX_SIZE_BYTES = 20 * 1024 * 1024
 
 function isAllowedFile(file: File): boolean {
   const name = file.name.toLowerCase()
@@ -41,14 +38,25 @@ export function FileUploadModal({ open, onClose }: FileUploadModalProps) {
   const [entries, setEntries] = useState<UploadEntry[]>([])
   const [dragActive, setDragActive] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([])
 
-  useEffect(() => {
-    const pendingTimers = timers.current
-    return () => {
-      for (const timer of pendingTimers) clearTimeout(timer)
+  async function uploadEntry(file: File, id: string) {
+    try {
+      const uploaded = await uploadFile({ file, purpose: 'document_automation' })
+      setEntries((prev) =>
+        prev.map((entry) =>
+          entry.id === id ? { ...entry, status: 'done', fileId: uploaded.file_id } : entry,
+        ),
+      )
+    } catch (error) {
+      const errorMessage =
+        error instanceof ApiError ? getErrorMessage(error) : '파일을 업로드하지 못했습니다. 다시 시도해 주세요.'
+      setEntries((prev) =>
+        prev.map((entry) =>
+          entry.id === id ? { ...entry, status: 'error', errorMessage } : entry,
+        ),
+      )
     }
-  }, [])
+  }
 
   function addFiles(files: FileList | null) {
     if (!files) return
@@ -73,15 +81,7 @@ export function FileUploadModal({ open, onClose }: FileUploadModalProps) {
       }
 
       setEntries((prev) => [...prev, { id, name: file.name, size: file.size, status: 'uploading' }])
-
-      const timer = setTimeout(() => {
-        setEntries((prev) =>
-          prev.map((entry) =>
-            entry.id === id ? { ...entry, status: 'done', fileId: `file-${Math.random().toString(36).slice(2, 10)}` } : entry,
-          ),
-        )
-      }, UPLOAD_DELAY_MS)
-      timers.current.push(timer)
+      void uploadEntry(file, id)
     }
   }
 
@@ -123,7 +123,7 @@ export function FileUploadModal({ open, onClose }: FileUploadModalProps) {
         <button type="button" className={styles.browseButton} onClick={() => inputRef.current?.click()}>
           파일 탐색기에서 선택
         </button>
-        <p className={styles.dropzoneHint}>HWP, HWPX · 최대 10MB</p>
+        <p className={styles.dropzoneHint}>HWP, HWPX · 최대 20MB</p>
         <input
           ref={inputRef}
           type="file"
@@ -141,7 +141,7 @@ export function FileUploadModal({ open, onClose }: FileUploadModalProps) {
             <li key={entry.id} className={styles.fileRow}>
               <div className={styles.fileInfo}>
                 <p className={styles.fileName}>{entry.name}</p>
-                <p className={styles.fileMeta}>
+                <p className={styles.fileMeta} aria-live="polite">
                   {formatFileSize(entry.size)}
                   {entry.status === 'uploading' && ' · 업로드 중...'}
                   {entry.status === 'done' && ` · 업로드 완료 · ${entry.fileId}`}
@@ -158,8 +158,13 @@ export function FileUploadModal({ open, onClose }: FileUploadModalProps) {
                 }`}
                 aria-hidden="true"
               />
-              <button type="button" className={styles.removeButton} onClick={() => handleRemove(entry.id)}>
-                삭제
+              <button
+                type="button"
+                className={styles.removeButton}
+                onClick={() => handleRemove(entry.id)}
+                disabled={entry.status === 'uploading'}
+              >
+                목록에서 제거
               </button>
             </li>
           ))}

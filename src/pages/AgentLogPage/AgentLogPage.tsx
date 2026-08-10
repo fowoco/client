@@ -7,7 +7,7 @@ import { Dropdown } from '../../components/ui/Dropdown/Dropdown'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { ListRow } from '../../components/ui/ListRow/ListRow'
 import { useApiQuery } from '../../hooks/useApiQuery'
-import { ACTOR_TYPE_TO_AGENT_SOURCE, AUDIT_ACTION_LABEL } from '../../utils/auditLabels'
+import { ACTOR_TYPE_TO_AGENT_SOURCE, getAuditActionLabel } from '../../utils/auditLabels'
 import { formatEventTime } from '../../utils/datetime'
 import styles from './AgentLogPage.module.css'
 
@@ -123,7 +123,7 @@ export function AgentLogPage() {
               {logs.map((log) => (
                 <ListRow key={log.audit_event_id} columns="120px 1fr 140px 140px">
                   <span className={styles.time}>{formatEventTime(log.created_at)}</span>
-                  <p className={styles.logDescription}>{log.change_summary ?? AUDIT_ACTION_LABEL[log.action]}</p>
+                  <p className={styles.logDescription}>{log.change_summary ?? getAuditActionLabel(log.action)}</p>
                   <AgentSourceLabel source={ACTOR_TYPE_TO_AGENT_SOURCE[log.actor_type]} />
                   {log.target_type === 'TASK' ? (
                     <button

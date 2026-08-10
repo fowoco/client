@@ -36,6 +36,13 @@ export interface RecordTaskEvidenceBody {
   recorded_at?: string
 }
 
+export interface RecordExternalSubmissionBody {
+  expected_version: number
+  destination: string
+  safe_reference: string
+  submitted_at?: string
+}
+
 export interface TaskActionResponse {
   resource_id: string
   task_id: string
@@ -48,6 +55,7 @@ export function buildTaskApprovalSnapshot(task: TaskDetailResponse): RequestTask
     expected_version: task.version,
     ai_snapshot: null,
     hr_snapshot: {
+      target_type: task.target_type,
       worker_id: task.worker_id,
       task_type: task.task_type,
       workflow_id: task.workflow_id,
@@ -102,6 +110,16 @@ export function recordTaskEvidence(
     method: 'POST',
     body: JSON.stringify(body),
   })
+}
+
+export function recordExternalSubmission(
+  taskId: string,
+  body: RecordExternalSubmissionBody,
+): Promise<TaskActionResponse> {
+  return apiFetch<TaskActionResponse>(
+    `/tasks/${encodeURIComponent(taskId)}/external-submissions`,
+    { method: 'POST', body: JSON.stringify(body) },
+  )
 }
 
 export function completeTask(taskId: string, expectedVersion: number): Promise<TaskActionResponse> {

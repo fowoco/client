@@ -13,9 +13,6 @@ import { getOperationalDateViewModel } from '../../view-models/dateViewModel'
 import { RegisterDocumentModal } from './overlays/RegisterDocumentModal'
 import styles from './WorkerDetailPage.module.css'
 
-// 제품이 E-9(비전문취업) 근로자를 대상으로 하는 만큼 비자 유형은 항상 E-9다.
-const VISA_TYPE = 'E-9'
-
 export function WorkerDetailPage() {
   const { workerId } = useParams()
 
@@ -61,6 +58,15 @@ export function WorkerDetailPage() {
   const stayExpiry = getOperationalDateViewModel('STAY_EXPIRY', worker.stay_expiry_date)
   const contractStart = getOperationalDateViewModel('CONTRACT_START', worker.contract_start_date)
   const contractEnd = getOperationalDateViewModel('CONTRACT_END', worker.contract_end_date)
+  const employmentPermitEnd = getOperationalDateViewModel(
+    'EMPLOYMENT_PERMIT_END',
+    worker.employment_permit_end_date,
+  )
+  const employmentActivityEnd = getOperationalDateViewModel(
+    'EMPLOYMENT_ACTIVITY_END',
+    worker.employment_activity_end_date,
+  )
+  const visaType = worker.visa_type ?? '미등록'
 
   return (
     <div>
@@ -77,7 +83,7 @@ export function WorkerDetailPage() {
         )}
       </div>
       <p className={styles.meta}>
-        {worker.nationality_code} · {VISA_TYPE} | 연락처·사번 준비 중
+        {worker.nationality_code} · {visaType} | 연락처·사번 준비 중
       </p>
 
       <div className={styles.sectionCard}>
@@ -88,7 +94,7 @@ export function WorkerDetailPage() {
           </button>
         </div>
         <DetailRow label="국적" value={worker.nationality_code} />
-        <DetailRow label="비자 유형" value={VISA_TYPE} />
+        <DetailRow label="비자 유형" value={visaType} />
         {/* TODO(#48): worker_sensitive_data API 연동 후 사번·연락처 표시 */}
         <DetailRow label="사번" value="준비 중" />
         <DetailRow label="연락처" value="준비 중" />
@@ -99,6 +105,8 @@ export function WorkerDetailPage() {
         />
         <DetailRow label={contractStart.label} value={contractStart.display} />
         <DetailRow label={contractEnd.label} value={contractEnd.display} />
+        <DetailRow label={employmentPermitEnd.label} value={employmentPermitEnd.display} />
+        <DetailRow label={employmentActivityEnd.label} value={employmentActivityEnd.display} />
       </div>
 
       <div className={styles.sectionCard}>

@@ -89,6 +89,12 @@
   cursor: pointer;
 }
 
+.textLink:disabled,
+.chip:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
 .primaryButton {
   height: 48px;
   padding: 0 24px;
@@ -333,7 +339,8 @@
   padding: 20px;
   background: var(--surface-default);
   border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-8);
+  border-radius: var(--fowoco-radius-10);
+  box-shadow: var(--shadow-sm);
   font-size: 13px;
   font-family: inherit;
   color: var(--text-primary);

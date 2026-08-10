@@ -13,11 +13,43 @@
   color: var(--text-secondary);
 }
 
+.requestList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.requestCard {
+  padding: 16px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-10);
+}
+
+.requestCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.requestCardHeader span {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.requestTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
 .dropzone {
   width: 100%;
-  min-height: 148px;
-  margin-top: 20px;
-  padding: 20px;
+  min-height: 124px;
+  margin-top: 12px;
+  padding: 16px;
   background: var(--surface-default);
   border: 2px solid var(--brand-primary);
   border-radius: var(--fowoco-radius-8);
@@ -136,6 +168,11 @@
   font-weight: 500;
   color: var(--text-secondary);
   cursor: pointer;
+}
+
+.removeFile:disabled {
+  cursor: wait;
+  opacity: 0.5;
 }
 
 .helpLabel {

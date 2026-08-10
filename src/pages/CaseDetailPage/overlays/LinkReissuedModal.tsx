@@ -9,6 +9,8 @@ export interface LinkReissuedModalProps {
   submission: ReissueSubmission | null
   workerUrl: string | null
   expiresAt: string | null
+  canRecordDelivery: boolean
+  onRecordDelivery: () => void
   onClose: () => void
 }
 
@@ -17,6 +19,8 @@ export function LinkReissuedModal({
   submission,
   workerUrl,
   expiresAt,
+  canRecordDelivery,
+  onRecordDelivery,
   onClose,
 }: LinkReissuedModalProps) {
   const showToast = useToastStore((state) => state.showToast)
@@ -60,8 +64,13 @@ export function LinkReissuedModal({
         <button type="button" className={styles.textLink} onClick={onClose}>
           닫기
         </button>
-        <button type="button" className={styles.primaryButton} onClick={handleCopyLink}>
-          새 링크 복사
+        <button
+          type="button"
+          className={styles.primaryButton}
+          onClick={onRecordDelivery}
+          disabled={!canRecordDelivery}
+        >
+          전달 완료 기록
         </button>
       </div>
     </Modal>

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { fetchWorkerById, fetchWorkers } from './workers'
+import { fetchWorkerById, fetchWorkers, patchWorker, registerWorker } from './workers'
 
 function jsonResponse(body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -47,5 +47,43 @@ describe('fetchWorkerById', () => {
 
     const [url] = vi.mocked(fetch).mock.calls[0]
     expect(url).toContain('/workers/W-1')
+  })
+})
+
+describe('worker E-9 fields', () => {
+  it('sends visa and employment dates when registering a worker', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ worker_id: 'W-2' }))
+
+    await registerWorker({
+      display_name: '응웬반A',
+      visa_type: 'E-9',
+      employment_permit_end_date: '2028-03-01',
+      employment_activity_end_date: '2028-03-01',
+    })
+
+    const [, init] = vi.mocked(fetch).mock.calls[0]
+    expect(JSON.parse(init?.body as string)).toEqual({
+      display_name: '응웬반A',
+      visa_type: 'E-9',
+      employment_permit_end_date: '2028-03-01',
+      employment_activity_end_date: '2028-03-01',
+    })
+  })
+
+  it('keeps expected_version when patching employment dates', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ worker_id: 'W-2' }))
+
+    await patchWorker('W-2', {
+      employment_permit_end_date: '2028-04-01',
+      expected_version: 3,
+    })
+
+    const [url, init] = vi.mocked(fetch).mock.calls[0]
+    expect(url).toContain('/workers/W-2')
+    expect(init?.method).toBe('PATCH')
+    expect(JSON.parse(init?.body as string)).toEqual({
+      employment_permit_end_date: '2028-04-01',
+      expected_version: 3,
+    })
   })
 })

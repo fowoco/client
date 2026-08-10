@@ -1,15 +1,16 @@
 .row {
-  display: flex;
-  align-items: center;
-  gap: var(--fowoco-spacing-16);
+  display: grid;
+  grid-template-columns: 4px minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 14px;
   width: 100%;
-  min-height: 56px;
-  padding: 8px var(--fowoco-spacing-20);
+  min-height: 88px;
+  padding: 12px 14px;
   background: var(--surface-default);
   border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-8);
+  border-radius: var(--fowoco-radius-10);
+  box-shadow: var(--shadow-sm);
   text-align: left;
-  cursor: pointer;
   transition:
     border-color var(--fowoco-motion-fast) var(--fowoco-easing-standard),
     box-shadow var(--fowoco-motion-fast) var(--fowoco-easing-standard);
@@ -17,28 +18,29 @@
 
 .row:hover {
   border-color: var(--brand-primary);
-  box-shadow: 0 1px 2px rgba(7, 132, 127, 0.12);
+  box-shadow: var(--shadow-md);
 }
 
-.row:focus-visible {
-  outline: 2px solid var(--brand-primary);
-  outline-offset: 2px;
+.rowFlat {
+  min-height: 82px;
+  padding: 12px 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border-default);
+  border-radius: 0;
+  box-shadow: none;
 }
 
-@media (max-width: 720px) {
-  .row {
-    flex-wrap: wrap;
-  }
-
-  .next {
-    flex-basis: 100%;
-  }
+.rowFlat:hover {
+  background: var(--surface-subtle);
+  border-color: var(--border-default);
+  box-shadow: none;
 }
 
 .rail {
-  flex-shrink: 0;
   width: 4px;
-  height: 40px;
+  height: 100%;
+  min-height: 56px;
   border-radius: var(--fowoco-radius-4);
   background: var(--status-warning);
 }
@@ -48,7 +50,7 @@
 }
 
 .railInfo {
-  background: #3976d3;
+  background: var(--status-info);
 }
 
 .railNeutral {
@@ -56,14 +58,39 @@
 }
 
 .content {
-  flex: 1;
   min-width: 0;
   display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+}
+
+.titleLine {
+  display: flex;
+  min-width: 0;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+}
+
+.worker {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 18px;
+  color: var(--text-primary);
+}
+
+.workerMissing {
+  padding: 1px 6px;
+  background: var(--surface-subtle);
+  border-radius: var(--fowoco-radius-999);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
 }
 
 .title {
+  flex: 1;
   min-width: 0;
   overflow: hidden;
   font-family: var(--font-sans);
@@ -79,6 +106,18 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
+}
+
+.actor {
+  font-size: 11px;
+  line-height: 17px;
+  color: var(--text-secondary);
+}
+
+.actor strong {
+  margin-left: 4px;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .status {
@@ -121,37 +160,80 @@
   color: var(--text-secondary);
 }
 
-.next {
-  flex-shrink: 0;
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.next,
+.evidence {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 120px;
-  height: 40px;
+  min-width: 88px;
+  height: 38px;
   padding: 8px 16px;
   border: 1px solid var(--border-default);
   border-radius: var(--fowoco-radius-6);
   font-family: var(--font-sans);
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 650;
   color: var(--text-primary);
   background: var(--surface-default);
+  cursor: pointer;
+}
+
+.next {
+  border-color: var(--brand-primary);
+  color: var(--fowoco-white);
+  background: var(--brand-primary);
+}
+
+.next:hover {
+  background: var(--brand-primary-hover);
+}
+
+.evidence:hover {
+  background: var(--surface-subtle);
+  border-color: var(--border-strong);
+}
+
+.next:focus-visible,
+.evidence:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
 }
 
 @media (max-width: 720px) {
+  .row {
+    grid-template-columns: 4px minmax(0, 1fr);
+  }
+
   .content {
-    flex: 1 1 calc(100% - 20px);
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 4px;
+    align-items: stretch;
   }
 
   .inlineMeta {
     flex-wrap: wrap;
   }
 
-  .next {
-    flex-basis: auto;
+  .actions {
+    grid-column: 2;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .next,
+  .evidence {
     width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .titleLine {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
   }
 }

@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import styles from './RouteTransition.module.css'
 
@@ -6,7 +7,16 @@ export function RouteTransition() {
 
   return (
     <div key={location.pathname} className={styles.fade}>
-      <Outlet />
+      <Suspense
+        fallback={
+          <div className={styles.loading} role="status" aria-live="polite">
+            <span className={styles.loadingDot} aria-hidden="true" />
+            화면을 불러오는 중입니다
+          </div>
+        }
+      >
+        <Outlet />
+      </Suspense>
     </div>
   )
 }

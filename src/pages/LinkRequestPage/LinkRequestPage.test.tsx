@@ -13,7 +13,9 @@ function jsonResponse(body: unknown, status = 200) {
 
 const VIEW = {
   guidance: '여권 사진면 사본을 제출해 주세요.',
+  language: 'vi',
   due_date: '2026-08-10',
+  requested_document_types: ['PASSPORT_COPY', 'CONTRACT'],
   allowed_responses: ['ACKNOWLEDGED', 'QUESTION', 'DOCUMENT_SUBMITTED'],
 }
 
@@ -33,6 +35,31 @@ describe('LinkRequestPage', () => {
 
     expect(await screen.findByText('여권 사진면 사본을 제출해 주세요.')).toBeInTheDocument()
     expect(screen.getByText(/2026.08.10/)).toBeInTheDocument()
+    expect(screen.getByText('베트남어 안내')).toBeInTheDocument()
+    expect(screen.getByText('제출할 서류 2개')).toBeInTheDocument()
+    expect(screen.getByText('근로계약서')).toBeInTheDocument()
+  })
+
+  it('shows a retryable preparing state for a link without ready draft content', async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({
+      timestamp: '2026-08-08T00:00:00Z',
+      status: 409,
+      code: 'WORKER_LINK_CONTENT_NOT_READY',
+      message: '근로자에게 표시할 요청 안내가 아직 준비되지 않았습니다.',
+      path: '/api/v1/public/worker-links/token-1',
+      request_id: 'request-1',
+      field_errors: [],
+    }, 409))
+    render(
+      <MemoryRouter initialEntries={['/worker-portal/token-1']}>
+        <Routes>
+          <Route path="/worker-portal/:token" element={<LinkRequestPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByText('요청 내용을 준비하고 있습니다')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument()
   })
 
   it('keeps the token when navigating to the upload page', async () => {

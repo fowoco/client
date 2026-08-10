@@ -5,6 +5,44 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppLayout } from './AppLayout'
 import { NAV_ITEMS } from './navItems'
 
+const EMPTY_TODAY_RESPONSE = {
+  summary_counts: {
+    pending_approval: 0,
+    due_today: 0,
+    needs_info: 0,
+    worker_response: 0,
+  },
+  priority_tasks: [],
+  upcoming_7_days: [],
+  recommendations: {
+    connected_count: 0,
+    prepared: [],
+    review: [],
+    after_approval: [],
+  },
+  approval_count: 0,
+  worker_response_count: 0,
+}
+
+const EMPTY_NOTIFICATION_RESPONSE = {
+  items: [],
+  page: 0,
+  size: 20,
+  total_elements: 0,
+  total_pages: 0,
+}
+
+function jsonResponse(body: unknown) {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
+function requestUrl(input: RequestInfo | URL) {
+  return typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+}
+
 function renderLayout() {
   const router = createMemoryRouter(
     [{ element: <AppLayout />, children: [{ path: '/dashboard', element: <p>content</p> }] }],
@@ -28,6 +66,15 @@ function stubWorkingLocalStorage() {
 
 beforeEach(() => {
   stubWorkingLocalStorage()
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: RequestInfo | URL) => {
+      const url = requestUrl(input)
+      return Promise.resolve(
+        jsonResponse(url.includes('/notifications') ? EMPTY_NOTIFICATION_RESPONSE : EMPTY_TODAY_RESPONSE),
+      )
+    }),
+  )
 })
 
 afterEach(() => {
@@ -46,6 +93,63 @@ describe('AppLayout', () => {
     expect(screen.queryByRole('link', { name: '근로자' })).not.toBeInTheDocument()
   })
 
+  it('shows server-backed work shortcut counts and routes them to focused inbox views', async () => {
+    localStorage.setItem('fowoco.onboarding.completed', 'true')
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      const url = requestUrl(input)
+      return Promise.resolve(
+        jsonResponse(
+          url.includes('/notifications')
+            ? EMPTY_NOTIFICATION_RESPONSE
+            : {
+                ...EMPTY_TODAY_RESPONSE,
+                summary_counts: {
+                  pending_approval: 4,
+                  due_today: 1,
+                  needs_info: 2,
+                  worker_response: 3,
+                },
+              },
+        ),
+      )
+    })
+
+    renderLayout()
+
+    expect(await screen.findByRole('link', { name: '승인 대기 4' })).toHaveAttribute(
+      'href',
+      '/tasks?focus=pending-approval',
+    )
+    expect(screen.getByRole('link', { name: '정보 보완 2' })).toHaveAttribute(
+      'href',
+      '/tasks?focus=needs-info',
+    )
+    expect(screen.getByRole('link', { name: '응답 대기 3' })).toHaveAttribute(
+      'href',
+      '/tasks?focus=worker-response',
+    )
+    expect(screen.getByRole('link', { name: '오늘 마감 1' })).toHaveAttribute(
+      'href',
+      '/tasks?focus=due-today',
+    )
+  })
+
+  it('opens and closes the mobile sidebar without changing the route', async () => {
+    localStorage.setItem('fowoco.onboarding.completed', 'true')
+    const user = userEvent.setup()
+    renderLayout()
+
+    const openButton = screen.getByRole('button', { name: '사이드바 열기' })
+    expect(openButton).toHaveAttribute('aria-expanded', 'false')
+
+    await user.click(openButton)
+    expect(openButton).toHaveAttribute('aria-expanded', 'true')
+
+    const closeButtons = screen.getAllByRole('button', { name: '사이드바 닫기' })
+    await user.click(closeButtons[0])
+    expect(openButton).toHaveAttribute('aria-expanded', 'false')
+  })
+
   it('opens and closes the help modal', async () => {
     localStorage.setItem('fowoco.onboarding.completed', 'true')
     const user = userEvent.setup()
@@ -53,7 +157,8 @@ describe('AppLayout', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: '? 도움말' }))
+    await screen.findByRole('link', { name: '승인 대기 0' })
+    await user.click(screen.getByRole('button', { name: '도움말' }))
     expect(screen.getByRole('dialog', { name: '도움말' })).toBeInTheDocument()
 
     const closeButtons = screen.getAllByRole('button', { name: '닫기' })
@@ -105,7 +210,8 @@ describe('AppLayout', () => {
     const user = userEvent.setup()
     renderLayout()
 
-    await user.click(screen.getByRole('button', { name: '? 도움말' }))
+    await screen.findByRole('link', { name: '승인 대기 0' })
+    await user.click(screen.getByRole('button', { name: '도움말' }))
     await user.click(screen.getByRole('button', { name: '시작 가이드 다시 보기 →' }))
 
     expect(screen.queryByRole('dialog', { name: '도움말' })).not.toBeInTheDocument()

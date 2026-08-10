@@ -22,6 +22,13 @@ export function getWorkerRequestStateViewModel(
   if (source.responseReceivedAt && !source.responseReadAt) {
     return { state: 'APPROVAL_WAITING', label: '승인대기', description: '근로자 응답이 도착해 담당자 확인이 필요합니다.' }
   }
+  if (source.responseReceivedAt && source.responseReadAt) {
+    return {
+      state: 'REQUEST_SENT',
+      label: '요청전송',
+      description: '근로자 응답을 확인했습니다. 필요한 후속 업무를 진행해 주세요.',
+    }
+  }
   if (source.requestSentAt) {
     return { state: 'REQUEST_SENT', label: '요청전송', description: '요청을 전송했으며 근로자 응답을 기다립니다.' }
   }

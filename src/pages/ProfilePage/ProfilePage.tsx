@@ -5,6 +5,7 @@ import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
 import { Modal } from '../../components/ui/Modal/Modal'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import { useToastStore } from '../../store/toastStore'
+import { CompanySettingsPanel } from './CompanySettingsPanel'
 import {
   INITIAL_NOTIFICATION_PREFS,
   INITIAL_PROFILE_FIELDS,
@@ -115,8 +116,8 @@ export function ProfilePage() {
     <div>
       <div className={styles.headerRow}>
         <div>
-          <h1 className={styles.headline}>내 프로필</h1>
-          <p className={styles.description}>계정 정보와 개인 알림 설정을 관리합니다.</p>
+          <h1 className={styles.headline}>설정</h1>
+          <p className={styles.description}>계정 정보와 사업장 운영 설정을 관리합니다.</p>
         </div>
         {editing ? (
           <div className={styles.editActions}>
@@ -150,6 +151,8 @@ export function ProfilePage() {
           <p className={styles.summaryLastLoginDevice}>{PROFILE_SUMMARY.lastLoginDevice}</p>
         </div>
       </div>
+
+      <CompanySettingsPanel />
 
       <div className={styles.gridRow}>
         <div className={styles.card}>

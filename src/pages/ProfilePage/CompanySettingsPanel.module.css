@@ -1,0 +1,359 @@
+.section {
+  margin-top: 16px;
+  padding: 24px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-10);
+  box-shadow: var(--shadow-sm);
+}
+
+.sectionHeader,
+.memberHeader,
+.settingsFooter {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.eyebrow {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--brand-primary);
+}
+
+.sectionHeader h2,
+.memberHeader h3 {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.sectionHeader h2 {
+  font-size: 20px;
+}
+
+.sectionHeader p,
+.memberHeader p {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.permissionBadge,
+.memberHeader > span {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  background: var(--fowoco-teal-50);
+  border-radius: var(--fowoco-radius-999);
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--brand-primary);
+}
+
+.settingsFieldset {
+  min-width: 0;
+  margin: 20px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.settingsFieldset:disabled {
+  opacity: 0.78;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.policyGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.policyField {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.policyField > label,
+.evidenceHeader strong {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--text-primary);
+}
+
+.policyGrid select,
+.policyGrid input[type='number'] {
+  width: 100%;
+  height: 38px;
+  padding: 0 10px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.numberField {
+  position: relative;
+}
+
+.numberField input {
+  padding-right: 34px !important;
+}
+
+.numberField em {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 12px;
+  font-style: normal;
+  color: var(--text-secondary);
+}
+
+.evidenceHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-default);
+}
+
+.evidenceHeader span {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.evidenceTable {
+  margin-top: 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
+  overflow: hidden;
+}
+
+.evidenceRow {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  align-items: center;
+  min-height: 44px;
+  padding: 7px 12px;
+  border-top: 1px solid var(--border-default);
+}
+
+.evidenceRow:first-child {
+  border-top: 0;
+}
+
+.evidenceRow > strong {
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.evidenceRow > div {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.evidenceRow label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.evidenceRow input {
+  accent-color: var(--brand-primary);
+}
+
+.settingsFooter {
+  align-items: center;
+  margin-top: 16px;
+}
+
+.settingsFooter > span {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.saveError,
+.conflictNotice {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: var(--fowoco-radius-6);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.saveError {
+  background: var(--fowoco-red-50);
+  color: var(--status-critical);
+}
+
+.conflictNotice {
+  background: var(--fowoco-amber-50);
+  color: var(--text-primary);
+}
+
+.stateMessage {
+  margin: 18px 0 0;
+  padding: 18px;
+  background: var(--surface-subtle);
+  border-radius: var(--fowoco-radius-8);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.errorState {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 18px;
+  padding: 14px;
+  background: var(--fowoco-red-50);
+  border-radius: var(--fowoco-radius-8);
+}
+
+.errorState p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--status-critical);
+}
+
+.memberSection {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-default);
+}
+
+.memberHeader h3 {
+  font-size: 16px;
+}
+
+.memberList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.memberList li {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+  padding: 10px;
+  background: var(--surface-subtle);
+  border-radius: var(--fowoco-radius-8);
+}
+
+.memberAvatar {
+  display: inline-flex;
+  flex: 0 0 30px;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: var(--fowoco-teal-50);
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--brand-primary);
+}
+
+.memberIdentity {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.memberIdentity strong {
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memberIdentity small {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.memberStatus,
+.approvalBadge {
+  flex: 0 0 auto;
+  font-size: 10px;
+}
+
+.memberStatus {
+  color: var(--text-secondary);
+}
+
+.memberStatusActive {
+  color: var(--fowoco-green-600);
+}
+
+.approvalBadge {
+  padding: 3px 5px;
+  background: var(--fowoco-teal-50);
+  border-radius: var(--fowoco-radius-999);
+  color: var(--brand-primary);
+}
+
+.policyGrid select:focus-visible,
+.policyGrid input:focus-visible,
+.evidenceRow input:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 1px;
+}
+
+@media (max-width: 900px) {
+  .policyGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .evidenceRow {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 640px) {
+  .section {
+    padding: 18px;
+  }
+
+  .sectionHeader,
+  .memberHeader {
+    flex-direction: column;
+  }
+
+  .policyGrid,
+  .memberList {
+    grid-template-columns: 1fr;
+  }
+
+  .evidenceRow > div {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

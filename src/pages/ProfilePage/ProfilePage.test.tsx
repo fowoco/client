@@ -35,7 +35,7 @@ describe('ProfilePage', () => {
   it('renders the profile summary and read-only fields', () => {
     renderPage()
 
-    expect(screen.getByRole('heading', { name: '내 프로필' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '설정' })).toBeInTheDocument()
     expect(screen.getByText('김민지 HR')).toBeInTheDocument()
     expect(screen.getByText('010-0000-1234')).toBeInTheDocument()
     expect(screen.getByText('hr.demo@fowoco.example')).toBeInTheDocument()

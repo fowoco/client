@@ -7,8 +7,13 @@
 
 .pageHeader {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.pageHeader > div:first-child {
+  min-width: 0;
 }
 
 .headline {
@@ -27,10 +32,39 @@
   color: var(--text-secondary);
 }
 
+.updateInfo {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 2px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.updateInfo button,
+.sectionHeader button,
+.groupHeader button {
+  padding: 5px 7px;
+  background: transparent;
+  border: 0;
+  border-radius: var(--fowoco-radius-6);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--brand-primary);
+  cursor: pointer;
+}
+
+.updateInfo button:hover,
+.sectionHeader button:hover,
+.groupHeader button:hover {
+  background: var(--fowoco-teal-50);
+}
+
+/* 1. Agent 업무 입력 */
 .agentRequest {
-  display: block;
   margin-top: 20px;
-  padding: 0;
   overflow: hidden;
   background: var(--surface-default);
   border: 1px solid var(--border-default);
@@ -40,57 +74,12 @@
 
 .agentRequestCompact {
   display: flex;
-  min-height: 66px;
+  min-height: 62px;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 12px 18px;
-}
-
-.agentRequestOpen .agentRequestCompact {
+  padding: 13px 22px;
   border-bottom: 1px solid var(--border-default);
-}
-
-.agentRequestBody {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.34fr);
-}
-
-.agentRequestToggle {
-  flex: 0 0 auto;
-  min-height: 38px;
-  padding: 8px 14px;
-  background: var(--surface-default);
-  border: 1px solid var(--brand-primary);
-  border-radius: var(--fowoco-radius-8);
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--brand-primary);
-  cursor: pointer;
-}
-
-.agentRequestToggle:hover {
-  background: var(--fowoco-teal-50);
-}
-
-.requestComposer {
-  min-width: 0;
-  padding: 15px 22px 16px;
-}
-
-.agentRequestHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-}
-
-.agentRequestHeader > strong {
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 18px;
-  color: var(--text-primary);
 }
 
 .agentRequestTitle {
@@ -143,16 +132,24 @@
   white-space: nowrap;
 }
 
+.agentRequestBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.32fr);
+}
+
+.requestComposer {
+  min-width: 0;
+  padding: 16px 22px 15px;
+}
+
 .commandForm {
   width: 100%;
-  margin-top: 11px;
 }
 
 .commandField {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 120px;
   gap: 10px;
-  margin-top: 5px;
 }
 
 .visuallyHidden {
@@ -168,9 +165,9 @@
 
 .commandInput {
   width: 100%;
-  min-height: 56px;
-  max-height: 116px;
   min-width: 0;
+  min-height: 58px;
+  max-height: 116px;
   padding: 11px 14px;
   resize: vertical;
   background: var(--surface-subtle);
@@ -201,7 +198,7 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  min-height: 56px;
+  min-height: 58px;
   padding: 10px 14px;
   background: var(--brand-primary);
   border: 0;
@@ -243,7 +240,7 @@
 
 .quickPromptPanel {
   min-width: 0;
-  padding: 18px 20px;
+  padding: 16px 18px;
   background: var(--surface-subtle);
   border-left: 1px solid var(--border-default);
 }
@@ -270,29 +267,29 @@
 .promptChips {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 7px;
-  margin-top: 11px;
+  gap: 6px;
+  margin-top: 9px;
 }
 
 .promptChip {
-  min-height: 36px;
-  padding: 7px 9px;
-  background: var(--surface-default);
+  min-height: 32px;
+  padding: 6px 9px;
+  background: transparent;
   border: 1px solid var(--border-default);
-  border-radius: var(--fowoco-radius-8);
+  border-radius: var(--fowoco-radius-999);
   font-family: inherit;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   line-height: 17px;
   color: var(--text-secondary);
-  text-align: left;
+  text-align: center;
   white-space: nowrap;
   cursor: pointer;
 }
 
 .promptChip:hover,
 .promptChip[aria-pressed='true'] {
-  background: var(--fowoco-teal-50);
+  background: var(--surface-default);
   border-color: var(--fowoco-teal-100);
   color: var(--brand-primary);
 }
@@ -308,138 +305,68 @@
   margin-top: 20px;
 }
 
-.primaryColumn {
-  grid-area: main;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  min-width: 0;
-}
-
+/* 카드 대신 하나의 수평 요약선 */
 .metricStrip {
   grid-area: metrics;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  border-top: 1px solid var(--border-default);
+  border-bottom: 1px solid var(--border-default);
 }
 
 .metricCard {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   min-width: 0;
-  min-height: 92px;
-  padding: 17px 18px 15px;
-  overflow: hidden;
-  background: var(--surface-default);
-  border: 1px solid var(--border-default);
-  border-top: 3px solid var(--border-strong);
-  border-radius: var(--fowoco-radius-14);
-  box-shadow: var(--shadow-sm);
+  min-height: 72px;
+  padding: 13px 18px;
+  background: transparent;
+  border: 0;
+  border-left: 1px solid var(--border-default);
   font-family: inherit;
   text-align: left;
   cursor: pointer;
-  transition:
-    transform var(--fowoco-motion-fast) var(--fowoco-easing-standard),
-    box-shadow var(--fowoco-motion-fast) var(--fowoco-easing-standard),
-    border-color var(--fowoco-motion-fast) var(--fowoco-easing-standard);
+}
+
+.metricCard:first-child {
+  border-left: 0;
 }
 
 .metricCard:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-}
-
-.metricCard_warning {
-  border-top-color: var(--status-warning);
-}
-
-.metricCard_info {
-  border-top-color: var(--status-info);
-}
-
-.metricCard_critical {
-  border-top-color: var(--status-critical);
-}
-
-.metricCard_neutral {
-  border-top-color: var(--border-strong);
+  background: var(--surface-subtle);
 }
 
 .metricText {
-  align-items: flex-start;
-  display: grid;
-  grid-template-columns: auto auto;
-  gap: 2px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   min-width: 0;
-  white-space: nowrap;
 }
 
 .metricLabel {
-  grid-column: 1 / -1;
+  overflow: hidden;
   font-size: 12px;
   font-weight: 600;
   line-height: 18px;
   color: var(--text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .metricValue {
-  font-size: 24px;
+  font-size: 23px;
   font-weight: 750;
   line-height: 28px;
   color: var(--text-primary);
 }
 
-.metricAction {
-  align-self: end;
-  padding-bottom: 3px;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 18px;
-  color: var(--brand-primary);
-}
-
-.metricIcon {
-  display: flex;
-  flex: 0 0 36px;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--fowoco-radius-10);
-}
-
-.metricIcon img {
-  width: 18px;
-  height: 18px;
-}
-
-.metricIcon_warning {
-  background: var(--fowoco-amber-50);
-}
-
-.metricIcon_info {
-  background: var(--surface-subtle);
-}
-
-.metricIcon_critical {
-  background: var(--fowoco-red-50);
-}
-
-.metricIcon_neutral {
-  background: var(--surface-subtle);
-}
-
-.metricIcon_neutral img {
-  filter: grayscale(1);
-  opacity: 0.55;
-}
-
-.todayTasks,
-.upcomingExpiry,
-.dataStatus {
+.primaryColumn {
+  grid-area: main;
   min-width: 0;
+}
+
+/* 2. 담당자 우선 업무 */
+.priorityWorkspace {
+  min-width: 0;
+  padding: 20px 22px 8px;
   background: var(--surface-default);
   border: 1px solid var(--border-default);
   border-radius: var(--fowoco-radius-14);
@@ -447,15 +374,14 @@
 }
 
 .sectionHeader,
-.dataStatusHeader {
+.groupHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
 }
 
-.sectionHeader > div,
-.dataStatusHeader > div {
+.sectionHeader > div {
   display: flex;
   min-width: 0;
   flex-direction: column;
@@ -470,60 +396,50 @@
   color: var(--brand-primary);
 }
 
-.sectionHeader h2,
-.dataStatusHeader h2 {
+.sectionHeader h2 {
   margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 26px;
+  font-size: 20px;
+  font-weight: 750;
+  line-height: 28px;
   color: var(--text-primary);
 }
 
-.agentLead button {
-  border: 0;
-  border-radius: var(--fowoco-radius-8);
-  font-family: inherit;
+.workspaceGroup {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-default);
+}
+
+.workspaceGroup:last-child {
+  padding-bottom: 12px;
+}
+
+.groupHeader h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 22px;
+  color: var(--text-primary);
+}
+
+.groupHeader > span {
   font-size: 12px;
-  font-weight: 650;
-  cursor: pointer;
-}
-
-.todayTasks,
-.upcomingExpiry {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 18px 20px 20px;
-}
-
-.sectionHeader button {
-  flex: 0 0 auto;
-  padding: 6px 8px;
-  background: transparent;
-  border: 0;
-  border-radius: var(--fowoco-radius-6);
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--brand-primary);
-  cursor: pointer;
-}
-
-.sectionHeader button:hover {
-  background: var(--fowoco-teal-50);
+  color: var(--text-secondary);
 }
 
 .workItemList {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  margin-top: 4px;
+}
+
+.workItemList > :last-child {
+  border-bottom: 0;
 }
 
 .sectionEmpty {
-  margin: 0;
-  padding: 18px;
-  background: var(--surface-subtle);
-  border-radius: var(--fowoco-radius-10);
+  margin: 8px 0 0;
+  padding: 14px 0;
   font-size: 13px;
   color: var(--text-secondary);
 }
@@ -531,8 +447,8 @@
 .expiryList {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin: 0;
+  column-gap: 20px;
+  margin: 6px 0 0;
   padding: 0;
   list-style: none;
 }
@@ -543,12 +459,12 @@
   justify-content: space-between;
   gap: 12px;
   width: 100%;
-  min-height: 58px;
-  padding: 10px 12px;
-  background: var(--surface-default);
-  border: 1px solid var(--border-default);
+  min-height: 56px;
+  padding: 10px 8px 10px 10px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border-default);
   border-left: 3px solid var(--border-strong);
-  border-radius: var(--fowoco-radius-8);
   color: var(--text-primary);
   font: inherit;
   text-align: left;
@@ -556,8 +472,7 @@
 }
 
 .expiryItem:hover {
-  border-color: var(--border-strong);
-  box-shadow: var(--shadow-sm);
+  background: var(--surface-subtle);
 }
 
 .expiryItem > span {
@@ -599,21 +514,15 @@
 
 .sideRail {
   grid-area: aside;
-  display: flex;
-  align-self: start;
   min-width: 0;
-  flex-direction: column;
-  gap: 20px;
 }
 
+/* 3. Agent 작업 공간 */
 .agentPrepared {
-  position: relative;
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 11px;
-  padding: 20px 20px 18px;
-  overflow: hidden;
+  padding: 20px 20px 10px;
   background: #f7f8ff;
   border: 1px solid #dce2fa;
   border-top: 3px solid var(--brand-primary);
@@ -623,29 +532,20 @@
 }
 
 .agentPreparedTitle {
-  position: relative;
-  z-index: 1;
   display: flex;
   align-items: center;
   gap: 7px;
-}
-
-.agentPreparedTitle img {
-  filter: none;
 }
 
 .agentPreparedTitle span {
   font-size: 11px;
   font-weight: 750;
   line-height: 15px;
-  letter-spacing: -0.01em;
   color: var(--brand-primary);
 }
 
 .agentPrepared > h2 {
-  position: relative;
-  z-index: 1;
-  margin: -2px 0 0;
+  margin: 4px 0 0;
   font-size: 22px;
   font-weight: 750;
   line-height: 30px;
@@ -653,16 +553,15 @@
 }
 
 .preparedIntro {
-  position: relative;
-  z-index: 1;
   display: flex;
   flex-direction: column;
   gap: 3px;
+  margin-top: 6px;
 }
 
 .preparedIntro strong {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 650;
   line-height: 19px;
 }
 
@@ -674,21 +573,18 @@
 }
 
 .agentLead {
-  position: relative;
-  z-index: 1;
   display: flex;
-  min-height: 0;
   flex-direction: column;
   align-items: flex-start;
-  padding: 12px;
-  background: var(--surface-default);
-  border: 1px solid #dce2fa;
-  border-radius: var(--fowoco-radius-10);
-  color: var(--text-primary);
+  margin-top: 16px;
+  padding: 14px 0 15px 12px;
+  border-top: 1px solid #dce2fa;
+  border-left: 3px solid var(--brand-primary);
+  border-bottom: 1px solid #dce2fa;
 }
 
 .agentLead > span {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   line-height: 17px;
   color: var(--brand-primary);
@@ -696,7 +592,7 @@
 
 .agentLead strong {
   display: -webkit-box;
-  margin-top: 5px;
+  margin-top: 4px;
   overflow: hidden;
   font-size: 14px;
   line-height: 21px;
@@ -706,7 +602,7 @@
 
 .agentLead p {
   display: -webkit-box;
-  margin: 4px 0 8px;
+  margin: 3px 0 8px;
   overflow: hidden;
   font-size: 12px;
   line-height: 18px;
@@ -716,19 +612,19 @@
 }
 
 .agentLead button {
-  width: 100%;
-  min-height: 36px;
-  margin-top: auto;
-  background: var(--brand-primary);
-  color: var(--fowoco-white);
+  padding: 4px 0;
+  background: transparent;
+  border: 0;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--brand-primary);
+  cursor: pointer;
 }
 
 .agentSummaryList {
-  position: relative;
-  z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
 }
 
 .agentSummaryItem {
@@ -737,20 +633,23 @@
   gap: 8px;
   align-items: center;
   width: 100%;
-  min-height: 48px;
-  padding: 6px 10px;
-  background: var(--surface-default);
-  border: 1px solid #e2e6f5;
-  border-radius: var(--fowoco-radius-8);
+  min-height: 54px;
+  padding: 8px 2px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #dce2fa;
   color: inherit;
   font-family: inherit;
   text-align: left;
   cursor: pointer;
 }
 
+.agentSummaryItem:last-child {
+  border-bottom: 0;
+}
+
 .agentSummaryItem:hover {
-  background: var(--fowoco-teal-50);
-  border-color: var(--fowoco-teal-100);
+  color: var(--brand-primary);
 }
 
 .summaryMark {
@@ -792,86 +691,19 @@
   color: var(--text-secondary);
 }
 
-.dataStatus {
-  display: flex;
-  flex-direction: column;
-  padding: 18px 20px 20px;
-}
-
-.dataStatusHeader button {
-  flex: 0 0 auto;
-  padding: 6px 8px;
-  background: transparent;
-  border: 0;
-  border-radius: var(--fowoco-radius-6);
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--brand-primary);
-  cursor: pointer;
-}
-
-.dataStatusHeader button:hover {
-  background: var(--fowoco-teal-50);
-}
-
-.dataStatusList {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0;
-  margin-top: 14px;
-  margin-bottom: 0;
-}
-
-.dataStatusList > div {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  min-height: 42px;
-  border-top: 1px solid var(--border-default);
-}
-
-.dataStatusList dt,
-.dataStatusList dd {
-  margin: 0;
-  font-size: 12px;
-  line-height: 18px;
-}
-
-.dataStatusList dt {
-  color: var(--text-secondary);
-}
-
-.dataStatusList dd {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 600;
-  color: var(--text-primary);
-  text-align: right;
-}
-
-.connectedDot {
-  width: 7px;
-  height: 7px;
-  background: var(--fowoco-green-600);
-  border-radius: 50%;
-}
-
 .stateWrap {
   margin-top: 20px;
 }
 
-.metricCard:focus-visible,
-.agentRequestToggle:focus-visible,
+.updateInfo button:focus-visible,
 .commandSubmit:focus-visible,
 .promptChip:focus-visible,
+.metricCard:focus-visible,
 .sectionHeader button:focus-visible,
+.groupHeader button:focus-visible,
 .expiryItem:focus-visible,
 .agentLead button:focus-visible,
-.agentSummaryItem:focus-visible,
-.dataStatusHeader button:focus-visible {
+.agentSummaryItem:focus-visible {
   outline: 2px solid var(--brand-primary);
   outline-offset: 2px;
 }
@@ -882,14 +714,9 @@
     column-gap: 18px;
   }
 
-  .metricStrip {
-    gap: 12px;
-  }
-
   .expiryList {
     grid-template-columns: 1fr;
   }
-
 }
 
 @media (max-width: 980px) {
@@ -913,18 +740,17 @@
       'main'
       'aside';
   }
-
-  .sideRail {
-    display: grid;
-    grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.6fr);
-    align-items: start;
-  }
-
 }
 
 @media (max-width: 760px) {
   .page {
     padding-bottom: 20px;
+  }
+
+  .pageHeader {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
   }
 
   .headline {
@@ -936,26 +762,22 @@
     margin-top: 2px;
   }
 
-  .agentRequest {
+  .updateInfo {
     padding: 0;
   }
 
   .agentRequestCompact {
     align-items: flex-start;
-    gap: 12px;
     padding: 12px 14px;
   }
 
-  .agentRequestTitle p {
+  .agentRequestTitle p,
+  .agentFlow {
     display: none;
   }
 
   .requestComposer {
-    padding: 16px;
-  }
-
-  .agentFlow {
-    display: none;
+    padding: 14px;
   }
 
   .commandField {
@@ -967,7 +789,7 @@
   }
 
   .quickPromptPanel {
-    padding: 14px 16px 16px;
+    padding: 14px;
   }
 
   .promptChips {
@@ -978,45 +800,38 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .metricCard:nth-child(3) {
+    border-left: 0;
+  }
+
+  .metricCard:nth-child(n + 3) {
+    border-top: 1px solid var(--border-default);
+  }
+
+  .priorityWorkspace,
+  .agentPrepared {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+}
+
+@media (max-width: 520px) {
   .metricCard {
-    min-height: 78px;
-    padding: 14px;
+    min-height: 66px;
+    padding: 10px 12px;
   }
 
   .metricValue {
     font-size: 20px;
   }
 
-  .todayTasks,
-  .upcomingExpiry,
-  .dataStatus {
-    padding-right: 14px;
-    padding-left: 14px;
-  }
-
-  .sideRail {
-    display: flex;
-  }
-
-}
-
-@media (max-width: 520px) {
-  .metricStrip,
-  .expiryList,
-  .promptChips {
-    grid-template-columns: 1fr;
-  }
-
-  .metricCard {
-    min-height: 72px;
-  }
-
-  .sectionHeader {
+  .sectionHeader,
+  .groupHeader {
     align-items: flex-start;
   }
 
-  .sectionHeader button {
-    margin-top: 2px;
+  .sectionHeader button,
+  .groupHeader button {
+    margin-top: 1px;
   }
-
 }

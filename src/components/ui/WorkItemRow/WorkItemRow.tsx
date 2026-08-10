@@ -27,6 +27,7 @@ export interface WorkItemRowProps {
   nextActor?: string
   nextAction: string
   urgency?: WorkItemUrgency
+  variant?: 'card' | 'flat'
   onClick?: () => void
   onEvidenceClick?: () => void
 }
@@ -41,11 +42,15 @@ export function WorkItemRow({
   nextActor,
   nextAction,
   urgency = 'warning',
+  variant = 'card',
   onClick,
   onEvidenceClick,
 }: WorkItemRowProps) {
   return (
-    <article className={styles.row} aria-label={`${workerLabel ?? '근로자'} ${title}`}>
+    <article
+      className={`${styles.row} ${variant === 'flat' ? styles.rowFlat : ''}`}
+      aria-label={`${workerLabel ?? '근로자'} ${title}`}
+    >
       <span className={`${styles.rail} ${RAIL_CLASS[urgency]}`} aria-hidden="true" />
       <span className={styles.content}>
         <span className={styles.titleLine}>

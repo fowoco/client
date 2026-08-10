@@ -144,7 +144,7 @@ describe('DashboardPage', () => {
 
     expect(
       await screen.findByRole('heading', {
-        name: '지금 확인이 필요한 승인 2건이 있습니다.',
+        name: '오늘의 업무를 확인하세요.',
       }),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '승인 대기 2건 업무함에서 보기' })).toBeInTheDocument()
@@ -169,8 +169,21 @@ describe('DashboardPage', () => {
     expect(await screen.findByText('Agent 생성 초안 · 1건')).toBeInTheDocument()
     expect(screen.getByText('담당자 확인 필요 · 1건')).toBeInTheDocument()
     expect(screen.getByText('응답·기관 대기 · 1건')).toBeInTheDocument()
-    expect(screen.getByText('연결된 업무 4건 · 담당자 확인 필요 1건')).toBeInTheDocument()
+    expect(screen.getByText('연결된 업무 4건')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Agent 작업 공간' })).toBeInTheDocument()
     expect(screen.getAllByText('Agent 생성 체류연장 초안').length).toBeGreaterThan(0)
+  })
+
+  it('keeps the dashboard hierarchy focused on the three main work regions', async () => {
+    renderPage()
+
+    expect(
+      await screen.findByRole('region', { name: 'Agent에게 새 업무 요청' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: '담당자 우선 업무' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Agent 작업 공간' })).toBeInTheDocument()
+    expect(screen.queryByText('현재 화면 정보')).not.toBeInTheDocument()
+    expect(screen.queryByText('7일 기한')).not.toBeInTheDocument()
   })
 
   it('keeps the dashboard concise and links to the full work lists', async () => {
@@ -260,7 +273,6 @@ describe('DashboardPage', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(screen.getByRole('button', { name: '새 업무 요청' }))
     await user.click(await screen.findByRole('button', { name: AI_REQUEST_PROMPT_CHIPS[0] }))
     const requestInput = screen.getByRole('textbox', { name: '업무 내용' })
     expect(requestInput).toHaveValue(AI_REQUEST_PROMPT_CHIPS[0])
@@ -275,7 +287,6 @@ describe('DashboardPage', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(screen.getByRole('button', { name: '새 업무 요청' }))
     const requestInput = await screen.findByRole('textbox', { name: '업무 내용' })
     await user.type(requestInput, '응웬반A 체류기간 연장 준비{Enter}')
 

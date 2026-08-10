@@ -21,6 +21,22 @@
   box-shadow: var(--shadow-md);
 }
 
+.rowFlat {
+  min-height: 82px;
+  padding: 12px 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border-default);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.rowFlat:hover {
+  background: var(--surface-subtle);
+  border-color: var(--border-default);
+  box-shadow: none;
+}
+
 .rail {
   width: 4px;
   height: 100%;

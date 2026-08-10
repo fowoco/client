@@ -14,10 +14,6 @@ import type {
 import { DOCUMENT_TYPE_LABEL } from '../../utils/documentLabels'
 import { daysUntil } from '../../utils/urgency'
 import { getOperationalDateViewModel } from '../../view-models/dateViewModel'
-import metricApprovalIcon from './assets/metric-approval.svg'
-import metricDueIcon from './assets/metric-due.svg'
-import metricInfoIcon from './assets/metric-info.svg'
-import metricResponseIcon from './assets/metric-response.svg'
 
 export const AI_REQUEST_PROMPT_CHIPS = [
   '체류기간 연장',
@@ -26,14 +22,10 @@ export const AI_REQUEST_PROMPT_CHIPS = [
   '근로자 요청',
 ]
 
-export type DashboardMetricTone = 'warning' | 'info' | 'critical' | 'neutral'
-
 export interface DashboardMetric {
   id: string
   label: string
   value: number
-  iconSrc: string
-  tone: DashboardMetricTone
   href: string
 }
 
@@ -161,32 +153,24 @@ export function buildDashboardMetrics(counts: DashboardSummaryCountsResponse): D
       id: 'pending-approval',
       label: '승인 대기',
       value: counts.pending_approval,
-      iconSrc: metricApprovalIcon,
-      tone: 'warning',
       href: '/tasks?focus=pending-approval',
     },
     {
       id: 'due-today',
       label: '오늘 마감',
       value: counts.due_today,
-      iconSrc: metricDueIcon,
-      tone: counts.due_today > 0 ? 'critical' : 'neutral',
       href: '/tasks?focus=due-today',
     },
     {
       id: 'needs-info',
       label: '정보 보완',
       value: counts.needs_info,
-      iconSrc: metricInfoIcon,
-      tone: 'warning',
       href: '/tasks?focus=needs-info',
     },
     {
       id: 'worker-response',
       label: '응답 대기',
       value: counts.worker_response,
-      iconSrc: metricResponseIcon,
-      tone: 'info',
       href: '/tasks?focus=worker-response',
     },
   ]

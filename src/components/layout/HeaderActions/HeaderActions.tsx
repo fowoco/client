@@ -1,21 +1,55 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import {
+  fetchNotifications,
+  markNotificationRead,
+  type NotificationItemResponse,
+} from '../../../api/notifications'
+import { ApiError, getErrorMessage } from '../../../api/errors'
+import { useApiQuery } from '../../../hooks/useApiQuery'
 import type { AuthUser } from '../../../store/authStore'
-import { HEADER_NOTIFICATIONS } from './headerNotifications'
 import styles from './HeaderActions.module.css'
+import { getSafeNotificationRoute } from './notificationPresentation'
 
 export interface HeaderActionsProps {
   user: AuthUser | null
   onLogout: () => void
 }
 
+const fetchHeaderNotifications = () => fetchNotifications({ size: 20 })
+
+function formatOccurredAt(value: string) {
+  const occurredAt = new Date(value)
+  if (Number.isNaN(occurredAt.getTime())) return '시간 정보 없음'
+  return new Intl.DateTimeFormat('ko-KR', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(occurredAt)
+}
+
 export function HeaderActions({ user, onLogout }: HeaderActionsProps) {
+  const navigate = useNavigate()
   const [notifOpen, setNotifOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [locallyReadIds, setLocallyReadIds] = useState<Set<string>>(() => new Set())
+  const [readingId, setReadingId] = useState<string | null>(null)
+  const [notificationActionError, setNotificationActionError] = useState<string | null>(null)
   const notifRef = useRef<HTMLDivElement>(null)
   const profileRef = useRef<HTMLDivElement>(null)
+  const {
+    status: notificationStatus,
+    data: notificationPage,
+    error: notificationQueryError,
+    refetch: refetchNotifications,
+  } = useApiQuery(fetchHeaderNotifications)
 
-  const unreadCount = HEADER_NOTIFICATIONS.filter((notification) => !notification.read).length
+  const notifications = notificationPage?.items ?? []
+  const locallyReadUnreadCount = notifications.filter(
+    (notification) => !notification.read && locallyReadIds.has(notification.id),
+  ).length
+  const unreadCount = Math.max(0, (notificationPage?.unread_count ?? 0) - locallyReadUnreadCount)
 
   useEffect(() => {
     if (!notifOpen && !profileOpen) return
@@ -41,12 +75,41 @@ export function HeaderActions({ user, onLogout }: HeaderActionsProps) {
 
   function toggleNotif() {
     setProfileOpen(false)
-    setNotifOpen((prev) => !prev)
+    setNotificationActionError(null)
+    if (!notifOpen) refetchNotifications()
+    setNotifOpen((previous) => !previous)
   }
 
   function toggleProfile() {
     setNotifOpen(false)
     setProfileOpen((prev) => !prev)
+  }
+
+  async function handleNotificationClick(notification: NotificationItemResponse) {
+    const route = getSafeNotificationRoute(notification.route)
+    if (notification.read || locallyReadIds.has(notification.id)) {
+      setNotifOpen(false)
+      navigate(route)
+      return
+    }
+
+    setReadingId(notification.id)
+    setNotificationActionError(null)
+    try {
+      await markNotificationRead(notification.id)
+      setLocallyReadIds((previous) => new Set(previous).add(notification.id))
+      setNotifOpen(false)
+      navigate(route)
+      refetchNotifications()
+    } catch (error) {
+      setNotificationActionError(
+        error instanceof ApiError
+          ? getErrorMessage(error)
+          : '알림을 읽음 처리하지 못했습니다. 다시 시도해 주세요.',
+      )
+    } finally {
+      setReadingId(null)
+    }
   }
 
   return (
@@ -76,22 +139,42 @@ export function HeaderActions({ user, onLogout }: HeaderActionsProps) {
         </button>
 
         {notifOpen && (
-          <div className={styles.panel} role="menu">
-            <p className={styles.panelTitle}>알림</p>
-            {HEADER_NOTIFICATIONS.length === 0 ? (
+          <div className={styles.panel} role="menu" aria-label="알림 목록">
+            <div className={styles.panelHeader}>
+              <p className={styles.panelTitle}>알림</p>
+              {unreadCount > 0 && <span>읽지 않음 {unreadCount}건</span>}
+            </div>
+            {notificationStatus === 'loading' && !notificationPage ? (
+              <p className={styles.panelEmpty}>알림을 불러오는 중입니다.</p>
+            ) : notificationStatus === 'error' && !notificationPage ? (
+              <div className={styles.panelError} role="alert">
+                <p>{notificationQueryError ? getErrorMessage(notificationQueryError) : '알림을 불러오지 못했습니다.'}</p>
+                <button type="button" onClick={refetchNotifications}>다시 시도</button>
+              </div>
+            ) : notifications.length === 0 ? (
               <p className={styles.panelEmpty}>새 알림이 없습니다.</p>
             ) : (
-              HEADER_NOTIFICATIONS.map((notification) => (
-                <div
-                  key={notification.id}
-                  className={`${styles.notificationRow} ${
-                    notification.read ? '' : styles.notificationRowUnread
-                  }`}
-                >
-                  <p className={styles.notificationTitle}>{notification.title}</p>
-                  <p className={styles.notificationTime}>{notification.time}</p>
-                </div>
-              ))
+              <div className={styles.notificationList}>
+                {notifications.map((notification) => {
+                  const isRead = notification.read || locallyReadIds.has(notification.id)
+                  return (
+                    <button
+                      key={notification.id}
+                      type="button"
+                      role="menuitem"
+                      disabled={readingId === notification.id}
+                      className={`${styles.notificationRow} ${isRead ? '' : styles.notificationRowUnread}`}
+                      onClick={() => handleNotificationClick(notification)}
+                    >
+                      <span className={styles.notificationTitle}>{notification.title}</span>
+                      <span className={styles.notificationTime}>{formatOccurredAt(notification.occurred_at)}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+            {notificationActionError && (
+              <p className={styles.notificationActionError} role="alert">{notificationActionError}</p>
             )}
           </div>
         )}

@@ -26,6 +26,18 @@ export interface WorkInboxWorkerGroup {
 
 export type WorkInboxSort = 'priority' | 'due-date' | 'worker-name'
 export type WorkInboxFilter = 'all' | 'active' | 'no-work'
+export type WorkInboxFocus =
+  | 'pending-approval'
+  | 'due-today'
+  | 'needs-info'
+  | 'worker-response'
+
+const WORK_INBOX_FOCUS_VALUES: readonly WorkInboxFocus[] = [
+  'pending-approval',
+  'due-today',
+  'needs-info',
+  'worker-response',
+]
 
 export interface BuildWorkInboxModelInput {
   cases: readonly CaseSummaryResponse[]
@@ -34,6 +46,7 @@ export interface BuildWorkInboxModelInput {
   selectedWorkerId?: string | null
   sort?: WorkInboxSort
   filter?: WorkInboxFilter
+  focus?: WorkInboxFocus | null
 }
 
 export interface WorkInboxModel {
@@ -143,6 +156,36 @@ function matchesFilter(group: WorkInboxWorkerGroup, filter: WorkInboxFilter): bo
   return true
 }
 
+export function parseWorkInboxFocus(value: string | null): WorkInboxFocus | null {
+  return WORK_INBOX_FOCUS_VALUES.includes(value as WorkInboxFocus)
+    ? (value as WorkInboxFocus)
+    : null
+}
+
+function todayInSeoul(): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date())
+  const byType = new Map(parts.map((part) => [part.type, part.value]))
+  return `${byType.get('year')}-${byType.get('month')}-${byType.get('day')}`
+}
+
+function matchesFocus(group: WorkInboxWorkerGroup, focus: WorkInboxFocus | null): boolean {
+  if (!focus) return true
+
+  return group.cases.some((item) => {
+    if (focus === 'pending-approval') return item.current_task?.status === 'READY_FOR_REVIEW'
+    if (focus === 'needs-info') return item.current_task?.status === 'NEEDS_INFO'
+    if (focus === 'worker-response') return item.current_task?.status === 'WAITING_WORKER'
+
+    const dueDate = item.current_task?.due_date ?? item.due_date
+    return dueDate?.slice(0, 10) === todayInSeoul()
+  })
+}
+
 export function buildWorkInboxModel({
   cases,
   workers,
@@ -150,6 +193,7 @@ export function buildWorkInboxModel({
   selectedWorkerId,
   sort = 'priority',
   filter = 'all',
+  focus = null,
 }: BuildWorkInboxModelInput): WorkInboxModel {
   const workerById = new Map(workers.map((worker) => [worker.worker_id, worker]))
   const casesByWorkerId = new Map<string, CaseSummaryResponse[]>()
@@ -191,7 +235,10 @@ export function buildWorkInboxModel({
 
   const normalizedQuery = normalizeWorkInboxSearch(query)
   const groups = allGroups.filter(
-    (group) => matchesQuery(group, normalizedQuery) && matchesFilter(group, filter),
+    (group) =>
+      matchesQuery(group, normalizedQuery) &&
+      matchesFilter(group, filter) &&
+      matchesFocus(group, focus),
   )
   const requestedSelection = selectedWorkerId?.trim()
   const selectedGroup =

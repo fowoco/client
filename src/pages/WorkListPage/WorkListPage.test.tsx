@@ -274,6 +274,21 @@ describe('WorkListPage', () => {
     )
   })
 
+  it('applies and clears a dashboard focus from the query string', async () => {
+    mockApi()
+    const user = userEvent.setup()
+    renderPage('/tasks?focus=pending-approval')
+
+    expect(await screen.findByText('승인 대기')).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: /응우옌 안/ })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: /파티마 누르/ })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '전체 업무 보기' }))
+
+    expect(screen.getByTestId('location')).toHaveTextContent('/tasks?workerId=W-1')
+    expect(await screen.findByRole('option', { name: /파티마 누르/ })).toBeInTheDocument()
+  })
+
   it('searches worker and case fields in the loaded data without re-fetching', async () => {
     mockApi()
     const user = userEvent.setup()

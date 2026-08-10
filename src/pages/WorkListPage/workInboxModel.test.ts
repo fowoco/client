@@ -172,6 +172,60 @@ describe('workInboxModel', () => {
     expect(noWork.groups.map((group) => group.workerId)).toEqual(['W-2', 'W-3'])
   })
 
+  it('filters dashboard focus conditions with Case and Task fields', () => {
+    const today = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Seoul',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
+      .formatToParts(new Date())
+      .reduce<Record<string, string>>((result, part) => {
+        result[part.type] = part.value
+        return result
+      }, {})
+    const todayKey = `${today.year}-${today.month}-${today.day}`
+    const input = {
+      workers: [worker('W-1'), worker('W-2'), worker('W-3'), worker('W-4')],
+      cases: [
+        caseSummary('C-1', 'W-1', undefined, {
+          current_task: currentTask('T-1', { status: 'READY_FOR_REVIEW' }),
+        }),
+        caseSummary('C-2', 'W-2', undefined, {
+          current_task: currentTask('T-2', { status: 'NEEDS_INFO' }),
+        }),
+        caseSummary('C-3', 'W-3', undefined, {
+          current_task: currentTask('T-3', { status: 'WAITING_WORKER' }),
+        }),
+        caseSummary('C-4', 'W-4', undefined, {
+          due_date: todayKey,
+          current_task: null,
+        }),
+      ],
+    }
+
+    expect(
+      buildWorkInboxModel({ ...input, focus: 'pending-approval' }).groups.map(
+        (group) => group.workerId,
+      ),
+    ).toEqual(['W-1'])
+    expect(
+      buildWorkInboxModel({ ...input, focus: 'needs-info' }).groups.map(
+        (group) => group.workerId,
+      ),
+    ).toEqual(['W-2'])
+    expect(
+      buildWorkInboxModel({ ...input, focus: 'worker-response' }).groups.map(
+        (group) => group.workerId,
+      ),
+    ).toEqual(['W-3'])
+    expect(
+      buildWorkInboxModel({ ...input, focus: 'due-today' }).groups.map(
+        (group) => group.workerId,
+      ),
+    ).toEqual(['W-4'])
+  })
+
   it('normalizes Unicode, letter case, and whitespace when searching all supported fields', () => {
     const workers = [worker('W-1', '김 민지'), worker('W-2', 'Nguyen An')]
     const cases = [

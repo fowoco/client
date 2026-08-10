@@ -89,6 +89,48 @@
   font-weight: 600;
 }
 
+.focusNotice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fowoco-spacing-12);
+  min-height: 42px;
+  margin-bottom: var(--fowoco-spacing-12);
+  padding: 9px 12px;
+  background: var(--fowoco-teal-50);
+  border: 1px solid var(--fowoco-teal-100);
+  border-radius: var(--fowoco-radius-8);
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--text-secondary);
+}
+
+.focusNotice strong {
+  color: var(--text-primary);
+}
+
+.focusNotice button {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  background: transparent;
+  border: 0;
+  border-radius: var(--fowoco-radius-6);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--brand-primary);
+  cursor: pointer;
+}
+
+.focusNotice button:hover {
+  background: var(--surface-default);
+}
+
+.focusNotice button:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 1px;
+}
+
 .stateWrap {
   margin-top: var(--fowoco-spacing-24);
 }

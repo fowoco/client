@@ -129,10 +129,7 @@ interface CreateTaskFields {
 }
 
 export type CreateTaskBody = CreateTaskFields &
-  (
-    | { target_type?: 'WORKER'; worker_id: string }
-    | { target_type: 'COMPANY'; worker_id?: never }
-  )
+  ({ target_type?: 'WORKER'; worker_id: string } | { target_type: 'COMPANY'; worker_id?: never })
 
 export function createTask(body: CreateTaskBody): Promise<TaskDetailResponse> {
   return apiFetch<TaskDetailResponse>('/tasks', { method: 'POST', body: JSON.stringify(body) })
@@ -181,3 +178,7 @@ export function cancelTask(taskId: string, body: CancelTaskBody): Promise<TaskDe
     body: JSON.stringify(body),
   })
 }
+
+// TODO(backend): POST /tasks/{taskId}/renewal-executions — server#131 병합 후 연동 (이슈 #311).
+// server#131이 아직 draft이고 문서 생성·저장 연동이 미완료라고 밝힌 상태라, 병합 시점에
+// 실제 요청/응답 계약을 다시 확인해야 함.

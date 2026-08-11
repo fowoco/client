@@ -11,7 +11,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: docker/login-action@v3
         with:
@@ -33,7 +33,7 @@ jobs:
           echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
 
       - name: Checkout infra manifests
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: fowoco/infra
           path: infra

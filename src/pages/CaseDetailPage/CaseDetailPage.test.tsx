@@ -824,6 +824,19 @@ describe('CaseDetailPage', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
   })
 
+  it('shows a toast when the assignee change action is clicked', async () => {
+    const user = userEvent.setup()
+    mockTaskAndActivities()
+    renderPage()
+    await screen.findByText('응웬반A 체류연장 준비')
+
+    await user.click(screen.getByRole('button', { name: '더보기 ···' }))
+    await user.click(screen.getByRole('menuitem', { name: '담당자 변경' }))
+
+    expect(screen.getByText('담당자 변경은 준비 중입니다.')).toBeInTheDocument()
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
   it('cancels the task via the more menu when a reason is entered', async () => {
     const user = userEvent.setup()
     mockTaskAndActivities()

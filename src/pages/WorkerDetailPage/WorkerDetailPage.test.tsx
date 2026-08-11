@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DocumentItemResponse, WorkerDocumentResponse } from '../../api/documents'
+import type { TaskSummaryResponse } from '../../api/tasks'
 import type { WorkerResponse } from '../../api/workers'
 import { WorkerDetailPage } from './WorkerDetailPage'
 
@@ -16,7 +17,15 @@ function jsonResponse(body: unknown, init: ResponseInit = {}) {
 
 function errorResponse(status: number, code: string, message: string) {
   return jsonResponse(
-    { timestamp: '2026-07-27T01:23:45Z', status, code, message, path: '/api/v1/workers/W-1', request_id: 'req-1', field_errors: [] },
+    {
+      timestamp: '2026-07-27T01:23:45Z',
+      status,
+      code,
+      message,
+      path: '/api/v1/workers/W-1',
+      request_id: 'req-1',
+      field_errors: [],
+    },
     { status },
   )
 }
@@ -55,17 +64,51 @@ function document(overrides: Partial<DocumentItemResponse> = {}): DocumentItemRe
   }
 }
 
-function mockWorkerAndDocuments(workerOverrides: Partial<WorkerResponse> = {}, documents: DocumentItemResponse[] = []) {
+function task(overrides: Partial<TaskSummaryResponse> = {}): TaskSummaryResponse {
+  return {
+    task_id: 'T-1',
+    target_type: 'WORKER',
+    worker_id: 'W-018',
+    case_id: null,
+    task_type: 'DOCUMENT_REQUEST',
+    workflow_id: 'WF-DOC-001',
+    workflow_catalog_version: '1',
+    title: '여권 사본 요청',
+    source: 'MANUAL',
+    status: 'WAITING_WORKER',
+    due_date: '2026-08-20',
+    content_revision: 1,
+    version: 1,
+    created_at: '2026-08-01T00:00:00Z',
+    updated_at: '2026-08-01T00:00:00Z',
+    ...overrides,
+  }
+}
+
+function mockWorkerAndDocuments(
+  workerOverrides: Partial<WorkerResponse> = {},
+  documents: DocumentItemResponse[] = [],
+  tasks: TaskSummaryResponse[] = [],
+) {
   vi.mocked(fetch).mockImplementation((input) => {
     const url = String(input)
     if (url.includes('/documents')) {
-      return Promise.resolve(jsonResponse({ items: documents, page: 0, size: 100, total_elements: documents.length }))
+      return Promise.resolve(
+        jsonResponse({ items: documents, page: 0, size: 100, total_elements: documents.length }),
+      )
+    }
+    if (url.includes('/tasks')) {
+      return Promise.resolve(
+        jsonResponse({ items: tasks, page: 0, size: 20, total_elements: tasks.length }),
+      )
     }
     return Promise.resolve(jsonResponse(worker(workerOverrides)))
   })
 }
 
-function registeredDocument(overrides: Partial<WorkerDocumentResponse> = {}): WorkerDocumentResponse {
+function registeredDocument(
+  overrides: Partial<WorkerDocumentResponse> = {},
+): WorkerDocumentResponse {
   return {
     worker_document_id: 'D-2',
     worker_id: 'W-018',
@@ -87,6 +130,9 @@ function mockWorkerError(status: number, code: string, message: string) {
     const url = String(input)
     if (url.includes('/documents')) {
       return Promise.resolve(jsonResponse({ items: [], page: 0, size: 100, total_elements: 0 }))
+    }
+    if (url.includes('/tasks')) {
+      return Promise.resolve(jsonResponse({ items: [], page: 0, size: 20, total_elements: 0 }))
     }
     return Promise.resolve(errorResponse(status, code, message))
   })
@@ -143,6 +189,23 @@ describe('WorkerDetailPage', () => {
     expect(await screen.findByText('제출된 서류가 없습니다')).toBeInTheDocument()
   })
 
+  it("shows the worker's real current tasks with a link to each task", async () => {
+    mockWorkerAndDocuments({ display_name: '쩐티B' }, [], [task()])
+    renderPage('W-018')
+
+    const taskLink = await screen.findByRole('link', { name: /여권 사본 요청/ })
+    expect(taskLink).toHaveAttribute('href', '/tasks/T-1')
+    expect(screen.getByText('근로자 응답 대기')).toBeInTheDocument()
+    expect(screen.getByText('~2026-08-20')).toBeInTheDocument()
+  })
+
+  it('shows an empty state when the worker has no current tasks', async () => {
+    mockWorkerAndDocuments({ display_name: '쩐티B' }, [], [])
+    renderPage('W-018')
+
+    expect(await screen.findByText('진행 중인 업무가 없습니다')).toBeInTheDocument()
+  })
+
   it('shows a loading state', () => {
     vi.mocked(fetch).mockReturnValue(new Promise(() => {}))
     renderPage('W-018')
@@ -165,8 +228,19 @@ describe('WorkerDetailPage', () => {
       const method = init?.method ?? 'GET'
       if (url.includes('/documents') && method === 'GET') {
         documentsGetCount += 1
-        const items = documentsGetCount === 1 ? [] : [document({ worker_document_id: 'D-2', document_type: 'PASSPORT_COPY', expiry_date: null })]
-        return Promise.resolve(jsonResponse({ items, page: 0, size: 100, total_elements: items.length }))
+        const items =
+          documentsGetCount === 1
+            ? []
+            : [
+                document({
+                  worker_document_id: 'D-2',
+                  document_type: 'PASSPORT_COPY',
+                  expiry_date: null,
+                }),
+              ]
+        return Promise.resolve(
+          jsonResponse({ items, page: 0, size: 100, total_elements: items.length }),
+        )
       }
       if (url.includes('/documents') && method === 'POST') {
         return Promise.resolve(jsonResponse(registeredDocument(), { status: 201 }))
@@ -198,7 +272,13 @@ describe('WorkerDetailPage', () => {
       if (url.includes('/files') && method === 'POST') {
         return Promise.resolve(
           jsonResponse(
-            { file_id: 'file-1', name: 'passport.png', mime_type: 'image/png', size: 1024, scan_status: 'NOT_SCANNED' },
+            {
+              file_id: 'file-1',
+              name: 'passport.png',
+              mime_type: 'image/png',
+              size: 1024,
+              scan_status: 'NOT_SCANNED',
+            },
             { status: 201 },
           ),
         )
@@ -222,7 +302,9 @@ describe('WorkerDetailPage', () => {
     await screen.findByText('제출된 서류가 없습니다')
 
     expect(calls.some((c) => c.url.includes('/files') && c.method === 'POST')).toBe(true)
-    expect(calls.some((c) => c.url.includes('/workers/W-018/documents') && c.method === 'POST')).toBe(true)
+    expect(
+      calls.some((c) => c.url.includes('/workers/W-018/documents') && c.method === 'POST'),
+    ).toBe(true)
     expect(calls.some((c) => c.url.includes('/documents/D-2') && c.method === 'PATCH')).toBe(true)
   })
 
@@ -242,7 +324,9 @@ describe('WorkerDetailPage', () => {
       }
       workerGetCount += 1
       return Promise.resolve(
-        jsonResponse(worker(workerGetCount === 1 ? {} : { display_name: '쩐티B(수정)', version: 2 })),
+        jsonResponse(
+          worker(workerGetCount === 1 ? {} : { display_name: '쩐티B(수정)', version: 2 }),
+        ),
       )
     })
     renderPage('W-018')
@@ -259,7 +343,10 @@ describe('WorkerDetailPage', () => {
     expect(await screen.findByRole('heading', { name: '쩐티B(수정)' })).toBeInTheDocument()
     const patchCall = calls.find((c) => c.url.includes('/workers/W-018') && c.method === 'PATCH')
     expect(patchCall).toBeDefined()
-    expect(JSON.parse(patchCall!.body!)).toMatchObject({ display_name: '쩐티B(수정)', expected_version: 1 })
+    expect(JSON.parse(patchCall!.body!)).toMatchObject({
+      display_name: '쩐티B(수정)',
+      expected_version: 1,
+    })
   })
 
   it('does not report success when an existing employment date is cleared', async () => {
@@ -273,7 +360,9 @@ describe('WorkerDetailPage', () => {
     await user.click(screen.getByRole('button', { name: '저장' }))
 
     expect(
-      screen.getByText('등록된 비자·날짜 값의 삭제는 아직 지원하지 않습니다. 기존 값을 유지해 주세요.'),
+      screen.getByText(
+        '등록된 비자·날짜 값의 삭제는 아직 지원하지 않습니다. 기존 값을 유지해 주세요.',
+      ),
     ).toBeInTheDocument()
     expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === 'PATCH')).toBe(false)
   })

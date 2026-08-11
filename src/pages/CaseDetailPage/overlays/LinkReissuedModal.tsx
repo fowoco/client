@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Modal } from '../../../components/ui/Modal/Modal'
 import { useToastStore } from '../../../store/toastStore'
 import { getWorkerRequestStateViewModel } from '../../../view-models/workerRequestStateViewModel'
@@ -11,6 +12,10 @@ export interface LinkReissuedModalProps {
   expiresAt: string | null
   canRecordDelivery: boolean
   onRecordDelivery: () => void
+  canSendSms: boolean
+  smsSending: boolean
+  smsStatusMessage: string | null
+  onSendSms: (recipientPhone: string) => void
   onClose: () => void
 }
 
@@ -21,10 +26,15 @@ export function LinkReissuedModal({
   expiresAt,
   canRecordDelivery,
   onRecordDelivery,
+  canSendSms,
+  smsSending,
+  smsStatusMessage,
+  onSendSms,
   onClose,
 }: LinkReissuedModalProps) {
   const showToast = useToastStore((state) => state.showToast)
   const requestState = getWorkerRequestStateViewModel({})
+  const [recipientPhone, setRecipientPhone] = useState('')
 
   async function handleCopyLink() {
     if (!workerUrl) return
@@ -36,14 +46,18 @@ export function LinkReissuedModal({
     }
   }
 
+  function handleSendSms() {
+    if (!canSendSms || smsSending || !recipientPhone.trim()) return
+    onSendSms(recipientPhone.trim())
+  }
+
   return (
     <Modal open={open} onClose={onClose} title="새 링크가 준비되었습니다" size="wide">
-      <p className={styles.description}>
-        자동 발송되지 않습니다. 링크를 복사해 직접 전달해 주세요.
-      </p>
+      <p className={styles.description}>문자로 바로 보내거나, 링크를 복사해 직접 전달해 주세요.</p>
 
       <p className={styles.readyBanner}>
-        ✓ {requestState.label} · {submission?.expiry} · {expiresAt ? new Date(expiresAt).toLocaleString('ko-KR') : '만료시각 확인 필요'}까지
+        ✓ {requestState.label} · {submission?.expiry} ·{' '}
+        {expiresAt ? new Date(expiresAt).toLocaleString('ko-KR') : '만료시각 확인 필요'}까지
       </p>
 
       <div className={styles.plainRow}>
@@ -53,11 +67,36 @@ export function LinkReissuedModal({
         </button>
       </div>
 
+      {canSendSms && (
+        <div className={styles.plainRow}>
+          <input
+            type="tel"
+            className={styles.textInput}
+            placeholder="01012345678"
+            value={recipientPhone}
+            onChange={(event) => setRecipientPhone(event.target.value)}
+            disabled={smsSending}
+            aria-label="근로자 휴대전화 번호"
+          />
+          <button
+            type="button"
+            className={styles.textLink}
+            onClick={handleSendSms}
+            disabled={smsSending || !recipientPhone.trim()}
+          >
+            {smsSending ? '발송 중…' : '문자로 보내기'}
+          </button>
+        </div>
+      )}
+      {smsStatusMessage && <p className={styles.policyBannerText}>{smsStatusMessage}</p>}
+
       <p className={styles.fieldLabel}>재발급 사유</p>
       <p className={styles.plainValue}>{submission?.reason}</p>
 
       <div className={styles.policyBanner}>
-        <p className={styles.policyBannerText}>{requestState.description} SMS·메신저로 직접 전달해 주세요.</p>
+        <p className={styles.policyBannerText}>
+          {requestState.description} SMS·메신저로 직접 전달해 주세요.
+        </p>
       </div>
 
       <div className={styles.actionRow}>

@@ -30,6 +30,7 @@ import {
   markTaskWorkerResponsesRead,
   markWorkerLinkSent,
   resolveWorkerPortalUrl,
+  sendWorkerLinkSms,
   type WorkerLinkDeliveryResponse,
   type WorkerResponseType,
 } from '../../api/workerLinks'
@@ -197,6 +198,10 @@ export function CaseDetailPage() {
   const [lastReissue, setLastReissue] = useState<ReissueSubmission | null>(null)
   const [issuedWorkerUrl, setIssuedWorkerUrl] = useState<string | null>(null)
   const [issuedExpiresAt, setIssuedExpiresAt] = useState<string | null>(null)
+  const [issuedWorkerLinkToken, setIssuedWorkerLinkToken] = useState<string | null>(null)
+  const [issuedIdempotencyKey, setIssuedIdempotencyKey] = useState<string | null>(null)
+  const [sendingLinkSms, setSendingLinkSms] = useState(false)
+  const [linkSmsStatusMessage, setLinkSmsStatusMessage] = useState<string | null>(null)
   const [localWorkerLinkDelivery, setLocalWorkerLinkDelivery] = useState<{
     taskId: string
     data: WorkerLinkDeliveryResponse
@@ -577,12 +582,13 @@ export function CaseDetailPage() {
   async function handleSubmitLinkReissue(submission: ReissueSubmission) {
     if (!task || actionPending) return
     const expiryHours = submission.expiry === '24시간' ? 24 : submission.expiry === '7일' ? 168 : 72
+    const idempotencyKey = crypto.randomUUID()
     setActionPending(true)
     try {
       const issued = await issueWorkerLink(
         task.task_id,
         { expires_in_hours: expiryHours, rotate_existing: true },
-        crypto.randomUUID(),
+        idempotencyKey,
       )
       setLastReissue(submission)
       setIssuedWorkerUrl(
@@ -591,6 +597,9 @@ export function CaseDetailPage() {
           : null,
       )
       setIssuedExpiresAt(issued.expires_at)
+      setIssuedWorkerLinkToken(issued.worker_link_token)
+      setIssuedIdempotencyKey(idempotencyKey)
+      setLinkSmsStatusMessage(null)
       setLocalWorkerLinkDelivery({
         taskId: task.task_id,
         data: {
@@ -647,6 +656,37 @@ export function CaseDetailPage() {
       )
     } finally {
       setMarkingLinkSent(false)
+    }
+  }
+
+  async function handleSendLinkSms(recipientPhone: string) {
+    if (!task || sendingLinkSms) return
+    const currentDelivery =
+      localWorkerLinkDelivery?.taskId === task.task_id
+        ? localWorkerLinkDelivery.data
+        : workerLinkDelivery
+    if (!currentDelivery || !issuedWorkerLinkToken || !issuedIdempotencyKey) return
+
+    setSendingLinkSms(true)
+    setLinkSmsStatusMessage(null)
+    try {
+      const delivered = await sendWorkerLinkSms(
+        currentDelivery.worker_link_id,
+        { recipient_phone: recipientPhone, worker_link_token: issuedWorkerLinkToken },
+        issuedIdempotencyKey,
+      )
+      setLocalWorkerLinkDelivery({ taskId: task.task_id, data: delivered })
+      refetchWorkerLinkDelivery()
+      refetchActivities()
+      setLinkSmsStatusMessage('문자를 발송했습니다.')
+      showToast('근로자에게 링크를 문자로 발송했습니다.')
+    } catch (error) {
+      setLinkSmsStatusMessage(
+        error instanceof ApiError ? getErrorMessage(error) : '문자를 발송하지 못했습니다.',
+      )
+      refetchWorkerLinkDelivery()
+    } finally {
+      setSendingLinkSms(false)
     }
   }
 
@@ -1470,6 +1510,14 @@ export function CaseDetailPage() {
           Boolean(issuedWorkerUrl) && currentWorkerLinkDelivery?.delivery_status === 'NOT_SENT'
         }
         onRecordDelivery={() => handleOpenDeliveryConfirm('reissued')}
+        canSendSms={
+          Boolean(issuedWorkerLinkToken) &&
+          (currentWorkerLinkDelivery?.delivery_status === 'NOT_SENT' ||
+            currentWorkerLinkDelivery?.delivery_status === undefined)
+        }
+        smsSending={sendingLinkSms}
+        smsStatusMessage={linkSmsStatusMessage}
+        onSendSms={handleSendLinkSms}
         onClose={() => setLinkOverlay('none')}
       />
       <LinkDeliveryConfirmModal

@@ -12,6 +12,7 @@ export interface WorkerLinkIssueBody {
 export interface WorkerLinkIssueResponse {
   worker_link_id: string
   worker_url: string | null
+  worker_link_token: string | null
   expires_at: string
   delivery_status: WorkerLinkDeliveryStatus
   sent_at: string | null
@@ -19,7 +20,7 @@ export interface WorkerLinkIssueResponse {
 }
 
 export type WorkerLinkStatus = 'ACTIVE' | 'EXPIRED' | 'REVOKED'
-export type WorkerLinkDeliveryStatus = 'NOT_SENT' | 'SENT'
+export type WorkerLinkDeliveryStatus = 'NOT_SENT' | 'SENDING' | 'REVIEW_REQUIRED' | 'SENT'
 
 export interface WorkerLinkDeliveryResponse {
   worker_link_id: string
@@ -99,6 +100,27 @@ export function markWorkerLinkSent(workerLinkId: string): Promise<WorkerLinkDeli
   )
 }
 
+export interface WorkerLinkSmsDeliveryBody {
+  recipient_phone: string
+  worker_link_token: string
+}
+
+// 링크 발급 때 쓴 것과 같은 idempotencyKey를 넘겨야 서버가 요청-토큰 일치를 검증한다.
+export function sendWorkerLinkSms(
+  workerLinkId: string,
+  body: WorkerLinkSmsDeliveryBody,
+  idempotencyKey: string,
+): Promise<WorkerLinkDeliveryResponse> {
+  return apiFetch<WorkerLinkDeliveryResponse>(
+    `/worker-links/${encodeURIComponent(workerLinkId)}/sms-deliveries`,
+    {
+      method: 'POST',
+      headers: { 'Idempotency-Key': idempotencyKey },
+      body: JSON.stringify(body),
+    },
+  )
+}
+
 export function fetchWorkerLink(token: string): Promise<WorkerLinkViewResponse> {
   return apiFetch<WorkerLinkViewResponse>(`/public/worker-links/${encodeURIComponent(token)}`, {
     skipAuthRetry: true,
@@ -163,7 +185,3 @@ export function resolveWorkerPortalUrl(workerUrlOrToken: string, origin: string)
   if (workerUrlOrToken.startsWith('/')) return new URL(workerUrlOrToken, origin).toString()
   return `${origin}/worker-portal/${encodeURIComponent(workerUrlOrToken)}`
 }
-
-// TODO(backend): POST /worker-links/{workerLinkId}/sms-deliveries — server#134 병합 후 연동
-// (이슈 #309). 응답 상태 NOT_SENT/SENDING/REVIEW_REQUIRED/SENT, SENDING·REVIEW_REQUIRED일 때
-// 재발송 금지.

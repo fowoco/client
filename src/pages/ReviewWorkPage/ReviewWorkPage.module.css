@@ -116,6 +116,25 @@
   border-radius: var(--fowoco-radius-6);
 }
 
+.requestTextarea {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: var(--fowoco-spacing-12);
+  padding: var(--fowoco-spacing-12);
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text-primary);
+  resize: vertical;
+}
+
+.requestTextarea:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
 .railCardTitleRow {
   display: flex;
   align-items: center;

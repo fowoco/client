@@ -2,11 +2,7 @@ import { apiFetch } from './client'
 import type { DocumentType } from './documents'
 
 export type WorkerResponseType =
-  | 'ACKNOWLEDGED'
-  | 'QUESTION'
-  | 'NOT_UNDERSTOOD'
-  | 'DOCUMENT_SUBMITTED'
-  | 'DIFFICULT'
+  'ACKNOWLEDGED' | 'QUESTION' | 'NOT_UNDERSTOOD' | 'DOCUMENT_SUBMITTED' | 'DIFFICULT'
 
 export interface WorkerLinkIssueBody {
   expires_in_hours?: number
@@ -92,12 +88,8 @@ export function issueWorkerLink(
   })
 }
 
-export function fetchTaskWorkerLinkDelivery(
-  taskId: string,
-): Promise<WorkerLinkDeliveryResponse> {
-  return apiFetch<WorkerLinkDeliveryResponse>(
-    `/tasks/${encodeURIComponent(taskId)}/worker-link`,
-  )
+export function fetchTaskWorkerLinkDelivery(taskId: string): Promise<WorkerLinkDeliveryResponse> {
+  return apiFetch<WorkerLinkDeliveryResponse>(`/tasks/${encodeURIComponent(taskId)}/worker-link`)
 }
 
 export function markWorkerLinkSent(workerLinkId: string): Promise<WorkerLinkDeliveryResponse> {
@@ -161,10 +153,9 @@ export function fetchTaskWorkerResponses(
 }
 
 export function markTaskWorkerResponsesRead(taskId: string): Promise<void> {
-  return apiFetch<void>(
-    `/tasks/${encodeURIComponent(taskId)}/worker-responses/read`,
-    { method: 'POST' },
-  )
+  return apiFetch<void>(`/tasks/${encodeURIComponent(taskId)}/worker-responses/read`, {
+    method: 'POST',
+  })
 }
 
 export function resolveWorkerPortalUrl(workerUrlOrToken: string, origin: string): string {
@@ -172,3 +163,7 @@ export function resolveWorkerPortalUrl(workerUrlOrToken: string, origin: string)
   if (workerUrlOrToken.startsWith('/')) return new URL(workerUrlOrToken, origin).toString()
   return `${origin}/worker-portal/${encodeURIComponent(workerUrlOrToken)}`
 }
+
+// TODO(backend): POST /worker-links/{workerLinkId}/sms-deliveries — server#134 병합 후 연동
+// (이슈 #309). 응답 상태 NOT_SENT/SENDING/REVIEW_REQUIRED/SENT, SENDING·REVIEW_REQUIRED일 때
+// 재발송 금지.

@@ -2,30 +2,16 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { ApiError, getErrorMessage } from '../../api/errors'
 import { fetchAiRun, type AiRunResponse } from '../../api/aiRuns'
-import { WorkflowStepIndicator } from '../../components/ui/WorkflowStepIndicator/WorkflowStepIndicator'
 import {
   readAiRunWorkRequestDraft,
   type WorkRequestDraft,
 } from '../CreateWorkPage/workRequestDraft'
 import { AiRunReview } from './AiRunReview'
 import styles from './ReviewWorkPage.module.css'
-import { REVIEW_STEPS } from './reviewWorkData'
-import { DraftPreparationStep } from './steps/DraftPreparationStep'
-import { FinalReviewStep } from './steps/FinalReviewStep'
-import { InformationPendingStep } from './steps/InformationPendingStep'
-
-// REVIEW_STEPS 인덱스 기준 2~4단계(정보 보완/초안 준비/최종 검토) 내부 위저드.
-// 1.요청 확인은 CreateWorkPage(/tasks/new)에서 진행되고, 같은 WorkflowStepIndicator를 공유한다.
-type WizardStepIndex = 1 | 2 | 3
 
 interface ReviewLocationState {
   aiRun?: AiRunResponse
   draft?: WorkRequestDraft
-}
-
-function parseStepIndex(value: string | null): WizardStepIndex {
-  const parsed = Number(value)
-  return parsed === 2 || parsed === 3 ? parsed : 1
 }
 
 export function ReviewWorkPage() {
@@ -38,7 +24,6 @@ export function ReviewWorkPage() {
   const [recoveredRun, setRecoveredRun] = useState<AiRunResponse | null>(null)
   const [recovering, setRecovering] = useState(Boolean(aiRunId && !navigationRun))
   const [recoveryError, setRecoveryError] = useState<string | null>(null)
-  const [stepIndex, setStepIndex] = useState<WizardStepIndex>(() => parseStepIndex(searchParams.get('step')))
   const aiRun = navigationRun ?? recoveredRun
   const draft = navigationState?.draft ?? (aiRunId ? readAiRunWorkRequestDraft(aiRunId) : null)
 
@@ -68,13 +53,10 @@ export function ReviewWorkPage() {
     }
   }, [aiRunId, navigationRun])
 
-  function handleStepClick(index: number) {
-    if (index === 0) {
-      navigate('/tasks/new')
-      return
-    }
-    setStepIndex(index as WizardStepIndex)
-  }
+  // 분석 실행 번호(aiRunId) 없이 이 화면에 직접 들어오면 검토할 내용이 없다 — 요청 입력으로 되돌린다.
+  useEffect(() => {
+    if (!aiRunId && !navigationRun) navigate('/tasks/new', { replace: true })
+  }, [aiRunId, navigationRun, navigate])
 
   if (aiRun) {
     return <AiRunReview initialRun={aiRun} initialDraft={draft} />
@@ -104,19 +86,5 @@ export function ReviewWorkPage() {
     )
   }
 
-  return (
-    <div>
-      <div className={styles.topBar}>
-        <Link to="/tasks/new" className={styles.back}>
-          ← 업무 생성
-        </Link>
-      </div>
-
-      <WorkflowStepIndicator steps={REVIEW_STEPS} currentIndex={stepIndex} onStepClick={handleStepClick} />
-
-      {stepIndex === 1 && <InformationPendingStep onComplete={() => setStepIndex(2)} />}
-      {stepIndex === 2 && <DraftPreparationStep onDone={() => setStepIndex(3)} />}
-      {stepIndex === 3 && <FinalReviewStep />}
-    </div>
-  )
+  return null
 }

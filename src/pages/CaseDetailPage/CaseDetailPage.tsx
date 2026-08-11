@@ -514,8 +514,9 @@ export function CaseDetailPage() {
   }
 
   function handleReassignCase() {
-    // TODO(backend): PATCH /api/work-items/:id/assignee -> 담당자 변경
+    // TODO(backend): PATCH /api/work-items/:id/assignee -> 담당자 변경 (이슈 #315)
     setMoreMenuOpen(false)
+    showToast('담당자 변경은 준비 중입니다.')
   }
 
   function handleExpandContext() {

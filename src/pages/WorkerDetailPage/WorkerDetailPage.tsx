@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { fetchDocuments } from '../../api/documents'
+import { fetchTasks } from '../../api/tasks'
 import { fetchWorkerById } from '../../api/workers'
 import { getErrorMessage } from '../../api/errors'
 import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
@@ -8,6 +9,7 @@ import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import { WorkerFormModal } from '../../components/worker/WorkerFormModal'
 import { useApiQuery } from '../../hooks/useApiQuery'
+import { TASK_STATUS_LABEL, TASK_STATUS_TONE } from '../../utils/taskStatus'
 import { getDocumentViewModel } from '../../view-models/documentViewModel'
 import { getOperationalDateViewModel } from '../../view-models/dateViewModel'
 import { RegisterDocumentModal } from './overlays/RegisterDocumentModal'
@@ -19,11 +21,15 @@ export function WorkerDetailPage() {
   const fetcher = useCallback(() => fetchWorkerById(workerId ?? ''), [workerId])
   const { status, data: worker, error, refetch } = useApiQuery(fetcher)
 
-  const {
-    data: documentPage,
-    refetch: refetchDocuments,
-  } = useApiQuery(useCallback(() => fetchDocuments({ workerId: workerId ?? '', size: 100 }), [workerId]))
+  const { data: documentPage, refetch: refetchDocuments } = useApiQuery(
+    useCallback(() => fetchDocuments({ workerId: workerId ?? '', size: 100 }), [workerId]),
+  )
   const workerDocuments = documentPage?.items ?? []
+
+  const { data: taskPage } = useApiQuery(
+    useCallback(() => fetchTasks({ workerId: workerId ?? '', size: 20 }), [workerId]),
+  )
+  const workerTasks = taskPage?.items ?? []
 
   const [registerModalOpen, setRegisterModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
@@ -89,7 +95,11 @@ export function WorkerDetailPage() {
       <div className={styles.sectionCard}>
         <div className={styles.cardHeaderRow}>
           <h2 className={styles.cardTitle}>기본정보</h2>
-          <button type="button" className={styles.cardHeaderButton} onClick={() => setEditModalOpen(true)}>
+          <button
+            type="button"
+            className={styles.cardHeaderButton}
+            onClick={() => setEditModalOpen(true)}
+          >
             정보 수정
           </button>
         </div>
@@ -101,7 +111,13 @@ export function WorkerDetailPage() {
         <DetailRow
           label={stayExpiry.label}
           value={stayExpiry.display}
-          tone={stayExpiry.tone === 'critical' ? 'critical' : stayExpiry.tone === 'warning' ? 'warning' : 'default'}
+          tone={
+            stayExpiry.tone === 'critical'
+              ? 'critical'
+              : stayExpiry.tone === 'warning'
+                ? 'warning'
+                : 'default'
+          }
         />
         <DetailRow label={contractStart.label} value={contractStart.display} />
         <DetailRow label={contractEnd.label} value={contractEnd.display} />
@@ -121,7 +137,11 @@ export function WorkerDetailPage() {
           </button>
         </div>
         {workerDocuments.length === 0 ? (
-          <EmptyState kind="empty" title="제출된 서류가 없습니다" body="근로자가 서류를 제출하면 여기에 표시됩니다." />
+          <EmptyState
+            kind="empty"
+            title="제출된 서류가 없습니다"
+            body="근로자가 서류를 제출하면 여기에 표시됩니다."
+          />
         ) : (
           <div className={styles.documentList}>
             {workerDocuments.map((document) => {
@@ -141,13 +161,36 @@ export function WorkerDetailPage() {
       <div className={styles.sectionCard}>
         <h2 className={styles.cardTitle}>안내이력</h2>
         {/* TODO(#156): Audit API 연동 후 실제 활동 이력으로 대체 */}
-        <EmptyState kind="empty" title="안내이력 연동 준비 중입니다" body="Audit API 연동 후 표시됩니다." />
+        <EmptyState
+          kind="empty"
+          title="안내이력 연동 준비 중입니다"
+          body="Audit API 연동 후 표시됩니다."
+        />
       </div>
 
       <div className={styles.sectionCard}>
         <h2 className={styles.cardTitle}>현재 업무</h2>
-        {/* TODO(#153): Task API 연동 후 실제 진행 업무로 대체 */}
-        <EmptyState kind="empty" title="업무 연동 준비 중입니다" body="Task API 연동 후 표시됩니다." />
+        {workerTasks.length === 0 ? (
+          <EmptyState
+            kind="empty"
+            title="진행 중인 업무가 없습니다"
+            body="새 업무가 생기면 여기에 표시됩니다."
+          />
+        ) : (
+          <div className={styles.documentList}>
+            {workerTasks.map((task) => (
+              <Link key={task.task_id} to={`/tasks/${task.task_id}`} className={styles.documentRow}>
+                <span className={styles.documentName}>{task.title}</span>
+                <StatusLabel tone={TASK_STATUS_TONE[task.status]}>
+                  {TASK_STATUS_LABEL[task.status]}
+                </StatusLabel>
+                <span className={styles.documentUpdatedAt}>
+                  {task.due_date ? `~${task.due_date}` : '기한 없음'}
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
       <RegisterDocumentModal

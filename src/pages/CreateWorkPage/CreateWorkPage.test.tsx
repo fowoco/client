@@ -97,13 +97,12 @@ describe('CreateWorkPage', () => {
     })
   })
 
-  it('jumps to a later review step when clicking it in the shared step indicator', async () => {
-    const user = userEvent.setup()
+  it('renders the shared step indicator as a non-interactive progress display', () => {
     renderPage()
 
-    await user.click(screen.getByRole('button', { name: '3 초안 작성' }))
-
-    expect(await screen.findByText('검토 화면?step=2')).toBeInTheDocument()
+    expect(screen.getByText('1 요청 확인')).toBeInTheDocument()
+    expect(screen.getByText('2 분석 결과')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /분석 결과/ })).not.toBeInTheDocument()
   })
 
   it('opens the file import wizard from the work item panel', async () => {

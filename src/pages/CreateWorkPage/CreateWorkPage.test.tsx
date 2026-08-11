@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ToastViewport } from '../../components/ui/ToastViewport/ToastViewport'
 import { useToastStore } from '../../store/toastStore'
 import { CreateWorkPage } from './CreateWorkPage'
-import { DEFAULT_ORIGINAL_REQUEST, WORKFLOW_TASKS } from './createWorkData'
 
 function jsonResponse(body: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(body), {
@@ -67,36 +66,34 @@ function renderPage(initialEntry: string | { pathname: string; state?: unknown }
 }
 
 describe('CreateWorkPage', () => {
-  it('shows the request forwarded from the dashboard as the original request', () => {
+  it('prefills the request forwarded from the dashboard as editable text', () => {
     renderPage({ pathname: '/tasks/new', state: { prefill: '응웬반A 체류기간 연장 준비' } })
 
-    expect(screen.getByText('응웬반A 체류기간 연장 준비')).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: '원본 요청' })).toHaveValue(
+      '응웬반A 체류기간 연장 준비',
+    )
   })
 
-  it('falls back to a default original request when nothing was forwarded', () => {
+  it('starts with an empty, editable request when nothing was forwarded', () => {
     renderPage()
 
-    expect(screen.getByText(DEFAULT_ORIGINAL_REQUEST.split('\n')[0])).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: '원본 요청' })).toHaveValue('')
+    expect(screen.getByRole('button', { name: '정보 보완' })).toBeDisabled()
   })
 
-  it('renders every candidate task in the work item', () => {
-    renderPage()
-
-    for (const task of WORKFLOW_TASKS) {
-      expect(screen.getByText(task.title)).toBeInTheDocument()
-    }
-  })
-
-  it('navigates to the review flow when moving to information review', async () => {
+  it('navigates to the review flow with the text the user typed', async () => {
     const user = userEvent.setup()
     renderPage()
 
+    await user.type(screen.getByRole('textbox', { name: '원본 요청' }), '직접 입력한 요청')
     await user.click(screen.getByRole('button', { name: '정보 보완' }))
 
     expect(await screen.findByText(/검토 화면\?aiRunId=A-1/)).toBeInTheDocument()
-    const analyzeCall = vi.mocked(fetch).mock.calls.find(([url]) => String(url).endsWith('/ai-runs'))
+    const analyzeCall = vi
+      .mocked(fetch)
+      .mock.calls.find(([url]) => String(url).endsWith('/ai-runs'))
     expect(JSON.parse((analyzeCall?.[1] as RequestInit).body as string)).toEqual({
-      instruction: DEFAULT_ORIGINAL_REQUEST,
+      instruction: '직접 입력한 요청',
     })
   })
 
@@ -116,14 +113,5 @@ describe('CreateWorkPage', () => {
     await user.click(screen.getByRole('button', { name: '파일로 근로자 명단 가져오기 →' }))
 
     expect(screen.getByRole('dialog', { name: '파일 가져오기 · 파일 확인' })).toBeInTheDocument()
-  })
-
-  it('shows a toast when editing the original request', async () => {
-    const user = userEvent.setup()
-    renderPage()
-
-    await user.click(screen.getByRole('button', { name: '원문 수정' }))
-
-    expect(screen.getByText('원문 수정은 준비 중입니다.')).toBeInTheDocument()
   })
 })

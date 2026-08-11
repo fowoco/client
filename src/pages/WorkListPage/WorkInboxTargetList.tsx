@@ -29,7 +29,7 @@ export function WorkInboxTargetList({
       return
     }
 
-    let nextIndex = currentIndex
+    let nextIndex: number
     if (event.key === 'ArrowDown') nextIndex = Math.min(currentIndex + 1, groups.length - 1)
     else if (event.key === 'ArrowUp') nextIndex = Math.max(currentIndex - 1, 0)
     else if (event.key === 'Home') nextIndex = 0

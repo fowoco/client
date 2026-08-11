@@ -5,7 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LinkUploadPage } from './LinkUploadPage'
 
 function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  })
 }
 
 function renderPage() {
@@ -19,20 +22,39 @@ function renderPage() {
 }
 
 beforeEach(() => {
-  vi.stubGlobal('fetch', vi.fn((input) => {
-    const url = String(input)
-    if (url.endsWith('/documents')) {
-      return Promise.resolve(jsonResponse({ upload_id: 'U-1', file_name: 'passport.jpg', size: 8, expires_at: '2026-08-07T00:00:00Z' }, 201))
-    }
-    if (url.endsWith('/responses')) {
-      return Promise.resolve(jsonResponse({ response_id: 'R-1', received_at: '2026-08-04T00:00:00Z' }, 201))
-    }
-    return Promise.resolve(jsonResponse({
-      guidance: '여권 사본을 제출해 주세요.', language: 'ko', due_date: '2026-08-10',
-      requested_document_types: ['PASSPORT_COPY'],
-      allowed_responses: ['QUESTION', 'NOT_UNDERSTOOD', 'DIFFICULT', 'DOCUMENT_SUBMITTED'],
-    }))
-  }))
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input) => {
+      const url = String(input)
+      if (url.endsWith('/documents')) {
+        return Promise.resolve(
+          jsonResponse(
+            {
+              upload_id: 'U-1',
+              file_name: 'passport.jpg',
+              size: 8,
+              expires_at: '2026-08-07T00:00:00Z',
+            },
+            201,
+          ),
+        )
+      }
+      if (url.endsWith('/responses')) {
+        return Promise.resolve(
+          jsonResponse({ response_id: 'R-1', received_at: '2026-08-04T00:00:00Z' }, 201),
+        )
+      }
+      return Promise.resolve(
+        jsonResponse({
+          guidance: '여권 사본을 제출해 주세요.',
+          language: 'ko',
+          due_date: '2026-08-10',
+          requested_document_types: ['PASSPORT_COPY'],
+          allowed_responses: ['QUESTION', 'NOT_UNDERSTOOD', 'DIFFICULT', 'DOCUMENT_SUBMITTED'],
+        }),
+      )
+    }),
+  )
 })
 
 afterEach(() => vi.unstubAllGlobals())
@@ -68,7 +90,9 @@ describe('LinkUploadPage', () => {
 
     await user.upload(await screen.findByLabelText('여권 사본 제출할 파일 선택'), file)
 
-    expect(screen.getByRole('alert')).toHaveTextContent('JPG, PNG, WEBP, PDF 파일만 선택할 수 있습니다.')
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'JPG, PNG, WEBP, PDF 파일만 선택할 수 있습니다.',
+    )
     expect(screen.queryByText('worker.exe')).not.toBeInTheDocument()
   })
 
@@ -88,7 +112,8 @@ describe('LinkUploadPage', () => {
     expect((uploadCall?.[1]?.body as FormData).get('documentType')).toBe('PASSPORT_COPY')
     const responseCall = calls.find(([url]) => String(url).endsWith('/responses'))
     expect(JSON.parse(responseCall?.[1]?.body as string)).toMatchObject({
-      response_type: 'DOCUMENT_SUBMITTED', upload_ids: ['U-1'],
+      response_type: 'DOCUMENT_SUBMITTED',
+      upload_ids: ['U-1'],
     })
   })
 
@@ -99,26 +124,38 @@ describe('LinkUploadPage', () => {
       const url = String(input)
       if (url.endsWith('/documents')) {
         uploadCount += 1
-        return Promise.resolve(jsonResponse({
-          upload_id: `U-${uploadCount}`,
-          file_name: `document-${uploadCount}.jpg`,
-          size: 8,
-          expires_at: '2026-08-07T00:00:00Z',
-        }, 201))
+        return Promise.resolve(
+          jsonResponse(
+            {
+              upload_id: `U-${uploadCount}`,
+              file_name: `document-${uploadCount}.jpg`,
+              size: 8,
+              expires_at: '2026-08-07T00:00:00Z',
+            },
+            201,
+          ),
+        )
       }
       if (url.endsWith('/responses')) {
-        return Promise.resolve(jsonResponse({
-          response_id: 'R-1',
-          received_at: '2026-08-04T00:00:00Z',
-        }, 201))
+        return Promise.resolve(
+          jsonResponse(
+            {
+              response_id: 'R-1',
+              received_at: '2026-08-04T00:00:00Z',
+            },
+            201,
+          ),
+        )
       }
-      return Promise.resolve(jsonResponse({
-        guidance: '여권과 계약서를 제출해 주세요.',
-        language: 'ko',
-        due_date: '2026-08-10',
-        requested_document_types: ['PASSPORT_COPY', 'CONTRACT'],
-        allowed_responses: ['DOCUMENT_SUBMITTED'],
-      }))
+      return Promise.resolve(
+        jsonResponse({
+          guidance: '여권과 계약서를 제출해 주세요.',
+          language: 'ko',
+          due_date: '2026-08-10',
+          requested_document_types: ['PASSPORT_COPY', 'CONTRACT'],
+          allowed_responses: ['DOCUMENT_SUBMITTED'],
+        }),
+      )
     })
     renderPage()
 
@@ -152,28 +189,40 @@ describe('LinkUploadPage', () => {
     vi.mocked(fetch).mockImplementation((input) => {
       const url = String(input)
       if (url.endsWith('/documents')) {
-        return Promise.resolve(jsonResponse({
-          upload_id: 'U-1',
-          file_name: 'passport.jpg',
-          size: 8,
-          expires_at: '2026-08-07T00:00:00Z',
-        }, 201))
+        return Promise.resolve(
+          jsonResponse(
+            {
+              upload_id: 'U-1',
+              file_name: 'passport.jpg',
+              size: 8,
+              expires_at: '2026-08-07T00:00:00Z',
+            },
+            201,
+          ),
+        )
       }
       if (url.endsWith('/responses')) {
         responseAttempts += 1
         if (responseAttempts === 1) return Promise.reject(new TypeError('network failed'))
-        return Promise.resolve(jsonResponse({
-          response_id: 'R-1',
-          received_at: '2026-08-04T00:00:00Z',
-        }, 201))
+        return Promise.resolve(
+          jsonResponse(
+            {
+              response_id: 'R-1',
+              received_at: '2026-08-04T00:00:00Z',
+            },
+            201,
+          ),
+        )
       }
-      return Promise.resolve(jsonResponse({
-        guidance: '여권을 제출해 주세요.',
-        language: 'ko',
-        due_date: '2026-08-10',
-        requested_document_types: ['PASSPORT_COPY'],
-        allowed_responses: ['DOCUMENT_SUBMITTED'],
-      }))
+      return Promise.resolve(
+        jsonResponse({
+          guidance: '여권을 제출해 주세요.',
+          language: 'ko',
+          due_date: '2026-08-10',
+          requested_document_types: ['PASSPORT_COPY'],
+          allowed_responses: ['DOCUMENT_SUBMITTED'],
+        }),
+      )
     })
     renderPage()
     await user.upload(
@@ -192,5 +241,26 @@ describe('LinkUploadPage', () => {
     expect(responseCalls).toHaveLength(2)
     const responseBodies = responseCalls.map(([, init]) => JSON.parse(String(init?.body)))
     expect(responseBodies[0].idempotency_key).toBe(responseBodies[1].idempotency_key)
+  })
+
+  it('lets the worker write and submit the actual question', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: /질문이 있습니다/ }))
+    await user.type(
+      screen.getByLabelText('담당자에게 물어볼 내용'),
+      '계약서도 사진으로 보내도 되나요?',
+    )
+    await user.click(screen.getByRole('button', { name: '질문 보내기' }))
+
+    expect(await screen.findByText('담당자에게 질문을 전송했습니다.')).toBeInTheDocument()
+    const responseCall = vi
+      .mocked(fetch)
+      .mock.calls.find(([url]) => String(url).endsWith('/responses'))
+    expect(JSON.parse(String(responseCall?.[1]?.body))).toMatchObject({
+      response_type: 'QUESTION',
+      message: '계약서도 사진으로 보내도 되나요?',
+    })
   })
 })

@@ -182,6 +182,7 @@ function mockTaskAndActivities(
   savedDocumentRequestDraft: DocumentRequestDraftResponse | null = null,
 ) {
   let responsesReviewed = false
+  let currentWorkerResponses = workerResponses
   let currentWorkerLinkDelivery = workerLinkDelivery
   let currentDocumentRequestDraft = savedDocumentRequestDraft
   vi.mocked(fetch).mockImplementation((input, init) => {
@@ -198,8 +199,27 @@ function mockTaskAndActivities(
       responsesReviewed = true
       return Promise.resolve(new Response(null, { status: 204 }))
     }
+    if (url.includes('/worker-responses/') && url.endsWith('/documents/adopt')) {
+      currentWorkerResponses = currentWorkerResponses.map((response) => ({
+        ...response,
+        uploads: response.uploads.map((upload) => ({ ...upload, adopted: true })),
+      }))
+      return Promise.resolve(
+        jsonResponse({
+          response_id: 'response-1',
+          adopted_documents:
+            currentWorkerResponses[0]?.uploads.map((upload) => ({
+              worker_document_id: `document-${upload.file_id}`,
+              file_id: upload.file_id,
+              document_type: upload.document_type,
+            })) ?? [],
+          task_status: 'APPROVED',
+          task_version: 2,
+        }),
+      )
+    }
     if (url.includes('/worker-responses?')) {
-      const items = workerResponses.map((response) =>
+      const items = currentWorkerResponses.map((response) =>
         responsesReviewed
           ? { ...response, unread: false, conversation_status: 'REOPENED' as const }
           : response,
@@ -605,6 +625,16 @@ describe('CaseDetailPage', () => {
           response_type: 'DOCUMENT_SUBMITTED',
           message: '여권 사본을 제출했습니다.',
           upload_ids: ['upload-1'],
+          uploads: [
+            {
+              file_id: 'upload-1',
+              file_name: 'passport.pdf',
+              mime_type: 'application/pdf',
+              size: 2048,
+              document_type: 'PASSPORT_COPY',
+              adopted: false,
+            },
+          ],
           conversation_status: 'NEEDS_FOLLOWUP',
           unread: true,
           received_at: '2026-07-20T01:00:00Z',
@@ -618,7 +648,8 @@ describe('CaseDetailPage', () => {
 
     expect(screen.getByText('승인대기')).toBeInTheDocument()
     expect(screen.getByText('여권 사본을 제출했습니다.')).toBeInTheDocument()
-    expect(screen.getByText('제출 파일 1개')).toBeInTheDocument()
+    expect(screen.getByText('passport.pdf')).toBeInTheDocument()
+    expect(screen.getByText(/여권 사본 · 2KB · 검토 필요/)).toBeInTheDocument()
     expect(screen.queryByText('여권 사본 요청문 초안을 준비했습니다.')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '응답 확인 완료' }))
@@ -689,6 +720,7 @@ describe('CaseDetailPage', () => {
           response_type: 'QUESTION',
           message: '어떤 서류가 필요한가요?',
           upload_ids: [],
+          uploads: [],
           conversation_status: 'NEEDS_FOLLOWUP',
           unread: true,
           received_at: '2026-07-20T01:00:00Z',
@@ -702,6 +734,55 @@ describe('CaseDetailPage', () => {
 
     expect(screen.getByText('미확인')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '응답 확인 완료' })).not.toBeInTheDocument()
+  })
+
+  it('adopts a submitted file as an official worker document', async () => {
+    const user = userEvent.setup()
+    useAuthStore.setState({
+      user: { name: 'hr', workplace: 'FOWOCO', role: 'HR' },
+      status: 'ready',
+    })
+    mockTaskAndActivities(
+      { status: 'WAITING_WORKER', version: 3 },
+      [],
+      {},
+      [],
+      [
+        {
+          response_id: 'response-1',
+          response_type: 'DOCUMENT_SUBMITTED',
+          message: '여권을 제출했습니다.',
+          upload_ids: ['upload-1'],
+          uploads: [
+            {
+              file_id: 'upload-1',
+              file_name: 'passport.pdf',
+              mime_type: 'application/pdf',
+              size: 2048,
+              document_type: 'PASSPORT_COPY',
+              adopted: false,
+            },
+          ],
+          conversation_status: 'NEEDS_FOLLOWUP',
+          unread: true,
+          received_at: '2026-07-20T01:00:00Z',
+        },
+      ],
+    )
+    renderPage()
+    await screen.findByText('응웬반A 체류연장 준비')
+
+    await user.click(screen.getByRole('tab', { name: CASE_TABS[3] }))
+    await user.click(screen.getByRole('button', { name: '확인 후 공식 서류로 등록' }))
+
+    expect(
+      await screen.findByText('제출 파일을 공식 근로자 서류로 등록했습니다.'),
+    ).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText(/공식 서류 등록됨/)).toBeInTheDocument())
+    const adoptionCall = vi
+      .mocked(fetch)
+      .mock.calls.find(([url]) => String(url).endsWith('/documents/adopt'))
+    expect(JSON.parse(String(adoptionCall?.[1]?.body))).toEqual({ expected_task_version: 3 })
   })
 
   it('switches to the activity tab and shows real activity content', async () => {

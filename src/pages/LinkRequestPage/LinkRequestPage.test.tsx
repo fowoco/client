@@ -41,15 +41,20 @@ describe('LinkRequestPage', () => {
   })
 
   it('shows a retryable preparing state for a link without ready draft content', async () => {
-    vi.mocked(fetch).mockResolvedValue(jsonResponse({
-      timestamp: '2026-08-08T00:00:00Z',
-      status: 409,
-      code: 'WORKER_LINK_CONTENT_NOT_READY',
-      message: '근로자에게 표시할 요청 안내가 아직 준비되지 않았습니다.',
-      path: '/api/v1/public/worker-links/token-1',
-      request_id: 'request-1',
-      field_errors: [],
-    }, 409))
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse(
+        {
+          timestamp: '2026-08-08T00:00:00Z',
+          status: 409,
+          code: 'WORKER_LINK_CONTENT_NOT_READY',
+          message: '근로자에게 표시할 요청 안내가 아직 준비되지 않았습니다.',
+          path: '/api/v1/public/worker-links/token-1',
+          request_id: 'request-1',
+          field_errors: [],
+        },
+        409,
+      ),
+    )
     render(
       <MemoryRouter initialEntries={['/worker-portal/token-1']}>
         <Routes>
@@ -82,6 +87,41 @@ describe('LinkRequestPage', () => {
       .mock.calls.find(([url]) => String(url).endsWith('/responses'))
     expect(JSON.parse(responseCall?.[1]?.body as string)).toMatchObject({
       response_type: 'ACKNOWLEDGED',
+    })
+  })
+
+  it('sends the question text instead of only a question type', async () => {
+    const user = userEvent.setup()
+    vi.mocked(fetch).mockImplementation((input) => {
+      if (String(input).endsWith('/responses')) {
+        return Promise.resolve(
+          jsonResponse({ response_id: 'R-1', received_at: '2026-08-10T00:00:00Z' }, 201),
+        )
+      }
+      return Promise.resolve(jsonResponse(VIEW))
+    })
+    render(
+      <MemoryRouter initialEntries={['/worker-portal/token-1']}>
+        <Routes>
+          <Route path="/worker-portal/:token" element={<LinkRequestPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await user.click(await screen.findByRole('button', { name: '질문이 있습니다' }))
+    await user.type(
+      screen.getByLabelText('담당자에게 물어볼 내용'),
+      '여권 어느 면을 찍어야 하나요?',
+    )
+    await user.click(screen.getByRole('button', { name: '질문 보내기' }))
+
+    expect(await screen.findByText('담당자에게 질문을 전송했습니다.')).toBeInTheDocument()
+    const responseCall = vi
+      .mocked(fetch)
+      .mock.calls.find(([url]) => String(url).endsWith('/responses'))
+    expect(JSON.parse(String(responseCall?.[1]?.body))).toMatchObject({
+      response_type: 'QUESTION',
+      message: '여권 어느 면을 찍어야 하나요?',
     })
   })
 

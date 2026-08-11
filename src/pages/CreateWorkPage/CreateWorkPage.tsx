@@ -58,11 +58,6 @@ export function CreateWorkPage() {
     }
   }
 
-  function handleStepClick(index: number) {
-    if (index === 0) return
-    navigate(`/tasks/new/review?step=${index}`)
-  }
-
   return (
     <div>
       <div className={styles.topBar}>
@@ -71,7 +66,7 @@ export function CreateWorkPage() {
         </Link>
       </div>
 
-      <WorkflowStepIndicator steps={REVIEW_STEPS} currentIndex={0} onStepClick={handleStepClick} />
+      <WorkflowStepIndicator steps={REVIEW_STEPS} currentIndex={0} />
 
       <div className={styles.headerRow}>
         <div>

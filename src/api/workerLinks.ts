@@ -2,11 +2,7 @@ import { apiFetch } from './client'
 import type { DocumentType } from './documents'
 
 export type WorkerResponseType =
-  | 'ACKNOWLEDGED'
-  | 'QUESTION'
-  | 'NOT_UNDERSTOOD'
-  | 'DOCUMENT_SUBMITTED'
-  | 'DIFFICULT'
+  'ACKNOWLEDGED' | 'QUESTION' | 'NOT_UNDERSTOOD' | 'DOCUMENT_SUBMITTED' | 'DIFFICULT'
 
 export interface WorkerLinkIssueBody {
   expires_in_hours?: number
@@ -16,6 +12,7 @@ export interface WorkerLinkIssueBody {
 export interface WorkerLinkIssueResponse {
   worker_link_id: string
   worker_url: string | null
+  worker_link_token: string | null
   expires_at: string
   delivery_status: WorkerLinkDeliveryStatus
   sent_at: string | null
@@ -23,7 +20,7 @@ export interface WorkerLinkIssueResponse {
 }
 
 export type WorkerLinkStatus = 'ACTIVE' | 'EXPIRED' | 'REVOKED'
-export type WorkerLinkDeliveryStatus = 'NOT_SENT' | 'SENT'
+export type WorkerLinkDeliveryStatus = 'NOT_SENT' | 'SENDING' | 'REVIEW_REQUIRED' | 'SENT'
 
 export interface WorkerLinkDeliveryResponse {
   worker_link_id: string
@@ -92,18 +89,35 @@ export function issueWorkerLink(
   })
 }
 
-export function fetchTaskWorkerLinkDelivery(
-  taskId: string,
-): Promise<WorkerLinkDeliveryResponse> {
-  return apiFetch<WorkerLinkDeliveryResponse>(
-    `/tasks/${encodeURIComponent(taskId)}/worker-link`,
-  )
+export function fetchTaskWorkerLinkDelivery(taskId: string): Promise<WorkerLinkDeliveryResponse> {
+  return apiFetch<WorkerLinkDeliveryResponse>(`/tasks/${encodeURIComponent(taskId)}/worker-link`)
 }
 
 export function markWorkerLinkSent(workerLinkId: string): Promise<WorkerLinkDeliveryResponse> {
   return apiFetch<WorkerLinkDeliveryResponse>(
     `/worker-links/${encodeURIComponent(workerLinkId)}/sent`,
     { method: 'POST' },
+  )
+}
+
+export interface WorkerLinkSmsDeliveryBody {
+  recipient_phone: string
+  worker_link_token: string
+}
+
+// 링크 발급 때 쓴 것과 같은 idempotencyKey를 넘겨야 서버가 요청-토큰 일치를 검증한다.
+export function sendWorkerLinkSms(
+  workerLinkId: string,
+  body: WorkerLinkSmsDeliveryBody,
+  idempotencyKey: string,
+): Promise<WorkerLinkDeliveryResponse> {
+  return apiFetch<WorkerLinkDeliveryResponse>(
+    `/worker-links/${encodeURIComponent(workerLinkId)}/sms-deliveries`,
+    {
+      method: 'POST',
+      headers: { 'Idempotency-Key': idempotencyKey },
+      body: JSON.stringify(body),
+    },
   )
 }
 
@@ -161,10 +175,9 @@ export function fetchTaskWorkerResponses(
 }
 
 export function markTaskWorkerResponsesRead(taskId: string): Promise<void> {
-  return apiFetch<void>(
-    `/tasks/${encodeURIComponent(taskId)}/worker-responses/read`,
-    { method: 'POST' },
-  )
+  return apiFetch<void>(`/tasks/${encodeURIComponent(taskId)}/worker-responses/read`, {
+    method: 'POST',
+  })
 }
 
 export function resolveWorkerPortalUrl(workerUrlOrToken: string, origin: string): string {

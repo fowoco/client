@@ -24,6 +24,7 @@ import { ApiError, getErrorMessage } from '../../api/errors'
 import { downloadFile } from '../../api/files'
 import { cancelTask, fetchTaskById, updateChecklistItem } from '../../api/tasks'
 import {
+  adoptWorkerResponseDocuments,
   fetchTaskWorkerLinkDelivery,
   fetchTaskWorkerResponses,
   issueWorkerLink,
@@ -119,6 +120,11 @@ const CASE_LIFECYCLE_LABEL: Record<CaseProjectionResponse['lifecycle_status'], s
   CANCELLED: '취소',
 }
 
+function formatResponseFileSize(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))}KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`
+}
+
 async function fetchTaskWorkerLinkDeliveryOrNull(
   taskId: string,
 ): Promise<WorkerLinkDeliveryResponse | null> {
@@ -209,6 +215,7 @@ export function CaseDetailPage() {
   const [markingLinkSent, setMarkingLinkSent] = useState(false)
   const [markingResponsesRead, setMarkingResponsesRead] = useState(false)
   const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null)
+  const [adoptingResponseId, setAdoptingResponseId] = useState<string | null>(null)
   const [savingDocumentRequestDraft, setSavingDocumentRequestDraft] = useState(false)
   const [documentRequestDraftForm, setDocumentRequestDraftForm] =
     useState<DocumentRequestDraftForm | null>(null)
@@ -611,7 +618,7 @@ export function CaseDetailPage() {
           expires_at: issued.expires_at,
         },
       })
-      refetchWorkerLinkDelivery()
+      await Promise.all([refetchTask(), refetchWorkerLinkDelivery(), refetchActivities()])
       setLinkOverlay('reissued')
       showToast(
         issued.worker_url
@@ -707,6 +714,31 @@ export function CaseDetailPage() {
       )
     } finally {
       setMarkingResponsesRead(false)
+    }
+  }
+
+  async function handleAdoptResponseDocuments(responseId: string) {
+    if (!task || adoptingResponseId) return
+    setAdoptingResponseId(responseId)
+    try {
+      await adoptWorkerResponseDocuments(task.task_id, responseId, task.version)
+      await Promise.all([
+        refetchTask(),
+        refetchWorkerResponses(),
+        refetchDocuments(),
+        refetchReadiness(),
+        refetchWorkerLinkDelivery(),
+        refetchActivities(),
+      ])
+      showToast('제출 파일을 공식 근로자 서류로 등록했습니다.')
+    } catch (error) {
+      showToast(
+        error instanceof ApiError
+          ? getErrorMessage(error)
+          : '제출 파일을 공식 서류로 등록하지 못했습니다.',
+      )
+    } finally {
+      setAdoptingResponseId(null)
     }
   }
 
@@ -1379,10 +1411,52 @@ export function CaseDetailPage() {
                           <p className={styles.commMessage}>
                             {response.message?.trim() || '별도 메시지 없이 응답했습니다.'}
                           </p>
-                          {response.upload_ids.length > 0 && (
-                            <p className={styles.commFiles}>
-                              제출 파일 {response.upload_ids.length}개
-                            </p>
+                          {response.uploads.length > 0 && (
+                            <div className={styles.responseFiles}>
+                              {response.uploads.map((upload) => (
+                                <div key={upload.file_id} className={styles.responseFileRow}>
+                                  <div className={styles.responseFileCopy}>
+                                    <span className={styles.responseFileName}>
+                                      {upload.file_name}
+                                    </span>
+                                    <span className={styles.responseFileMeta}>
+                                      {upload.document_type
+                                        ? DOCUMENT_TYPE_LABEL[upload.document_type]
+                                        : '서류 유형 미확인'}
+                                      {' · '}
+                                      {formatResponseFileSize(upload.size)}
+                                      {upload.adopted ? ' · 공식 서류 등록됨' : ' · 검토 필요'}
+                                    </span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    className={styles.responseFileAction}
+                                    disabled={downloadingFileId !== null}
+                                    onClick={() =>
+                                      handleDownloadDocument(upload.file_id, upload.file_name)
+                                    }
+                                  >
+                                    {downloadingFileId === upload.file_id ? '받는 중…' : '다운로드'}
+                                  </button>
+                                </div>
+                              ))}
+                              {response.response_type === 'DOCUMENT_SUBMITTED' &&
+                                response.uploads.some((upload) => !upload.adopted) &&
+                                userRole !== 'VIEWER' && (
+                                  <button
+                                    type="button"
+                                    className={styles.adoptDocumentsAction}
+                                    disabled={adoptingResponseId !== null}
+                                    onClick={() =>
+                                      handleAdoptResponseDocuments(response.response_id)
+                                    }
+                                  >
+                                    {adoptingResponseId === response.response_id
+                                      ? '등록 중…'
+                                      : '확인 후 공식 서류로 등록'}
+                                  </button>
+                                )}
+                            </div>
                           )}
                         </div>
                       </article>

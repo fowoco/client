@@ -179,10 +179,14 @@ export function buildDashboardMetrics(counts: DashboardSummaryCountsResponse): D
 export function buildDashboardWorkItems(
   tasks: DashboardTaskSummaryResponse[],
   upcomingExpiries: UpcomingExpiryItemResponse[] = [],
+  workers: { worker_id: string; display_name: string }[] = [],
 ): DashboardWorkItem[] {
-  const workerNameById = new Map(
-    upcomingExpiries.map((item) => [item.worker_id, item.display_name]),
-  )
+  // upcoming_7_days에는 마감 임박 근로자만 있어서 우선 업무의 근로자 이름이 종종
+  // 비어 보였다. 전체 근로자 목록을 우선 사용하고, 못 찾으면 upcoming_7_days로 보완한다.
+  const workerNameById = new Map([
+    ...upcomingExpiries.map((item): [string, string] => [item.worker_id, item.display_name]),
+    ...workers.map((worker): [string, string] => [worker.worker_id, worker.display_name]),
+  ])
 
   return tasks.map((task) => {
     const presentation = STATUS_PRESENTATION[task.status]

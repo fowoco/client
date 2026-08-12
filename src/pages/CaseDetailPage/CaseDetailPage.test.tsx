@@ -900,9 +900,32 @@ describe('CaseDetailPage', () => {
     expect(screen.getByRole('menu', { name: '업무 더보기 메뉴' })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: '취소' })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: '담당자 변경' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Renewal 실행' })).toBeInTheDocument()
 
     await user.click(moreButton)
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
+  it('does not show Renewal 실행 for non-renewal task types', async () => {
+    const user = userEvent.setup()
+    mockTaskAndActivities({ task_type: 'DOCUMENT_REQUEST' })
+    renderPage()
+    await screen.findByText('응웬반A 체류연장 준비')
+
+    await user.click(screen.getByRole('button', { name: '더보기 ···' }))
+    expect(screen.queryByRole('menuitem', { name: 'Renewal 실행' })).not.toBeInTheDocument()
+  })
+
+  it('opens the Renewal execution modal from the more menu', async () => {
+    const user = userEvent.setup()
+    mockTaskAndActivities()
+    renderPage()
+    await screen.findByText('응웬반A 체류연장 준비')
+
+    await user.click(screen.getByRole('button', { name: '더보기 ···' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Renewal 실행' }))
+
+    expect(screen.getByRole('dialog', { name: 'Renewal Agent 실행' })).toBeInTheDocument()
   })
 
   it('shows a toast when the assignee change action is clicked', async () => {

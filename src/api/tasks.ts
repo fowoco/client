@@ -129,10 +129,7 @@ interface CreateTaskFields {
 }
 
 export type CreateTaskBody = CreateTaskFields &
-  (
-    | { target_type?: 'WORKER'; worker_id: string }
-    | { target_type: 'COMPANY'; worker_id?: never }
-  )
+  ({ target_type?: 'WORKER'; worker_id: string } | { target_type: 'COMPANY'; worker_id?: never })
 
 export function createTask(body: CreateTaskBody): Promise<TaskDetailResponse> {
   return apiFetch<TaskDetailResponse>('/tasks', { method: 'POST', body: JSON.stringify(body) })

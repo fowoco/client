@@ -22,7 +22,7 @@ import {
 } from '../../api/documents'
 import { ApiError, getErrorMessage } from '../../api/errors'
 import { downloadFile } from '../../api/files'
-import { cancelTask, fetchTaskById, updateChecklistItem } from '../../api/tasks'
+import { cancelTask, fetchTaskById, updateChecklistItem, type TaskType } from '../../api/tasks'
 import {
   adoptWorkerResponseDocuments,
   fetchTaskWorkerLinkDelivery,
@@ -71,6 +71,7 @@ import {
   type ExternalCompletionSubmission,
 } from './overlays/ExternalCompletionModal'
 import { LinkDeliveryConfirmModal } from './overlays/LinkDeliveryConfirmModal'
+import { RenewalExecutionModal } from './overlays/RenewalExecutionModal'
 import { LinkReissueModal, type ReissueSubmission } from './overlays/LinkReissueModal'
 import { LinkReissuedModal } from './overlays/LinkReissuedModal'
 import { RejectionReasonModal } from './overlays/RejectionReasonModal'
@@ -124,6 +125,12 @@ function formatResponseFileSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))}KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`
 }
+
+const RENEWAL_TASK_TYPES = new Set<TaskType>([
+  'RECONTRACT',
+  'EMPLOYMENT_PERIOD_EXTENSION',
+  'STAY_PERIOD_EXTENSION',
+])
 
 async function fetchTaskWorkerLinkDeliveryOrNull(
   taskId: string,
@@ -194,6 +201,7 @@ export function CaseDetailPage() {
   const contextRequested = searchParams.get('context') === 'open'
   const [activeTab, setActiveTab] = useState(CASE_TABS[0])
   const [moreMenuOpen, setMoreMenuOpen] = useState(false)
+  const [renewalOverlayOpen, setRenewalOverlayOpen] = useState(false)
   const [contextDrawerOpen, setContextDrawerOpen] = useState(contextRequested)
   const [approvalOverlay, setApprovalOverlay] = useState<ApprovalOverlay>('none')
   const [completionOverlay, setCompletionOverlay] = useState<CompletionOverlay>('none')
@@ -898,6 +906,21 @@ export function CaseDetailPage() {
                   담당자 변경
                 </button>
               </li>
+              {RENEWAL_TASK_TYPES.has(task.task_type) && (
+                <li role="presentation">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className={styles.moreMenuItem}
+                    onClick={() => {
+                      setMoreMenuOpen(false)
+                      setRenewalOverlayOpen(true)
+                    }}
+                  >
+                    Renewal 실행
+                  </button>
+                </li>
+              )}
             </ul>
           )}
         </div>
@@ -1601,6 +1624,22 @@ export function CaseDetailPage() {
         onClose={() => setLinkOverlay(deliveryConfirmReturn)}
         onConfirm={handleMarkLinkSent}
       />
+
+      {task && (
+        <RenewalExecutionModal
+          open={renewalOverlayOpen}
+          taskId={task.task_id}
+          taskVersion={task.version}
+          onClose={() => setRenewalOverlayOpen(false)}
+          onDownloadDocument={handleDownloadDocument}
+          onApplied={() => {
+            refetchTask()
+            refetchDocuments()
+            refetchActivities()
+            refetchReadiness()
+          }}
+        />
+      )}
 
       <Drawer open={contextDrawerOpen} onClose={handleCloseContext} title="관련 Context">
         {caseId && (caseProjectionStatus === 'loading' || caseProjectionStatus === 'empty') && (

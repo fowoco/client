@@ -1,8 +1,10 @@
-import { useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useCallback, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { fetchWorkers } from '../../api/workers'
 import { useDashboardToday } from '../../components/layout/dashboardTodayContext'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { WorkItemRow } from '../../components/ui/WorkItemRow/WorkItemRow'
+import { useApiQuery } from '../../hooks/useApiQuery'
 import agentSparkIcon from './assets/agent-spark.svg'
 import commandSubmitIcon from './assets/command-submit.svg'
 import styles from './DashboardPage.module.css'
@@ -19,11 +21,16 @@ export function DashboardPage() {
   const [agentRequest, setAgentRequest] = useState('')
   const agentRequestRef = useRef<HTMLTextAreaElement>(null)
   const { status, data: today, error, refetch, lastUpdatedAt } = useDashboardToday()
+  // 우선 업무 카드의 근로자 이름을 표시하기 위한 조회 — today API의 priority_tasks에는
+  // worker_id만 있고 이름이 없다.
+  const { data: workerPage } = useApiQuery(useCallback(() => fetchWorkers({ size: 100 }), []))
   const metrics = useMemo(() => (today ? buildDashboardMetrics(today.summary_counts) : []), [today])
   const workItems = useMemo(
     () =>
-      today ? buildDashboardWorkItems(today.priority_tasks, today.upcoming_7_days) : [],
-    [today],
+      today
+        ? buildDashboardWorkItems(today.priority_tasks, today.upcoming_7_days, workerPage?.items)
+        : [],
+    [today, workerPage],
   )
   const agentPrepared = useMemo(
     () =>
@@ -94,7 +101,9 @@ export function DashboardPage() {
         {status === 'success' && (
           <div className={styles.updateInfo}>
             <span>최근 갱신 {lastUpdatedAt ?? '확인 중'}</span>
-            <button type="button" onClick={refetch}>새로고침</button>
+            <button type="button" onClick={refetch}>
+              새로고침
+            </button>
           </div>
         )}
       </header>
@@ -112,59 +121,59 @@ export function DashboardPage() {
         </header>
 
         <div id="agent-request-body" className={styles.agentRequestBody}>
-            <div className={styles.requestComposer}>
-              <form className={styles.commandForm} onSubmit={handleAgentRequestSubmit}>
-                <label className={styles.visuallyHidden} htmlFor="agent-work-request">
-                  업무 내용
-                </label>
-                <div className={styles.commandField}>
-                  <textarea
-                    ref={agentRequestRef}
-                    id="agent-work-request"
-                    className={styles.commandInput}
-                    value={agentRequest}
-                    onChange={(event) => setAgentRequest(event.target.value)}
-                    onKeyDown={handleAgentRequestKeyDown}
-                    placeholder="예: 응웬반A의 체류기간 연장 준비"
-                    aria-describedby="agent-request-hint"
-                    rows={2}
-                    maxLength={2000}
-                  />
-                  <button
-                    type="submit"
-                    className={styles.commandSubmit}
-                    disabled={agentRequest.trim() === ''}
-                  >
-                    <img src={commandSubmitIcon} alt="" aria-hidden="true" />
-                    <span>업무 분석</span>
-                  </button>
-                </div>
-                <p id="agent-request-hint" className={styles.commandHint}>
-                  입력한 원문 그대로 분석합니다 · Enter로 분석 · Shift+Enter로 줄바꿈
-                </p>
-              </form>
-            </div>
-
-            <aside className={styles.quickPromptPanel} aria-label="빠른 요청">
-              <div className={styles.promptPanelHeader}>
-                <strong>빠른 요청</strong>
-                <span>자주 쓰는 업무로 시작하세요.</span>
+          <div className={styles.requestComposer}>
+            <form className={styles.commandForm} onSubmit={handleAgentRequestSubmit}>
+              <label className={styles.visuallyHidden} htmlFor="agent-work-request">
+                업무 내용
+              </label>
+              <div className={styles.commandField}>
+                <textarea
+                  ref={agentRequestRef}
+                  id="agent-work-request"
+                  className={styles.commandInput}
+                  value={agentRequest}
+                  onChange={(event) => setAgentRequest(event.target.value)}
+                  onKeyDown={handleAgentRequestKeyDown}
+                  placeholder="예: 응웬반A의 체류기간 연장 준비"
+                  aria-describedby="agent-request-hint"
+                  rows={2}
+                  maxLength={2000}
+                />
+                <button
+                  type="submit"
+                  className={styles.commandSubmit}
+                  disabled={agentRequest.trim() === ''}
+                >
+                  <img src={commandSubmitIcon} alt="" aria-hidden="true" />
+                  <span>업무 분석</span>
+                </button>
               </div>
-              <div className={styles.promptChips}>
-                {AI_REQUEST_PROMPT_CHIPS.map((chip) => (
-                  <button
-                    key={chip}
-                    type="button"
-                    className={styles.promptChip}
-                    aria-pressed={agentRequest === chip}
-                    onClick={() => handlePromptChipClick(chip)}
-                  >
-                    {chip}
-                  </button>
-                ))}
-              </div>
-            </aside>
+              <p id="agent-request-hint" className={styles.commandHint}>
+                입력한 원문 그대로 분석합니다 · Enter로 분석 · Shift+Enter로 줄바꿈
+              </p>
+            </form>
           </div>
+
+          <aside className={styles.quickPromptPanel} aria-label="빠른 요청">
+            <div className={styles.promptPanelHeader}>
+              <strong>빠른 요청</strong>
+              <span>자주 쓰는 업무로 시작하세요.</span>
+            </div>
+            <div className={styles.promptChips}>
+              {AI_REQUEST_PROMPT_CHIPS.map((chip) => (
+                <button
+                  key={chip}
+                  type="button"
+                  className={styles.promptChip}
+                  aria-pressed={agentRequest === chip}
+                  onClick={() => handlePromptChipClick(chip)}
+                >
+                  {chip}
+                </button>
+              ))}
+            </div>
+          </aside>
+        </div>
       </section>
 
       {status === 'loading' && (
@@ -257,7 +266,9 @@ export function DashboardPage() {
                       />
                     ))
                   ) : (
-                    <p className={styles.sectionEmpty}>현재 담당자가 바로 처리할 업무가 없습니다.</p>
+                    <p className={styles.sectionEmpty}>
+                      현재 담당자가 바로 처리할 업무가 없습니다.
+                    </p>
                   )}
                 </div>
               </div>
@@ -331,9 +342,7 @@ export function DashboardPage() {
               </div>
               <h2 id="agent-prepared-title">Agent 작업 공간</h2>
               <div className={styles.preparedIntro}>
-                <strong>
-                  연결된 업무 {agentPrepared.connectedCount}건
-                </strong>
+                <strong>연결된 업무 {agentPrepared.connectedCount}건</strong>
                 <p>Agent가 준비하거나 이어서 처리할 업무만 모았습니다.</p>
               </div>
 

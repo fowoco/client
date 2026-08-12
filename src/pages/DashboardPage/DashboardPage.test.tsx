@@ -131,7 +131,16 @@ function renderPage() {
 }
 
 beforeEach(() => {
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(TODAY_RESPONSE)))
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+      if (url.includes('/workers')) {
+        return Promise.resolve(jsonResponse({ items: [], page: 0, size: 100, total_elements: 0 }))
+      }
+      return Promise.resolve(jsonResponse(TODAY_RESPONSE))
+    }),
+  )
 })
 
 afterEach(() => {
@@ -147,10 +156,18 @@ describe('DashboardPage', () => {
         name: '오늘의 업무를 확인하세요.',
       }),
     ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '승인 대기 2건 업무함에서 보기' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '오늘 마감 1건 업무함에서 보기' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '정보 보완 1건 업무함에서 보기' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '응답 대기 3건 업무함에서 보기' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: '승인 대기 2건 업무함에서 보기' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: '오늘 마감 1건 업무함에서 보기' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: '정보 보완 1건 업무함에서 보기' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: '응답 대기 3건 업무함에서 보기' }),
+    ).toBeInTheDocument()
     expect(screen.getAllByText('응웬반A 체류연장 요청문').length).toBeGreaterThan(0)
     expect(screen.getAllByText('응웬반A').length).toBeGreaterThan(0)
     expect(screen.getByText(/처리 기한 .*D-1/)).toBeInTheDocument()
@@ -158,9 +175,13 @@ describe('DashboardPage', () => {
     expect(screen.getByText('체류기간 만료')).toBeInTheDocument()
     expect(screen.getByText('여권 사본 만료')).toBeInTheDocument()
 
-    const requestedUrl = String(vi.mocked(fetch).mock.calls[0][0])
-    expect(requestedUrl).toContain('/dashboard/today?timezone=Asia%2FSeoul')
-    expect(requestedUrl).not.toContain('/tasks?')
+    const todayCall = vi
+      .mocked(fetch)
+      .mock.calls.find(([input]) => String(input).includes('/dashboard/today'))
+    expect(String(todayCall?.[0])).toContain('/dashboard/today?timezone=Asia%2FSeoul')
+    expect(vi.mocked(fetch).mock.calls.some(([input]) => String(input).includes('/tasks?'))).toBe(
+      false,
+    )
   })
 
   it('renders the recommendation groups returned by the Today API', async () => {
@@ -201,7 +222,13 @@ describe('DashboardPage', () => {
         display_name: `만료 근로자 ${index + 1}`,
       })),
     }
-    vi.mocked(fetch).mockResolvedValue(jsonResponse(previewResponse))
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+      if (url.includes('/workers')) {
+        return Promise.resolve(jsonResponse({ items: [], page: 0, size: 100, total_elements: 0 }))
+      }
+      return Promise.resolve(jsonResponse(previewResponse))
+    })
 
     renderPage()
 
@@ -225,9 +252,7 @@ describe('DashboardPage', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(
-      await screen.findByRole('button', { name: '정보 보완 1건 업무함에서 보기' }),
-    )
+    await user.click(await screen.findByRole('button', { name: '정보 보완 1건 업무함에서 보기' }))
 
     expect(await screen.findByText('업무함 ?focus=needs-info')).toBeInTheDocument()
   })
@@ -249,7 +274,13 @@ describe('DashboardPage', () => {
   })
 
   it('shows an honest empty state when the Today projection is empty', async () => {
-    vi.mocked(fetch).mockResolvedValue(jsonResponse(EMPTY_RESPONSE))
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+      if (url.includes('/workers')) {
+        return Promise.resolve(jsonResponse({ items: [], page: 0, size: 100, total_elements: 0 }))
+      }
+      return Promise.resolve(jsonResponse(EMPTY_RESPONSE))
+    })
     renderPage()
 
     expect(await screen.findByText('등록된 업무가 없습니다')).toBeInTheDocument()
@@ -257,15 +288,22 @@ describe('DashboardPage', () => {
   })
 
   it('shows an error state and retries the Today API request', async () => {
-    vi.mocked(fetch)
-      .mockRejectedValueOnce(new TypeError('network'))
-      .mockResolvedValueOnce(jsonResponse(TODAY_RESPONSE))
+    let todayCallCount = 0
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+      if (url.includes('/workers')) {
+        return Promise.resolve(jsonResponse({ items: [], page: 0, size: 100, total_elements: 0 }))
+      }
+      todayCallCount += 1
+      if (todayCallCount === 1) return Promise.reject(new TypeError('network'))
+      return Promise.resolve(jsonResponse(TODAY_RESPONSE))
+    })
     const user = userEvent.setup()
     renderPage()
 
     await user.click(await screen.findByRole('button', { name: '다시 시도' }))
 
-    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(todayCallCount).toBe(2))
     expect((await screen.findAllByText('응웬반A 체류연장 요청문')).length).toBeGreaterThan(0)
   })
 

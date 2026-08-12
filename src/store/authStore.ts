@@ -7,12 +7,13 @@ import { ApiError, getErrorMessage } from '../api/errors'
 // 계정 만들기" 참고). 비밀번호는 서버가 DEMO_SEED_ADMIN_PASSWORD 최소 길이(12자)를 강제하므로
 // "1234"처럼 짧은 값은 쓸 수 없다 — 로컬 seed 값과 반드시 일치시켜야 한다.
 export const DEMO_ACCOUNT = {
-  email: 'mini@naver.com',
+  email: 'demo.admin@example.com',
   password: 'fowoco-demo-1234',
 }
 
 export interface AuthUser {
   name: string
+  email: string
   workplace: string
   role: string
 }
@@ -60,6 +61,7 @@ const PROFILE_STORAGE_KEY = 'fowoco.auth.profile'
 
 interface PersistedProfile {
   name: string
+  email: string
   workplace: string
 }
 
@@ -126,12 +128,19 @@ export const useAuthStore = create<AuthState>((set) => {
         })
 
         setAccessToken(body.access_token)
-        const profile: PersistedProfile = { name: email.split('@')[0], workplace: body.company_name }
+        const profile: PersistedProfile = {
+          name: email.split('@')[0],
+          email,
+          workplace: body.company_name,
+        }
         persistProfile(profile)
         set({ user: { ...profile, role: body.role }, status: 'ready' })
         return { success: true }
       } catch (error) {
-        return { success: false, message: toApiErrorMessage(error, '알 수 없는 오류가 발생했습니다.') }
+        return {
+          success: false,
+          message: toApiErrorMessage(error, '알 수 없는 오류가 발생했습니다.'),
+        }
       }
     },
 
@@ -166,6 +175,7 @@ export const useAuthStore = create<AuthState>((set) => {
           set({
             user: {
               name: persisted?.name ?? '사용자',
+              email: persisted?.email ?? '',
               workplace: persisted?.workplace ?? '',
               role: me.roles[0] ?? '',
             },

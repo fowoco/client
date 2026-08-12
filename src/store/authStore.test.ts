@@ -75,14 +75,17 @@ describe('useAuthStore.login', () => {
 
     expect(result).toEqual({ success: true })
     expect(getAccessToken()).toBe('access-1')
-    expect(useAuthStore.getState().user).toEqual({ name: 'mini', workplace: '한빛정밀', role: 'HR' })
+    expect(useAuthStore.getState().user).toEqual({
+      name: 'mini',
+      email: 'mini@naver.com',
+      workplace: '한빛정밀',
+      role: 'HR',
+    })
     expect(useAuthStore.getState().status).toBe('ready')
   })
 
   it('returns a translated error message on invalid credentials', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(
-      errorResponse(401, 'INVALID_CREDENTIALS', 'raw'),
-    )
+    vi.mocked(fetch).mockResolvedValueOnce(errorResponse(401, 'INVALID_CREDENTIALS', 'raw'))
 
     const result = await useAuthStore.getState().login('wrong@example.com', 'wrongpass')
 
@@ -138,14 +141,19 @@ describe('useAuthStore.restoreSession', () => {
     // 저장이 조용히 실패할 수 있다 (구현도 이 상황을 try/catch로 감내하도록 설계했다).
     // 그래서 여기서는 실제로 저장에 성공했는지를 먼저 확인하고, 그 결과에 맞는 기대값으로
     // 검증한다 — 저장에 성공하면 저장된 이름을, 실패하면 authStore의 fallback("사용자")을 기대한다.
-    setTestLocalStorage('fowoco.auth.profile', JSON.stringify({ name: 'mini', workplace: '한빛정밀' }))
+    setTestLocalStorage(
+      'fowoco.auth.profile',
+      JSON.stringify({ name: 'mini', email: 'mini@naver.com', workplace: '한빛정밀' }),
+    )
     let expectedName = '사용자'
+    let expectedEmail = ''
     let expectedWorkplace = ''
     try {
       const raw = localStorage.getItem('fowoco.auth.profile')
       if (raw) {
-        const parsed = JSON.parse(raw) as { name: string; workplace: string }
+        const parsed = JSON.parse(raw) as { name: string; email: string; workplace: string }
         expectedName = parsed.name
+        expectedEmail = parsed.email
         expectedWorkplace = parsed.workplace
       }
     } catch {
@@ -168,6 +176,7 @@ describe('useAuthStore.restoreSession', () => {
     expect(useAuthStore.getState().status).toBe('ready')
     expect(useAuthStore.getState().user).toEqual({
       name: expectedName,
+      email: expectedEmail,
       workplace: expectedWorkplace,
       role: 'HR',
     })

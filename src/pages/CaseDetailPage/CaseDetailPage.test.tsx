@@ -706,7 +706,7 @@ describe('CaseDetailPage', () => {
   it('does not offer the response review action to a viewer', async () => {
     const user = userEvent.setup()
     useAuthStore.setState({
-      user: { name: 'viewer', workplace: 'FOWOCO', role: 'VIEWER' },
+      user: { name: 'viewer', email: 'viewer@example.com', workplace: 'FOWOCO', role: 'VIEWER' },
       status: 'ready',
     })
     mockTaskAndActivities(
@@ -739,7 +739,7 @@ describe('CaseDetailPage', () => {
   it('adopts a submitted file as an official worker document', async () => {
     const user = userEvent.setup()
     useAuthStore.setState({
-      user: { name: 'hr', workplace: 'FOWOCO', role: 'HR' },
+      user: { name: 'hr', email: 'hr@example.com', workplace: 'FOWOCO', role: 'HR' },
       status: 'ready',
     })
     mockTaskAndActivities(

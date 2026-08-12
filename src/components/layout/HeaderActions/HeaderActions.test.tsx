@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { HeaderActions } from './HeaderActions'
 import { getSafeNotificationRoute } from './notificationPresentation'
 
-const USER = { name: '김민지', workplace: '한빛정밀', role: 'HR' }
+const USER = { name: '김민지', email: 'kim@example.com', workplace: '한빛정밀', role: 'HR' }
 const NOTIFICATIONS = {
   items: [
     {
@@ -94,23 +94,31 @@ describe('HeaderActions', () => {
     await user.click(screen.getByRole('menuitem', { name: /체류연장 요청문 승인이 필요합니다/ }))
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/tasks/task-1'))
-    expect(vi.mocked(fetch).mock.calls.some(([url, init]) =>
-      String(url).includes('/notifications/n1/read') && init?.method === 'POST',
-    )).toBe(true)
+    expect(
+      vi
+        .mocked(fetch)
+        .mock.calls.some(
+          ([url, init]) =>
+            String(url).includes('/notifications/n1/read') && init?.method === 'POST',
+        ),
+    ).toBe(true)
   })
 
   it('shows an error and keeps the panel open when read processing fails', async () => {
     vi.mocked(fetch).mockImplementation(async (_input, init) => {
       if (init?.method === 'POST') {
-        return jsonResponse({
-          timestamp: '2026-08-10T01:00:00Z',
-          status: 500,
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'failed',
-          path: '/api/v1/notifications/n1/read',
-          request_id: 'request-1',
-          field_errors: [],
-        }, 500)
+        return jsonResponse(
+          {
+            timestamp: '2026-08-10T01:00:00Z',
+            status: 500,
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'failed',
+            path: '/api/v1/notifications/n1/read',
+            request_id: 'request-1',
+            field_errors: [],
+          },
+          500,
+        )
       }
       return jsonResponse(NOTIFICATIONS)
     })
@@ -120,7 +128,9 @@ describe('HeaderActions', () => {
     await user.click(await screen.findByLabelText('알림 1건 안 읽음'))
     await user.click(screen.getByRole('menuitem', { name: /체류연장 요청문 승인이 필요합니다/ }))
 
-    expect(await screen.findByText('일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')).toBeInTheDocument()
+    expect(
+      await screen.findByText('일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'),
+    ).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/dashboard')
     expect(screen.getByRole('menu', { name: '알림 목록' })).toBeInTheDocument()
   })
@@ -156,7 +166,9 @@ describe('HeaderActions', () => {
 
 describe('getSafeNotificationRoute', () => {
   it('keeps expected internal routes and rejects external or unexpected routes', () => {
-    expect(getSafeNotificationRoute('/documents/document-1?tab=ocr')).toBe('/documents/document-1?tab=ocr')
+    expect(getSafeNotificationRoute('/documents/document-1?tab=ocr')).toBe(
+      '/documents/document-1?tab=ocr',
+    )
     expect(getSafeNotificationRoute('https://example.com')).toBe('/dashboard')
     expect(getSafeNotificationRoute('//example.com/tasks/1')).toBe('/dashboard')
     expect(getSafeNotificationRoute('/profile')).toBe('/dashboard')

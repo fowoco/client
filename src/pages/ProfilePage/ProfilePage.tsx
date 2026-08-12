@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/Button/Button'
 import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
 import { Modal } from '../../components/ui/Modal/Modal'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
+import { useAuthStore } from '../../store/authStore'
 import { useToastStore } from '../../store/toastStore'
 import { CompanySettingsPanel } from './CompanySettingsPanel'
 import {
@@ -49,20 +50,28 @@ function validateFields(input: EditableProfileFields): FieldErrors {
 export function ProfilePage() {
   const navigate = useNavigate()
   const showToast = useToastStore((state) => state.showToast)
+  const user = useAuthStore((state) => state.user)
 
-  const [fields, setFields] = useState<EditableProfileFields>(INITIAL_PROFILE_FIELDS)
-  const [draft, setDraft] = useState<EditableProfileFields>(INITIAL_PROFILE_FIELDS)
+  const initialFields: EditableProfileFields = {
+    ...INITIAL_PROFILE_FIELDS,
+    name: user?.name ?? INITIAL_PROFILE_FIELDS.name,
+  }
+  const [fields, setFields] = useState<EditableProfileFields>(initialFields)
+  const [draft, setDraft] = useState<EditableProfileFields>(initialFields)
   const [editing, setEditing] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [notificationPrefs, setNotificationPrefs] = useState(INITIAL_NOTIFICATION_PREFS)
 
-  const changedFieldCount = EDITABLE_FIELD_META.filter(({ key }) => draft[key] !== fields[key]).length
+  const changedFieldCount = EDITABLE_FIELD_META.filter(
+    ({ key }) => draft[key] !== fields[key],
+  ).length
   const isDirty = editing && changedFieldCount > 0
 
   // Figma "저장하지 않은 변경사항이 있습니다" 오버레이(node 1623:2530) — 편집 중 다른 화면으로
   // 이동하려 하면 확인을 받는다.
   const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) => isDirty && currentLocation.pathname !== nextLocation.pathname,
+    ({ currentLocation, nextLocation }) =>
+      isDirty && currentLocation.pathname !== nextLocation.pathname,
   )
 
   function handleStartEdit() {
@@ -94,7 +103,9 @@ export function ProfilePage() {
 
   function handleToggleNotification(id: string) {
     setNotificationPrefs((prev) =>
-      prev.map((pref) => (pref.id === id && !pref.required ? { ...pref, enabled: !pref.enabled } : pref)),
+      prev.map((pref) =>
+        pref.id === id && !pref.required ? { ...pref, enabled: !pref.enabled } : pref,
+      ),
     )
   }
 
@@ -133,16 +144,18 @@ export function ProfilePage() {
 
       <div className={styles.summaryCard}>
         <div className={styles.avatar} aria-hidden="true">
-          {PROFILE_SUMMARY.initial}
+          {fields.name.charAt(0) || PROFILE_SUMMARY.initial}
         </div>
         <div className={styles.summaryIdentity}>
           <p className={styles.summaryName}>{fields.name}</p>
           <p className={styles.summaryMeta}>
-            {PROFILE_SUMMARY.role} · {PROFILE_SUMMARY.email}
+            {user?.role ?? PROFILE_SUMMARY.role} · {user?.email ?? PROFILE_SUMMARY.email}
           </p>
           <div className={styles.summaryStatusRow}>
             <StatusLabel tone="success">사용 중</StatusLabel>
-            <span className={styles.summaryCompany}>{PROFILE_SUMMARY.companyName}</span>
+            <span className={styles.summaryCompany}>
+              {user?.workplace ?? PROFILE_SUMMARY.companyName}
+            </span>
           </div>
         </div>
         <div className={styles.summaryLastLogin}>
@@ -175,7 +188,9 @@ export function ProfilePage() {
                       className={styles.fieldInput}
                       value={draft[key]}
                       aria-label={label}
-                      onChange={(event) => setDraft((prev) => ({ ...prev, [key]: event.target.value }))}
+                      onChange={(event) =>
+                        setDraft((prev) => ({ ...prev, [key]: event.target.value }))
+                      }
                     />
                     {fieldErrors[key] && <p className={styles.fieldError}>{fieldErrors[key]}</p>}
                   </>
@@ -191,8 +206,12 @@ export function ProfilePage() {
                 <span className={styles.fieldLabel}>로그인 이메일</span>
                 <span className={styles.fieldBadgeMuted}>본인 확인 필요</span>
               </div>
-              <p className={styles.fieldValue}>{PROFILE_SUMMARY.email}</p>
-              <button type="button" className={styles.fieldLinkButton} onClick={handleRequestEmailChange}>
+              <p className={styles.fieldValue}>{user?.email ?? PROFILE_SUMMARY.email}</p>
+              <button
+                type="button"
+                className={styles.fieldLinkButton}
+                onClick={handleRequestEmailChange}
+              >
                 이메일 변경 요청 →
               </button>
             </div>
@@ -265,7 +284,10 @@ export function ProfilePage() {
           <p className={styles.cardDescription}>계정 보호 상태와 최근 로그인 정보를 확인합니다.</p>
           <hr className={styles.divider} />
 
-          <DetailRow label="계정 보호 상태" value={<StatusLabel tone="success">{SECURITY_INFO.accountStatus}</StatusLabel>} />
+          <DetailRow
+            label="계정 보호 상태"
+            value={<StatusLabel tone="success">{SECURITY_INFO.accountStatus}</StatusLabel>}
+          />
           <DetailRow label="비밀번호 변경" value={SECURITY_INFO.passwordChangedAt} />
           <DetailRow label="로그인 기기" value={SECURITY_INFO.loginDeviceSummary} />
 
@@ -296,7 +318,11 @@ export function ProfilePage() {
           변경사항 {changedFieldCount}개 · 입력값은 현재 편집 화면에 유지됩니다.
         </p>
         <div className={styles.blockerActions}>
-          <button type="button" className={styles.cardLinkButton} onClick={handleBlockerContinueEditing}>
+          <button
+            type="button"
+            className={styles.cardLinkButton}
+            onClick={handleBlockerContinueEditing}
+          >
             계속 수정
           </button>
           <div className={styles.editActions}>

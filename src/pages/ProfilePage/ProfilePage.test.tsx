@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { useAuthStore } from '../../store/authStore'
 import { ToastViewport } from '../../components/ui/ToastViewport/ToastViewport'
 import { useToastStore } from '../../store/toastStore'
 import { ProfilePage } from './ProfilePage'
@@ -31,6 +32,10 @@ beforeEach(() => {
   useToastStore.setState({ toasts: [] })
 })
 
+afterEach(() => {
+  useAuthStore.setState({ user: null })
+})
+
 describe('ProfilePage', () => {
   it('renders the profile summary and read-only fields', () => {
     renderPage()
@@ -40,6 +45,24 @@ describe('ProfilePage', () => {
     expect(screen.getByText('010-0000-1234')).toBeInTheDocument()
     expect(screen.getByText('hr.demo@fowoco.example')).toBeInTheDocument()
     expect(screen.getByText('체류·문서 운영')).toBeInTheDocument()
+  })
+
+  it("shows the real logged-in user's identity instead of the fixture persona", () => {
+    useAuthStore.setState({
+      user: {
+        name: 'demo.admin',
+        email: 'demo.admin@example.com',
+        workplace: 'FOWOCO Demo Company',
+        role: 'ADMIN',
+      },
+      status: 'ready',
+    })
+    renderPage()
+
+    expect(screen.getAllByText('demo.admin').length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/demo\.admin@example\.com/).length).toBeGreaterThan(0)
+    expect(screen.getByText('FOWOCO Demo Company')).toBeInTheDocument()
+    expect(screen.queryByText('hr.demo@fowoco.example')).not.toBeInTheDocument()
   })
 
   it('edits and saves the editable fields', async () => {
@@ -156,7 +179,9 @@ describe('ProfilePage', () => {
     await user.type(screen.getByLabelText('연락처'), '9')
     await user.click(screen.getByRole('button', { name: '비밀번호 변경' }))
 
-    expect(screen.getByRole('dialog', { name: '저장하지 않은 변경사항이 있습니다.' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('dialog', { name: '저장하지 않은 변경사항이 있습니다.' }),
+    ).toBeInTheDocument()
     expect(screen.getByText(/변경사항 1개/)).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '계속 수정' }))

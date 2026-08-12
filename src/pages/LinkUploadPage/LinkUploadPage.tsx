@@ -36,6 +36,8 @@ export function LinkUploadPage() {
   const [submitting, setSubmitting] = useState(false)
   const [submission, setSubmission] = useState<WorkerResponseSubmitResponse | null>(null)
   const [responseMessage, setResponseMessage] = useState<string | null>(null)
+  const [questionComposerOpen, setQuestionComposerOpen] = useState(false)
+  const [question, setQuestion] = useState('')
   const [submissionError, setSubmissionError] = useState<string | null>(null)
   const fetcher = useCallback(
     () => (token ? fetchWorkerLink(token) : Promise.reject(new Error('missing token'))),
@@ -105,12 +107,7 @@ export function LinkUploadPage() {
         if (!file) throw new Error('missing selected file')
         const requestId = uploadRequestIds.current[documentType] ?? crypto.randomUUID()
         uploadRequestIds.current[documentType] = requestId
-        const upload = await uploadWorkerLinkDocument(
-          token,
-          file,
-          requestId,
-          documentType,
-        )
+        const upload = await uploadWorkerLinkDocument(token, file, requestId, documentType)
         nextUploadedIds[documentType] = upload.upload_id
         setUploadedIds({ ...nextUploadedIds })
       }
@@ -135,16 +132,25 @@ export function LinkUploadPage() {
     }
   }
 
-  async function handleHelpResponse(responseType: WorkerResponseType, successMessage: string) {
+  async function handleHelpResponse(
+    responseType: WorkerResponseType,
+    successMessage: string,
+    message?: string,
+  ) {
     if (!token || submitting) return
     setSubmitting(true)
     setSubmissionError(null)
     try {
       await submitWorkerResponse(token, {
         response_type: responseType,
+        ...(message ? { message } : {}),
         idempotency_key: crypto.randomUUID(),
       })
       setResponseMessage(successMessage)
+      if (responseType === 'QUESTION') {
+        setQuestionComposerOpen(false)
+        setQuestion('')
+      }
     } catch (caught) {
       if (caught instanceof ApiError && caught.status === 410) {
         navigate(`/worker-portal/${encodeURIComponent(token)}/expired`, { replace: true })
@@ -189,7 +195,9 @@ export function LinkUploadPage() {
       <MobileShell title="서류 제출" onBack={() => navigate(-1)}>
         <EmptyState
           kind="error"
-          title={contentNotReady ? '요청 내용을 준비하고 있습니다' : '제출 링크를 확인하지 못했습니다'}
+          title={
+            contentNotReady ? '요청 내용을 준비하고 있습니다' : '제출 링크를 확인하지 못했습니다'
+          }
           body={
             contentNotReady
               ? '회사 담당자가 안내문을 준비 중입니다. 잠시 후 같은 링크에서 다시 확인해 주세요.'
@@ -240,16 +248,18 @@ export function LinkUploadPage() {
     <MobileShell
       title="요청 서류 제출"
       onBack={() => navigate(-1)}
-      right={<span>{selectedCount} / {requestedTypes.length}</span>}
+      right={
+        <span>
+          {selectedCount} / {requestedTypes.length}
+        </span>
+      }
     >
       <h1 className={styles.headline}>
         요청받은 서류를
         <br />
         추가해 주세요
       </h1>
-      <p className={styles.subtext}>
-        각 서류의 글자와 사진이 선명하게 보이는지 확인해 주세요.
-      </p>
+      <p className={styles.subtext}>각 서류의 글자와 사진이 선명하게 보이는지 확인해 주세요.</p>
 
       <div className={styles.requestList}>
         {requestedTypes.map((documentType) => {
@@ -269,7 +279,9 @@ export function LinkUploadPage() {
                 onClick={() => fileInputRefs.current[documentType]?.click()}
               >
                 <p className={styles.dropzonePlus}>{file ? '↻' : '＋'}</p>
-                <p className={styles.dropzoneLabel}>{file ? '다른 파일 선택' : '파일 또는 사진 선택'}</p>
+                <p className={styles.dropzoneLabel}>
+                  {file ? '다른 파일 선택' : '파일 또는 사진 선택'}
+                </p>
                 <p className={styles.dropzoneHint}>JPG, PNG, WEBP, PDF · 최대 20MB</p>
               </button>
               <input
@@ -318,6 +330,36 @@ export function LinkUploadPage() {
       )}
       {responseMessage && <p className={styles.responseNotice}>{responseMessage}</p>}
 
+      {questionComposerOpen && (
+        <section className={styles.questionComposer}>
+          <label className={styles.questionLabel} htmlFor="upload-question">
+            담당자에게 물어볼 내용
+          </label>
+          <textarea
+            id="upload-question"
+            className={styles.questionInput}
+            value={question}
+            maxLength={1000}
+            placeholder="제출이 어려운 이유나 궁금한 내용을 입력해 주세요."
+            disabled={submitting}
+            onChange={(event) => setQuestion(event.target.value)}
+          />
+          <div className={styles.questionFooter}>
+            <span>{question.length}/1000</span>
+            <button
+              type="button"
+              className={styles.questionSubmit}
+              disabled={submitting || !question.trim()}
+              onClick={() =>
+                handleHelpResponse('QUESTION', '담당자에게 질문을 전송했습니다.', question.trim())
+              }
+            >
+              질문 보내기
+            </button>
+          </div>
+        </section>
+      )}
+
       <p className={styles.helpLabel}>제출이 어렵다면</p>
       <div className={styles.helpLinks}>
         {helpResponses.map((response, index) => (
@@ -326,7 +368,14 @@ export function LinkUploadPage() {
             type="button"
             className={`${styles.helpLink} ${index === 0 ? styles.helpLinkPrimary : ''}`}
             disabled={!data.allowed_responses.includes(response.type) || submitting}
-            onClick={() => handleHelpResponse(response.type, response.message)}
+            onClick={() => {
+              if (response.type === 'QUESTION') {
+                setQuestionComposerOpen(true)
+                setSubmissionError(null)
+                return
+              }
+              handleHelpResponse(response.type, response.message)
+            }}
           >
             <span>{response.label}</span>
             <span>→</span>

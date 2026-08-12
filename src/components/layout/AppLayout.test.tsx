@@ -71,7 +71,9 @@ beforeEach(() => {
     vi.fn((input: RequestInfo | URL) => {
       const url = requestUrl(input)
       return Promise.resolve(
-        jsonResponse(url.includes('/notifications') ? EMPTY_NOTIFICATION_RESPONSE : EMPTY_TODAY_RESPONSE),
+        jsonResponse(
+          url.includes('/notifications') ? EMPTY_NOTIFICATION_RESPONSE : EMPTY_TODAY_RESPONSE,
+        ),
       )
     }),
   )
@@ -82,7 +84,7 @@ afterEach(() => {
 })
 
 describe('AppLayout', () => {
-  it('renders the current global navigation without a workers tab', () => {
+  it('renders the current global navigation including the workers tab', () => {
     localStorage.setItem('fowoco.onboarding.completed', 'true')
     renderLayout()
 
@@ -90,7 +92,7 @@ describe('AppLayout', () => {
     for (const item of NAV_ITEMS) {
       expect(screen.getByRole('link', { name: item.label })).toBeInTheDocument()
     }
-    expect(screen.queryByRole('link', { name: '근로자' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '근로자' })).toHaveAttribute('href', '/workers')
   })
 
   it('shows server-backed work shortcut counts and routes them to focused inbox views', async () => {
@@ -169,7 +171,9 @@ describe('AppLayout', () => {
   it('shows the onboarding tour automatically on first visit', () => {
     renderLayout()
 
-    expect(screen.getByRole('dialog', { name: 'FOWOCO에 오신 것을 환영합니다' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('dialog', { name: 'FOWOCO에 오신 것을 환영합니다' }),
+    ).toBeInTheDocument()
   })
 
   it('does not show the onboarding tour again once completed', () => {
@@ -184,10 +188,14 @@ describe('AppLayout', () => {
     renderLayout()
 
     await user.click(screen.getByRole('button', { name: '다음' }))
-    expect(screen.getByRole('dialog', { name: 'Today·업무함에서 우선순위를 확인하세요' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('dialog', { name: 'Today·업무함에서 우선순위를 확인하세요' }),
+    ).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '다음' }))
-    expect(screen.getByRole('dialog', { name: '무엇이든 요청하면 Agent가 초안을 준비합니다' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('dialog', { name: '무엇이든 요청하면 Agent가 초안을 준비합니다' }),
+    ).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '시작하기' }))
 
@@ -215,6 +223,8 @@ describe('AppLayout', () => {
     await user.click(screen.getByRole('button', { name: '시작 가이드 다시 보기 →' }))
 
     expect(screen.queryByRole('dialog', { name: '도움말' })).not.toBeInTheDocument()
-    expect(screen.getByRole('dialog', { name: 'FOWOCO에 오신 것을 환영합니다' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('dialog', { name: 'FOWOCO에 오신 것을 환영합니다' }),
+    ).toBeInTheDocument()
   })
 })

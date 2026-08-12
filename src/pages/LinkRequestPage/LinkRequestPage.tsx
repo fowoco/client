@@ -45,6 +45,8 @@ function WorkerLinkRequest({ token }: { token: string }) {
   const [submittingQuestion, setSubmittingQuestion] = useState(false)
   const [submittingAcknowledgement, setSubmittingAcknowledgement] = useState(false)
   const [questionSent, setQuestionSent] = useState(false)
+  const [questionComposerOpen, setQuestionComposerOpen] = useState(false)
+  const [question, setQuestion] = useState('')
   const [responseError, setResponseError] = useState<string | null>(null)
   const fetcher = useCallback(() => fetchWorkerLink(token), [token])
   const { status, data, error, refetch } = useApiQuery(fetcher)
@@ -57,11 +59,17 @@ function WorkerLinkRequest({ token }: { token: string }) {
 
   async function handleQuestion() {
     if (submittingQuestion) return
+    const message = question.trim()
+    if (!message) {
+      setResponseError('담당자에게 보낼 질문을 입력해 주세요.')
+      return
+    }
     setSubmittingQuestion(true)
     setResponseError(null)
     try {
       await submitWorkerResponse(token, {
         response_type: 'QUESTION',
+        message,
         idempotency_key: crypto.randomUUID(),
       })
       setQuestionSent(true)
@@ -118,7 +126,9 @@ function WorkerLinkRequest({ token }: { token: string }) {
       <MobileShell right={<span>보안 링크</span>}>
         <EmptyState
           kind="error"
-          title={contentNotReady ? '요청 내용을 준비하고 있습니다' : '요청 내용을 불러오지 못했습니다'}
+          title={
+            contentNotReady ? '요청 내용을 준비하고 있습니다' : '요청 내용을 불러오지 못했습니다'
+          }
           body={
             contentNotReady
               ? '회사 담당자가 안내문을 준비 중입니다. 잠시 후 같은 링크에서 다시 확인해 주세요.'
@@ -176,7 +186,34 @@ function WorkerLinkRequest({ token }: { token: string }) {
         <p className={styles.privacyBody}>선택한 파일은 이 보안 링크의 업무에만 연결됩니다.</p>
       </div>
 
-      {questionSent && <p className={styles.responseNotice}>담당자에게 질문 의사를 전했습니다.</p>}
+      {questionComposerOpen && !questionSent && (
+        <section className={styles.questionComposer}>
+          <label className={styles.questionLabel} htmlFor="worker-question">
+            담당자에게 물어볼 내용
+          </label>
+          <textarea
+            id="worker-question"
+            className={styles.questionInput}
+            value={question}
+            maxLength={1000}
+            placeholder="예: 여권 사진은 어느 면을 찍어야 하나요?"
+            disabled={submittingQuestion}
+            onChange={(event) => setQuestion(event.target.value)}
+          />
+          <div className={styles.questionFooter}>
+            <span>{question.length}/1000</span>
+            <button
+              type="button"
+              className={styles.questionSubmit}
+              disabled={submittingQuestion || !question.trim()}
+              onClick={handleQuestion}
+            >
+              {submittingQuestion ? '전송 중…' : '질문 보내기'}
+            </button>
+          </div>
+        </section>
+      )}
+      {questionSent && <p className={styles.responseNotice}>담당자에게 질문을 전송했습니다.</p>}
       {responseError && (
         <p className={styles.responseError} role="alert">
           {responseError}
@@ -190,9 +227,12 @@ function WorkerLinkRequest({ token }: { token: string }) {
           disabled={
             !canAskQuestion || submittingQuestion || submittingAcknowledgement || questionSent
           }
-          onClick={handleQuestion}
+          onClick={() => {
+            setQuestionComposerOpen(true)
+            setResponseError(null)
+          }}
         >
-          {questionSent ? '질문 의사 전송됨' : '질문이 있습니다'}
+          {questionSent ? '질문 전송됨' : questionComposerOpen ? '질문 작성 중' : '질문이 있습니다'}
         </button>
         <button
           type="button"

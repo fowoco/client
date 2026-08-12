@@ -677,6 +677,77 @@
   color: var(--text-secondary);
 }
 
+.responseFiles {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.responseFileRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 12px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
+}
+
+.responseFileCopy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.responseFileName {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.responseFileMeta {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.responseFileAction,
+.adoptDocumentsAction {
+  flex-shrink: 0;
+  border-radius: var(--fowoco-radius-6);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.responseFileAction {
+  min-height: 34px;
+  padding: 0 12px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+}
+
+.adoptDocumentsAction {
+  align-self: flex-end;
+  min-height: 38px;
+  padding: 0 16px;
+  background: var(--brand-primary);
+  border: 0;
+  color: var(--fowoco-white);
+}
+
+.responseFileAction:disabled,
+.adoptDocumentsAction:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .timeline {
   display: flex;
   flex-direction: column;
@@ -802,6 +873,16 @@
   .commMeta {
     align-items: center;
     flex-direction: row;
+  }
+
+  .responseFileRow {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .responseFileAction,
+  .adoptDocumentsAction {
+    align-self: stretch;
   }
 }
 

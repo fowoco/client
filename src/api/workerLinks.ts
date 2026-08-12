@@ -59,11 +59,21 @@ export interface WorkerResponseSubmitResponse {
 
 export type WorkerConversationStatus = 'WAITING_WORKER' | 'NEEDS_FOLLOWUP' | 'REOPENED'
 
+export interface WorkerResponseUploadItem {
+  file_id: string
+  file_name: string
+  mime_type: string
+  size: number
+  document_type: DocumentType | null
+  adopted: boolean
+}
+
 export interface WorkerResponseItemResponse {
   response_id: string
   response_type: WorkerResponseType
   message: string | null
   upload_ids: string[]
+  uploads: WorkerResponseUploadItem[]
   conversation_status: WorkerConversationStatus
   unread: boolean
   received_at: string
@@ -75,6 +85,17 @@ export interface WorkerResponsePageResponse {
   size: number
   total_elements: number
   total_pages: number
+}
+
+export interface WorkerResponseDocumentAdoptionResponse {
+  response_id: string
+  adopted_documents: Array<{
+    worker_document_id: string
+    file_id: string
+    document_type: DocumentType
+  }>
+  task_status: string
+  task_version: number
 }
 
 export function issueWorkerLink(
@@ -178,6 +199,20 @@ export function markTaskWorkerResponsesRead(taskId: string): Promise<void> {
   return apiFetch<void>(`/tasks/${encodeURIComponent(taskId)}/worker-responses/read`, {
     method: 'POST',
   })
+}
+
+export function adoptWorkerResponseDocuments(
+  taskId: string,
+  responseId: string,
+  expectedTaskVersion: number,
+): Promise<WorkerResponseDocumentAdoptionResponse> {
+  return apiFetch<WorkerResponseDocumentAdoptionResponse>(
+    `/tasks/${encodeURIComponent(taskId)}/worker-responses/${encodeURIComponent(responseId)}/documents/adopt`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ expected_task_version: expectedTaskVersion }),
+    },
+  )
 }
 
 export function resolveWorkerPortalUrl(workerUrlOrToken: string, origin: string): string {

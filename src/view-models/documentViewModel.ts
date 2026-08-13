@@ -3,7 +3,8 @@ import type { StatusTone } from '../components/ui/StatusLabel/StatusLabel'
 import { DOCUMENT_TYPE_LABEL } from '../utils/documentLabels'
 import { getOperationalDateViewModel, type OperationalDateViewModel } from './dateViewModel'
 
-export type DocumentWorkflowState = 'NOT_SUBMITTED' | 'REVIEW_REQUIRED' | 'COMPLETED' | 'EXPIRED'
+export type DocumentWorkflowState =
+  'DRAFT' | 'NOT_SUBMITTED' | 'REVIEW_REQUIRED' | 'COMPLETED' | 'EXPIRED'
 
 export interface DocumentViewModel {
   id: string
@@ -23,6 +24,23 @@ export interface DocumentViewModel {
 export function getDocumentViewModel(document: DocumentItemResponse): DocumentViewModel {
   const expiry = getOperationalDateViewModel('DOCUMENT_EXPIRY', document.expiry_date)
   const fileAvailable = Boolean(document.file_id)
+
+  if (document.submission_status === 'DRAFT') {
+    return {
+      id: document.worker_document_id,
+      workerId: document.worker_id,
+      workerName: document.display_name ?? '이름 미등록',
+      typeLabel: DOCUMENT_TYPE_LABEL[document.document_type],
+      workflowState: 'DRAFT',
+      statusLabel: '초안',
+      statusTone: 'neutral',
+      expiry,
+      fileAvailable,
+      fileLabel: fileAvailable ? '파일 연결됨' : '파일 없음',
+      actionLabel: fileAvailable ? '보기' : '상세 확인',
+      reviewable: false,
+    }
+  }
 
   if (document.submission_status === 'MISSING') {
     return {

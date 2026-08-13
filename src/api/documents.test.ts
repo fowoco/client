@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   fetchDocumentRequestDraft,
+  fetchDocument,
   fetchDocuments,
   patchWorkerDocument,
   registerWorkerDocument,
@@ -8,7 +9,10 @@ import {
 } from './documents'
 
 function jsonResponse(body: unknown) {
-  return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  })
 }
 
 beforeEach(() => {
@@ -21,7 +25,9 @@ afterEach(() => {
 
 describe('fetchDocuments', () => {
   it('requests /documents with default pagination and no filters', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ items: [], page: 0, size: 100, total_elements: 0 }))
+    vi.mocked(fetch).mockResolvedValueOnce(
+      jsonResponse({ items: [], page: 0, size: 100, total_elements: 0 }),
+    )
 
     await fetchDocuments()
 
@@ -30,15 +36,34 @@ describe('fetchDocuments', () => {
   })
 
   it('adds filters when given', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ items: [], page: 0, size: 20, total_elements: 0 }))
+    vi.mocked(fetch).mockResolvedValueOnce(
+      jsonResponse({ items: [], page: 0, size: 20, total_elements: 0 }),
+    )
 
-    await fetchDocuments({ workerId: 'W-1', documentType: 'PASSPORT_COPY', status: 'MISSING', page: 1, size: 20 })
+    await fetchDocuments({
+      workerId: 'W-1',
+      documentType: 'PASSPORT_COPY',
+      status: 'MISSING',
+      page: 1,
+      size: 20,
+    })
 
     const [url] = vi.mocked(fetch).mock.calls[0]
     expect(url).toContain('workerId=W-1')
     expect(url).toContain('documentType=PASSPORT_COPY')
     expect(url).toContain('status=MISSING')
     expect(url).toContain('page=1&size=20')
+  })
+})
+
+describe('fetchDocument', () => {
+  it('requests the encoded document detail endpoint', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ worker_document_id: 'D/1' }))
+
+    await fetchDocument('D/1')
+
+    const [url] = vi.mocked(fetch).mock.calls[0]
+    expect(url).toContain('/documents/D%2F1')
   })
 })
 
@@ -60,7 +85,10 @@ describe('registerWorkerDocument', () => {
       }),
     )
 
-    await registerWorkerDocument('W-1', { document_type: 'PASSPORT_COPY', submission_status: 'SUBMITTED' })
+    await registerWorkerDocument('W-1', {
+      document_type: 'PASSPORT_COPY',
+      submission_status: 'SUBMITTED',
+    })
 
     const [url, init] = vi.mocked(fetch).mock.calls[0]
     expect(url).toContain('/workers/W-1/documents')

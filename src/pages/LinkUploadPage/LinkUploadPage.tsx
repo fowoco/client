@@ -4,6 +4,7 @@ import type { DocumentType } from '../../api/documents'
 import { ApiError, getErrorMessage } from '../../api/errors'
 import {
   fetchWorkerLink,
+  getWorkerRequestedDocumentTypes,
   submitWorkerResponse,
   uploadWorkerLinkDocument,
   type WorkerResponseSubmitResponse,
@@ -92,7 +93,7 @@ export function LinkUploadPage() {
 
   async function handleSubmit() {
     if (!token || !data || submitting) return
-    const requestedTypes = [...new Set(data.requested_document_types)]
+    const requestedTypes = getWorkerRequestedDocumentTypes(data)
     if (requestedTypes.length === 0 || requestedTypes.some((type) => !files[type])) {
       setSubmissionError('요청받은 서류의 파일을 모두 선택해 주세요.')
       return
@@ -226,7 +227,7 @@ export function LinkUploadPage() {
   }
 
   const canSubmitDocument = data.allowed_responses.includes('DOCUMENT_SUBMITTED')
-  const requestedTypes = [...new Set(data.requested_document_types)]
+  const requestedTypes = getWorkerRequestedDocumentTypes(data)
   const selectedCount = requestedTypes.filter((type) => files[type]).length
   const allRequestedFilesSelected =
     requestedTypes.length > 0 && selectedCount === requestedTypes.length

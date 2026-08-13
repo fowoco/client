@@ -106,6 +106,7 @@ const WORKER_RESPONSE_TYPE_LABEL: Record<WorkerResponseType, string> = {
   NOT_UNDERSTOOD: '이해가 어려워요',
   DOCUMENT_SUBMITTED: '서류 제출',
   DIFFICULT: '진행이 어려워요',
+  SLOT_ANSWERS_SUBMITTED: '요청 정보 답변',
 }
 
 const WORKER_REQUEST_STATE_TONE: Record<WorkerRequestState, StatusTone> = {
@@ -1432,7 +1433,10 @@ export function CaseDetailPage() {
                             </span>
                           </div>
                           <p className={styles.commMessage}>
-                            {response.message?.trim() || '별도 메시지 없이 응답했습니다.'}
+                            {response.message?.trim() ||
+                              (response.response_type === 'SLOT_ANSWERS_SUBMITTED'
+                                ? `요청 정보 ${Object.keys(response.answers ?? {}).length}개를 제출했습니다.`
+                                : '별도 메시지 없이 응답했습니다.')}
                           </p>
                           {response.uploads.length > 0 && (
                             <div className={styles.responseFiles}>

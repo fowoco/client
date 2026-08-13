@@ -183,6 +183,63 @@ describe('LinkUploadPage', () => {
     })
   })
 
+  it('uses UPLOAD_DOCUMENT actions from the worker link contract', async () => {
+    const user = userEvent.setup()
+    vi.mocked(fetch).mockImplementation((input) => {
+      const url = String(input)
+      if (url.endsWith('/documents')) {
+        return Promise.resolve(
+          jsonResponse(
+            {
+              upload_id: 'U-arc',
+              file_name: 'arc.jpg',
+              size: 8,
+              expires_at: '2026-08-13T00:00:00Z',
+            },
+            201,
+          ),
+        )
+      }
+      if (url.endsWith('/responses')) {
+        return Promise.resolve(
+          jsonResponse({ response_id: 'R-arc', received_at: '2026-08-13T00:00:00Z' }, 201),
+        )
+      }
+      return Promise.resolve(
+        jsonResponse({
+          guidance: '외국인등록증을 제출해 주세요.',
+          language: 'ko',
+          due_date: '2026-08-20',
+          requested_document_types: [],
+          allowed_responses: ['DOCUMENT_SUBMITTED'],
+          requested_actions: [
+            {
+              type: 'UPLOAD_DOCUMENT',
+              field_key: null,
+              label: '외국인등록증 파일을 제출해 주세요.',
+              input_type: null,
+              required: true,
+              document_type: 'ARC',
+            },
+          ],
+        }),
+      )
+    })
+    renderPage()
+
+    await user.upload(
+      await screen.findByLabelText('외국인등록증 제출할 파일 선택'),
+      new File(['arc'], 'arc.jpg', { type: 'image/jpeg' }),
+    )
+    await user.click(screen.getByRole('button', { name: '서류 제출' }))
+
+    expect(await screen.findByText('서류를 제출했습니다')).toBeInTheDocument()
+    const uploadCall = vi
+      .mocked(fetch)
+      .mock.calls.find(([url]) => String(url).endsWith('/documents'))
+    expect((uploadCall?.[1]?.body as FormData).get('documentType')).toBe('ARC')
+  })
+
   it('reuses uploaded files and the response idempotency key after a network retry', async () => {
     const user = userEvent.setup()
     let responseAttempts = 0

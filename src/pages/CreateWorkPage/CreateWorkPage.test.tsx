@@ -21,6 +21,7 @@ const AI_RUN = {
   status: 'SUCCEEDED',
   analysis_outcome: 'NEEDS_INFO',
   detected_intent: 'EXPIRY_RENEWAL',
+  evidence: null,
   error_code: null,
   attempt_count: 1,
   version: 1,

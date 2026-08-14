@@ -20,6 +20,7 @@ const RUN: AiRunResponse = {
   status: 'SUCCEEDED',
   analysis_outcome: 'REVIEW_REQUIRED',
   detected_intent: 'EXPIRY_RENEWAL',
+  evidence: null,
   error_code: null,
   attempt_count: 1,
   version: 3,
@@ -92,6 +93,7 @@ function processingRun(): AiRunResponse {
     status: 'RUNNING',
     analysis_outcome: null,
     detected_intent: null,
+    evidence: null,
     version: 1,
     questions: [],
     candidates: [],
@@ -104,6 +106,7 @@ function needsInfoRun(): AiRunResponse {
     status: 'SUCCEEDED',
     analysis_outcome: 'NEEDS_INFO',
     detected_intent: 'EXPIRY_RENEWAL',
+    evidence: null,
     version: 2,
     questions: [
       {
@@ -231,6 +234,41 @@ describe('AiRunReview candidate decision', () => {
 
     expect(await screen.findByRole('button', { name: '체류기간 연장 처리 선택' })).toBeDisabled()
     expect(screen.getByRole('button', { name: '선택한 업무 생성' })).toBeDisabled()
+  })
+})
+
+describe('AiRunReview 분석 근거', () => {
+  function mockCatalogAndWorkers() {
+    vi.mocked(fetch).mockImplementation((input) => {
+      const url = String(input)
+      if (url.includes('/workflow-catalogs')) return Promise.resolve(jsonResponse(CATALOG))
+      if (url.includes('/workers')) {
+        return Promise.resolve(jsonResponse({ items: [], page: 0, size: 100, total_elements: 0 }))
+      }
+      return Promise.reject(new Error(`Unexpected request: ${url}`))
+    })
+  }
+
+  it('renders the evidence text returned by the API', async () => {
+    mockCatalogAndWorkers()
+    render(
+      <MemoryRouter>
+        <AiRunReview initialRun={{ ...RUN, evidence: '체류만료일이 30일 이내로 확인됨' }} />
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByText('체류만료일이 30일 이내로 확인됨')).toBeInTheDocument()
+  })
+
+  it('falls back to a placeholder when the API has no evidence yet', async () => {
+    mockCatalogAndWorkers()
+    render(
+      <MemoryRouter>
+        <AiRunReview initialRun={{ ...RUN, evidence: null }} />
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByText('현재 분석 API에서 제공하지 않음')).toBeInTheDocument()
   })
 })
 

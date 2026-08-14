@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { DocumentItemResponse, DocumentPageResponse } from '../../api/documents'
+import type { DocumentDetailResponse, DocumentItemResponse } from '../../api/documents'
 import type { DocumentOcrRunResponse } from '../../api/documentOcr'
 import { DocumentDetailPage } from './DocumentDetailPage'
 
@@ -15,6 +15,19 @@ function document(overrides: Partial<DocumentItemResponse>): DocumentItemRespons
     submission_status: 'MISSING',
     expiry_date: null,
     file_id: null,
+    ...overrides,
+  }
+}
+
+function detail(overrides: Partial<DocumentDetailResponse>): DocumentDetailResponse {
+  return {
+    ...document(overrides),
+    task_id: null,
+    version: 0,
+    file_name: null,
+    file_mime_type: null,
+    file_size: null,
+    file_scan_status: null,
     ...overrides,
   }
 }
@@ -98,10 +111,6 @@ function errorResponse(status: number, code: string, message: string) {
   )
 }
 
-function pageResponse(items: DocumentItemResponse[]): DocumentPageResponse {
-  return { items, page: 0, size: 100, total_elements: items.length }
-}
-
 function renderPage(documentId: string) {
   render(
     <MemoryRouter initialEntries={[`/documents/${documentId}`]}>
@@ -126,7 +135,7 @@ afterEach(() => {
 
 describe('DocumentDetailPage', () => {
   it('renders the document type and worker name', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(pageResponse(DOCUMENTS)))
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(detail(DOCUMENTS[0])))
     renderPage('D-1')
 
     expect(await screen.findByRole('heading', { name: '외국인등록증' })).toBeInTheDocument()
@@ -135,7 +144,7 @@ describe('DocumentDetailPage', () => {
 
   it('navigates to the related worker', async () => {
     const user = userEvent.setup()
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(pageResponse(DOCUMENTS)))
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(detail(DOCUMENTS[0])))
     renderPage('D-1')
 
     await user.click(await screen.findByRole('button', { name: '응웬반A 정보 →' }))
@@ -145,16 +154,18 @@ describe('DocumentDetailPage', () => {
 
   it('downloads the attached original file through the authenticated file API', async () => {
     const user = userEvent.setup()
-    const fileDocuments = [
-      document({
-        worker_document_id: 'D-1',
-        display_name: '응웬반A',
-        submission_status: 'SUBMITTED',
-        file_id: 'file-1',
-      }),
-    ]
+    const fileDocument = detail({
+      worker_document_id: 'D-1',
+      display_name: '응웬반A',
+      submission_status: 'SUBMITTED',
+      file_id: 'file-1',
+      file_name: 'arc.pdf',
+      file_mime_type: 'application/pdf',
+      file_size: 3,
+      file_scan_status: 'NOT_SCANNED',
+    })
     vi.mocked(fetch)
-      .mockResolvedValueOnce(jsonResponse(pageResponse(fileDocuments)))
+      .mockResolvedValueOnce(jsonResponse(fileDocument))
       .mockResolvedValueOnce(
         errorResponse(404, 'DOCUMENT_OCR_RUN_NOT_FOUND', 'OCR 실행 이력을 찾을 수 없습니다.'),
       )
@@ -180,14 +191,14 @@ describe('DocumentDetailPage', () => {
   })
 
   it('shows an empty state when the documentId does not match any document', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(pageResponse(DOCUMENTS)))
+    vi.mocked(fetch).mockResolvedValueOnce(errorResponse(404, 'DOCUMENT_NOT_FOUND', 'not found'))
     renderPage('does-not-exist')
 
     expect(await screen.findByText('서류를 찾을 수 없습니다')).toBeInTheDocument()
   })
 
   it('does not offer OCR review when no file is connected', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(pageResponse(DOCUMENTS)))
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(detail(DOCUMENTS[0])))
     renderPage('D-1')
     await screen.findByRole('heading', { name: '외국인등록증' })
 
@@ -199,16 +210,18 @@ describe('DocumentDetailPage', () => {
   it('runs OCR, polls until ready, submits only HR corrections, and marks review complete', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-    const fileDocuments = [
-      document({
-        worker_document_id: 'D-1',
-        display_name: '응웬반A',
-        submission_status: 'SUBMITTED',
-        file_id: 'file-1',
-      }),
-    ]
+    const fileDocument = detail({
+      worker_document_id: 'D-1',
+      display_name: '응웬반A',
+      submission_status: 'SUBMITTED',
+      file_id: 'file-1',
+      file_name: 'arc.pdf',
+      file_mime_type: 'application/pdf',
+      file_size: 3,
+      file_scan_status: 'NOT_SCANNED',
+    })
     vi.mocked(fetch)
-      .mockResolvedValueOnce(jsonResponse(pageResponse(fileDocuments)))
+      .mockResolvedValueOnce(jsonResponse(fileDocument))
       .mockResolvedValueOnce(
         errorResponse(404, 'DOCUMENT_OCR_RUN_NOT_FOUND', 'OCR 실행 이력을 찾을 수 없습니다.'),
       )
@@ -252,12 +265,56 @@ describe('DocumentDetailPage', () => {
     })
   })
 
+  it('previews an authenticated image and revokes the object URL on unmount', async () => {
+    const imageDocument = detail({
+      worker_document_id: 'D-1',
+      submission_status: 'SUBMITTED',
+      file_id: 'file-1',
+      file_name: '외국인등록증_앞면.png',
+      file_mime_type: 'image/png',
+      file_size: 3,
+      file_scan_status: 'NOT_SCANNED',
+    })
+    vi.mocked(fetch).mockImplementation((url) => {
+      if (String(url).includes('/files/file-1/content')) {
+        return Promise.resolve(new Response(new Blob(['png'], { type: 'image/png' })))
+      }
+      if (String(url).includes('/ocr-runs/latest')) {
+        return Promise.resolve(errorResponse(404, 'DOCUMENT_OCR_RUN_NOT_FOUND', 'not found'))
+      }
+      return Promise.resolve(jsonResponse(imageDocument))
+    })
+    const createObjectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:preview-1')
+    const revokeObjectUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+    const rendered = render(
+      <MemoryRouter initialEntries={['/documents/D-1']}>
+        <Routes>
+          <Route path="/documents/:documentId" element={<DocumentDetailPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(
+      await screen.findByRole('img', { name: '외국인등록증 합성 원본 미리보기' }),
+    ).toHaveAttribute('src', 'blob:preview-1')
+    expect(createObjectUrl).toHaveBeenCalledTimes(1)
+
+    rendered.unmount()
+    expect(revokeObjectUrl).toHaveBeenCalledWith('blob:preview-1')
+  })
+
   it('shows a preparing message when the OCR feature returns 503', async () => {
-    const fileDocuments = [
-      document({ worker_document_id: 'D-1', submission_status: 'SUBMITTED', file_id: 'file-1' }),
-    ]
+    const fileDocument = detail({
+      worker_document_id: 'D-1',
+      submission_status: 'SUBMITTED',
+      file_id: 'file-1',
+      file_name: 'arc.pdf',
+      file_mime_type: 'application/pdf',
+      file_size: 3,
+      file_scan_status: 'NOT_SCANNED',
+    })
     vi.mocked(fetch)
-      .mockResolvedValueOnce(jsonResponse(pageResponse(fileDocuments)))
+      .mockResolvedValueOnce(jsonResponse(fileDocument))
       .mockResolvedValueOnce(
         errorResponse(503, 'DOCUMENT_OCR_DISABLED', 'OCR 기능이 아직 활성화되지 않았습니다.'),
       )
@@ -269,11 +326,17 @@ describe('DocumentDetailPage', () => {
 
   it('requires a reason and submits no corrected fields when OCR is rejected', async () => {
     const user = userEvent.setup()
-    const fileDocuments = [
-      document({ worker_document_id: 'D-1', submission_status: 'SUBMITTED', file_id: 'file-1' }),
-    ]
+    const fileDocument = detail({
+      worker_document_id: 'D-1',
+      submission_status: 'SUBMITTED',
+      file_id: 'file-1',
+      file_name: 'arc.pdf',
+      file_mime_type: 'application/pdf',
+      file_size: 3,
+      file_scan_status: 'NOT_SCANNED',
+    })
     vi.mocked(fetch)
-      .mockResolvedValueOnce(jsonResponse(pageResponse(fileDocuments)))
+      .mockResolvedValueOnce(jsonResponse(fileDocument))
       .mockResolvedValueOnce(jsonResponse(OCR_READY))
       .mockResolvedValueOnce(
         jsonResponse(

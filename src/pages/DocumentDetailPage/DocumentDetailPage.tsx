@@ -1,6 +1,6 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { fetchDocuments } from '../../api/documents'
+import { fetchDocument } from '../../api/documents'
 import { ApiError, getErrorMessage } from '../../api/errors'
 import { downloadFile } from '../../api/files'
 import { Button } from '../../components/ui/Button/Button'
@@ -19,15 +19,41 @@ export function DocumentDetailPage() {
   const [downloading, setDownloading] = useState(false)
   const showToast = useToastStore((state) => state.showToast)
 
-  // GET /api/v1/documents/{id} 단건 조회가 없어서(#57 조사 결과), 목록을 통째로 받아
-  // worker_document_id로 찾는다.
   const {
     status: fetchStatus,
-    data,
+    data: document,
     error,
     refetch,
-  } = useApiQuery(useCallback(() => fetchDocuments({ size: 100 }), []))
-  const document = data?.items.find((item) => item.worker_document_id === documentId) ?? null
+  } = useApiQuery(useCallback(() => fetchDocument(documentId ?? ''), [documentId]))
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [previewError, setPreviewError] = useState(false)
+
+  const fileId = document?.file_id ?? null
+  const fileMimeType = document?.file_mime_type ?? null
+  const canPreviewImage = Boolean(fileId && fileMimeType?.startsWith('image/'))
+
+  useEffect(() => {
+    let cancelled = false
+    let objectUrl: string | null = null
+    setPreviewUrl(null)
+    setPreviewError(false)
+    if (!canPreviewImage || !fileId) return
+
+    downloadFile(fileId)
+      .then((downloaded) => {
+        if (cancelled) return
+        objectUrl = URL.createObjectURL(downloaded.blob)
+        setPreviewUrl(objectUrl)
+      })
+      .catch(() => {
+        if (!cancelled) setPreviewError(true)
+      })
+
+    return () => {
+      cancelled = true
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [canPreviewImage, fileId])
 
   if (fetchStatus === 'loading') {
     return (
@@ -37,6 +63,18 @@ export function DocumentDetailPage() {
           title="서류 정보를 불러오는 중입니다"
           body="잠시만 기다려 주세요."
           note="처리 중 · 중복 실행 차단"
+        />
+      </div>
+    )
+  }
+
+  if (fetchStatus === 'error' && error?.status === 404) {
+    return (
+      <div className={styles.stateWrap}>
+        <EmptyState
+          kind="empty"
+          title="서류를 찾을 수 없습니다"
+          body="서류 목록에서 다시 확인해 주세요."
         />
       </div>
     )
@@ -56,7 +94,7 @@ export function DocumentDetailPage() {
     )
   }
 
-  if (!document) {
+  if (fetchStatus === 'empty' || !document) {
     return (
       <div className={styles.stateWrap}>
         <EmptyState
@@ -69,8 +107,6 @@ export function DocumentDetailPage() {
   }
 
   const view = getDocumentViewModel(document)
-  const fileId = document.file_id
-
   async function handleDownload() {
     if (!fileId || downloading) return
     setDownloading(true)
@@ -107,11 +143,26 @@ export function DocumentDetailPage() {
       <div className={styles.sectionCard}>
         <h2 className={styles.cardTitle}>첨부 파일</h2>
         <div className={styles.previewBox}>
-          <p className={styles.previewFileName}>{view.typeLabel}</p>
+          <p className={styles.previewFileName}>{document.file_name ?? view.typeLabel}</p>
+          {canPreviewImage && previewUrl && (
+            <img
+              className={styles.previewImage}
+              src={previewUrl}
+              alt={`${view.typeLabel} 합성 원본 미리보기`}
+            />
+          )}
           <p className={styles.previewNote}>
-            {fileId
-              ? '사업장 권한을 확인한 뒤 원본 파일을 내려받습니다.'
-              : '이 문서에는 연결된 파일이 없습니다.'}
+            {!fileId && '이 문서에는 연결된 파일이 없습니다.'}
+            {fileId &&
+              canPreviewImage &&
+              !previewUrl &&
+              !previewError &&
+              '이미지 미리보기를 불러오는 중입니다.'}
+            {fileId &&
+              canPreviewImage &&
+              previewError &&
+              '미리보기를 불러오지 못했습니다. 원본 다운로드를 이용해 주세요.'}
+            {fileId && !canPreviewImage && '사업장 권한을 확인한 뒤 원본 파일을 내려받습니다.'}
           </p>
           {fileId && (
             <Button variant="secondary" disabled={downloading} onClick={handleDownload}>

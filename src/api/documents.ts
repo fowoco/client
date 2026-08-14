@@ -1,8 +1,15 @@
 import { apiFetch } from './client'
 
 // fowoco/server DocumentController 기준 (#57 통합 문서함·파일 업로드·문서 준비도 구현).
-export type DocumentType = 'PASSPORT_COPY' | 'ARC' | 'CONTRACT' | 'PERMIT'
-export type SubmissionStatus = 'MISSING' | 'SUBMITTED' | 'VERIFIED'
+export type DocumentType =
+  | 'PASSPORT_COPY'
+  | 'ARC'
+  | 'CONTRACT'
+  | 'PERMIT'
+  | 'EMPLOYMENT_EXTENSION_APPLICATION'
+  | 'INTEGRATED_APPLICATION'
+  | 'RESIDENCE_PROOF'
+export type SubmissionStatus = 'DRAFT' | 'MISSING' | 'SUBMITTED' | 'VERIFIED'
 
 export interface DocumentItemResponse {
   worker_document_id: string
@@ -19,6 +26,15 @@ export interface DocumentPageResponse {
   page: number
   size: number
   total_elements: number
+}
+
+export interface DocumentDetailResponse extends DocumentItemResponse {
+  task_id: string | null
+  version: number
+  file_name: string | null
+  file_mime_type: string | null
+  file_size: number | null
+  file_scan_status: 'NOT_SCANNED' | 'CLEAN' | 'INFECTED' | null
 }
 
 export interface FetchDocumentsParams {
@@ -43,6 +59,10 @@ export function fetchDocuments(params: FetchDocumentsParams = {}): Promise<Docum
   return apiFetch<DocumentPageResponse>(`/documents?${query.toString()}`)
 }
 
+export function fetchDocument(documentId: string): Promise<DocumentDetailResponse> {
+  return apiFetch<DocumentDetailResponse>(`/documents/${encodeURIComponent(documentId)}`)
+}
+
 export interface DocumentReadinessResponse {
   required: DocumentType[]
   available: DocumentType[]
@@ -53,7 +73,9 @@ export interface DocumentReadinessResponse {
 
 // Task 생성 시점 체크리스트 snapshot 기준이라 Workflow Catalog를 실시간으로 다시 읽지 않는다 (#176).
 export function fetchDocumentReadiness(taskId: string): Promise<DocumentReadinessResponse> {
-  return apiFetch<DocumentReadinessResponse>(`/tasks/${encodeURIComponent(taskId)}/document-readiness`)
+  return apiFetch<DocumentReadinessResponse>(
+    `/tasks/${encodeURIComponent(taskId)}/document-readiness`,
+  )
 }
 
 export interface DocumentRequestUpsertBody {

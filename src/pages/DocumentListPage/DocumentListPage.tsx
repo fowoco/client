@@ -29,7 +29,7 @@ function matchesTab(document: DocumentItemResponse, tab: TabId): boolean {
     return days !== null && days >= 0 && days <= EXPIRING_SOON_WITHIN_DAYS
   }
   if (tab === 'missing') return document.submission_status === 'MISSING'
-  return document.submission_status === 'VERIFIED'
+  return document.submission_status === 'VERIFIED' || document.submission_status === 'DRAFT'
 }
 
 const DOCUMENT_TABS: { id: TabId; label: string }[] = [
@@ -67,13 +67,21 @@ export function DocumentListPage() {
   const metricStrip = useMemo(
     () => [
       { id: 'total', label: '전체 문서', value: documents.length },
-      { id: 'needs-review', label: '검토 필요', value: documents.filter((doc) => doc.submission_status === 'SUBMITTED').length },
+      {
+        id: 'needs-review',
+        label: '검토 필요',
+        value: documents.filter((doc) => doc.submission_status === 'SUBMITTED').length,
+      },
       {
         id: 'expiring-soon',
         label: '30일 내 만료',
         value: documents.filter((doc) => matchesTab(doc, 'expiring-soon')).length,
       },
-      { id: 'missing', label: '누락 문서', value: documents.filter((doc) => doc.submission_status === 'MISSING').length },
+      {
+        id: 'missing',
+        label: '누락 문서',
+        value: documents.filter((doc) => doc.submission_status === 'MISSING').length,
+      },
     ],
     [documents],
   )
@@ -125,7 +133,12 @@ export function DocumentListPage() {
         ))}
       </div>
 
-      <Tabs tabs={tabsWithCounts} activeId={activeTab} onChange={(id) => setActiveTab(id as TabId)} ariaLabel="서류 탭" />
+      <Tabs
+        tabs={tabsWithCounts}
+        activeId={activeTab}
+        onChange={(id) => setActiveTab(id as TabId)}
+        ariaLabel="서류 탭"
+      />
 
       <div className={styles.toolbar}>
         <SearchInput
@@ -134,7 +147,11 @@ export function DocumentListPage() {
           placeholder="근로자명·서류 종류 검색"
           ariaLabel="서류 검색"
         />
-        <button type="button" className={styles.uploadButton} onClick={() => setUploadModalOpen(true)}>
+        <button
+          type="button"
+          className={styles.uploadButton}
+          onClick={() => setUploadModalOpen(true)}
+        >
           ＋ HWP/HWPX 업로드
         </button>
       </div>
@@ -166,7 +183,11 @@ export function DocumentListPage() {
 
       {status === 'empty' && (
         <div className={styles.stateWrap}>
-          <EmptyState kind="empty" title="등록된 서류가 없습니다" body="근로자가 서류를 제출하면 여기에 표시됩니다." />
+          <EmptyState
+            kind="empty"
+            title="등록된 서류가 없습니다"
+            body="근로자가 서류를 제출하면 여기에 표시됩니다."
+          />
         </div>
       )}
 
@@ -181,14 +202,18 @@ export function DocumentListPage() {
 
           {data && data.total_elements > data.items.length && (
             <p className={styles.capNotice}>
-              전체 {data.total_elements}건 중 {data.items.length}건만 불러왔습니다. 찾는 서류가 안 보이면
-              검색어를 바꿔보세요.
+              전체 {data.total_elements}건 중 {data.items.length}건만 불러왔습니다. 찾는 서류가 안
+              보이면 검색어를 바꿔보세요.
             </p>
           )}
 
           {visibleDocuments.length === 0 ? (
             <div className={styles.stateWrap}>
-              <EmptyState kind="empty" title="검색 결과가 없습니다" body="다른 검색어로 다시 시도해 보세요." />
+              <EmptyState
+                kind="empty"
+                title="검색 결과가 없습니다"
+                body="다른 검색어로 다시 시도해 보세요."
+              />
             </div>
           ) : (
             <div className={styles.list}>

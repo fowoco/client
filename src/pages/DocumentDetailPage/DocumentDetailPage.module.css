@@ -92,6 +92,17 @@
   color: var(--text-secondary);
 }
 
+.previewImage {
+  display: block;
+  width: min(100%, 760px);
+  max-height: 560px;
+  margin: 12px 0;
+  object-fit: contain;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-8);
+}
+
 .relatedLinks {
   display: flex;
   flex-direction: column;

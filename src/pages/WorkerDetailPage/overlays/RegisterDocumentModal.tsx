@@ -1,5 +1,10 @@
 import { useState, type ChangeEvent } from 'react'
-import { registerWorkerDocument, patchWorkerDocument, type DocumentType, type SubmissionStatus } from '../../../api/documents'
+import {
+  registerWorkerDocument,
+  patchWorkerDocument,
+  type DocumentType,
+  type SubmissionStatus,
+} from '../../../api/documents'
 import { ApiError, getErrorMessage } from '../../../api/errors'
 import { uploadFile } from '../../../api/files'
 import { Button } from '../../../components/ui/Button/Button'
@@ -7,11 +12,26 @@ import { Modal } from '../../../components/ui/Modal/Modal'
 import { DOCUMENT_TYPE_LABEL, SUBMISSION_STATUS_LABEL } from '../../../utils/documentLabels'
 import styles from './overlays.module.css'
 
-const DOCUMENT_TYPES: DocumentType[] = ['PASSPORT_COPY', 'ARC', 'CONTRACT', 'PERMIT']
-const SUBMISSION_STATUSES: SubmissionStatus[] = ['MISSING', 'SUBMITTED', 'VERIFIED']
+const DOCUMENT_TYPES: DocumentType[] = [
+  'PASSPORT_COPY',
+  'ARC',
+  'CONTRACT',
+  'PERMIT',
+  'EMPLOYMENT_EXTENSION_APPLICATION',
+  'INTEGRATED_APPLICATION',
+  'RESIDENCE_PROOF',
+]
+const SUBMISSION_STATUSES: SubmissionStatus[] = ['DRAFT', 'MISSING', 'SUBMITTED', 'VERIFIED']
 
-// fowoco/server FileService 기준 첨부 파일 제약 (image/jpeg·png·webp, application/pdf, 최대 20MB).
-const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
+// fowoco/server FileService 기준 첨부 파일 제약 (image/jpeg·png·webp, PDF, HWP/HWPX, 최대 20MB).
+const ALLOWED_FILE_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/pdf',
+  'application/x-hwp',
+  'application/hwp+zip',
+]
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024
 
 export interface RegisterDocumentModalProps {
@@ -21,7 +41,12 @@ export interface RegisterDocumentModalProps {
   onRegistered: () => void
 }
 
-export function RegisterDocumentModal({ open, workerId, onClose, onRegistered }: RegisterDocumentModalProps) {
+export function RegisterDocumentModal({
+  open,
+  workerId,
+  onClose,
+  onRegistered,
+}: RegisterDocumentModalProps) {
   const [documentType, setDocumentType] = useState<DocumentType>('PASSPORT_COPY')
   const [submissionStatus, setSubmissionStatus] = useState<SubmissionStatus>('SUBMITTED')
   const [expiryDate, setExpiryDate] = useState('')
@@ -49,7 +74,7 @@ export function RegisterDocumentModal({ open, workerId, onClose, onRegistered }:
     }
     if (!ALLOWED_FILE_TYPES.includes(chosen.type)) {
       setFile(null)
-      setFileError('지원하지 않는 파일 형식입니다 (JPEG·PNG·WEBP·PDF만 가능)')
+      setFileError('지원하지 않는 파일 형식입니다 (JPEG·PNG·WEBP·PDF·HWP·HWPX만 가능)')
       return
     }
     if (chosen.size > MAX_FILE_SIZE_BYTES) {
@@ -82,7 +107,9 @@ export function RegisterDocumentModal({ open, workerId, onClose, onRegistered }:
       onRegistered()
       resetAndClose()
     } catch (error) {
-      setErrorMessage(error instanceof ApiError ? getErrorMessage(error) : '서류를 등록하지 못했습니다.')
+      setErrorMessage(
+        error instanceof ApiError ? getErrorMessage(error) : '서류를 등록하지 못했습니다.',
+      )
     } finally {
       setSubmitting(false)
     }

@@ -1,6 +1,11 @@
 import { useNavigate, useBlocker } from 'react-router-dom'
 import { useCallback, useEffect, useState } from 'react'
 import { fetchMyProfile, updateMyProfile, type ProfileResponse } from '../../api/profile'
+import {
+  fetchNotificationPreferences,
+  updateNotificationPreference,
+  type NotificationPreferenceResponse,
+} from '../../api/notificationPreferences'
 import { ApiError, getErrorMessage } from '../../api/errors'
 import { Button } from '../../components/ui/Button/Button'
 import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
@@ -9,13 +14,9 @@ import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import { useApiQuery } from '../../hooks/useApiQuery'
 import { useAuthStore } from '../../store/authStore'
 import { useToastStore } from '../../store/toastStore'
+import { formatEventTime } from '../../utils/datetime'
 import { CompanySettingsPanel } from './CompanySettingsPanel'
-import {
-  INITIAL_NOTIFICATION_PREFS,
-  PROFILE_SUMMARY,
-  SECURITY_INFO,
-  WORK_CONTEXT,
-} from './profileData'
+import { NOTIFICATION_PREFERENCE_COPY, PROFILE_SUMMARY } from './profileData'
 import styles from './ProfilePage.module.css'
 
 interface EditableFields {
@@ -24,6 +25,26 @@ interface EditableFields {
 }
 
 type FieldErrors = Partial<Record<keyof EditableFields, string>>
+
+const ROLE_LABEL: Record<ProfileResponse['role'], string> = {
+  ADMIN: '관리자',
+  HR: 'HR 담당자',
+  VIEWER: '조회 전용',
+}
+
+const ACCOUNT_STATUS_LABEL: Record<ProfileResponse['account_status'], string> = {
+  ACTIVE: '정상',
+  SUSPENDED: '일시 정지',
+  DISABLED: '비활성화',
+}
+
+function formatDateOnly(iso: string): string {
+  const date = new Date(iso)
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}.${m}.${d}`
+}
 
 // Figma Screen Brief 04번 항목 기준 검증 규칙.
 function validateFields(input: EditableFields): FieldErrors {
@@ -56,6 +77,7 @@ export function ProfilePage() {
   const setStoreProfile = useAuthStore((state) => state.updateProfile)
 
   const { data: profile, status: profileStatus } = useApiQuery(fetchMyProfile)
+  const { data: preferenceData } = useApiQuery(fetchNotificationPreferences)
 
   const [fields, setFields] = useState<EditableFields | null>(null)
   const [draft, setDraft] = useState<EditableFields | null>(null)
@@ -63,11 +85,15 @@ export function ProfilePage() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
-  const [notificationPrefs, setNotificationPrefs] = useState(INITIAL_NOTIFICATION_PREFS)
+  const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferenceResponse[]>([])
 
   useEffect(() => {
     if (profile) setFields(toFields(profile))
   }, [profile])
+
+  useEffect(() => {
+    if (preferenceData) setNotificationPrefs(preferenceData)
+  }, [preferenceData])
 
   const changedFieldCount =
     editing && fields && draft
@@ -128,12 +154,23 @@ export function ProfilePage() {
     showToast('이메일 변경 요청을 관리자에게 전달했습니다.')
   }
 
-  function handleToggleNotification(id: string) {
+  async function handleToggleNotification(key: string) {
+    const current = notificationPrefs.find((pref) => pref.key === key)
+    if (!current || current.required) return
+
+    const nextEnabled = !current.enabled
     setNotificationPrefs((prev) =>
-      prev.map((pref) =>
-        pref.id === id && !pref.required ? { ...pref, enabled: !pref.enabled } : pref,
-      ),
+      prev.map((pref) => (pref.key === key ? { ...pref, enabled: nextEnabled } : pref)),
     )
+    try {
+      const updated = await updateNotificationPreference(key, nextEnabled)
+      setNotificationPrefs(updated)
+    } catch {
+      setNotificationPrefs((prev) =>
+        prev.map((pref) => (pref.key === key ? { ...pref, enabled: current.enabled } : pref)),
+      )
+      showToast('알림 설정을 저장하지 못했습니다.')
+    }
   }
 
   function handleBlockerContinueEditing() {
@@ -193,8 +230,10 @@ export function ProfilePage() {
         </div>
         <div className={styles.summaryLastLogin}>
           <p className={styles.summaryLastLoginLabel}>마지막 로그인</p>
-          <p className={styles.summaryLastLoginValue}>{PROFILE_SUMMARY.lastLoginAt}</p>
-          <p className={styles.summaryLastLoginDevice}>{PROFILE_SUMMARY.lastLoginDevice}</p>
+          <p className={styles.summaryLastLoginValue}>
+            {profile?.last_login_at ? formatEventTime(profile.last_login_at) : '확인 중…'}
+          </p>
+          <p className={styles.summaryLastLoginDevice}>{profile?.last_login_device ?? ''}</p>
         </div>
       </div>
 
@@ -291,27 +330,33 @@ export function ProfilePage() {
 
         <div className={styles.cardNarrow}>
           <h2 className={styles.cardTitle}>업무 Context와 권한</h2>
-          <p className={styles.cardDescription}>{WORK_CONTEXT.companySummary}</p>
+          <p className={styles.cardDescription}>
+            {(user?.workplace ?? PROFILE_SUMMARY.companyName) +
+              (profile ? ` · ${ROLE_LABEL[profile.role]}` : '')}
+          </p>
           <hr className={styles.divider} />
 
-          <DetailRow
-            label="승인 가능 여부"
-            value={
-              <StatusLabel tone={WORK_CONTEXT.canApprove ? 'success' : 'warning'}>
-                {WORK_CONTEXT.canApprove ? '업무 승인 가능' : '승인 불가'}
-              </StatusLabel>
-            }
-          />
-          <DetailRow label="담당 업무 영역" value={WORK_CONTEXT.assignedArea} />
-          <DetailRow
-            label="자료 등록 실행"
-            value={
-              <StatusLabel tone={WORK_CONTEXT.canRegisterData ? 'success' : 'warning'}>
-                {WORK_CONTEXT.canRegisterData ? '권한 있음' : '권한 없음'}
-              </StatusLabel>
-            }
-          />
-          <DetailRow label="문서 열람 범위" value={WORK_CONTEXT.documentScope} />
+          {profile && (
+            <>
+              <DetailRow label="역할" value={ROLE_LABEL[profile.role]} />
+              <DetailRow
+                label="승인 가능 여부"
+                value={
+                  <StatusLabel tone={profile.role !== 'VIEWER' ? 'success' : 'warning'}>
+                    {profile.role !== 'VIEWER' ? '업무 승인 가능' : '승인 불가'}
+                  </StatusLabel>
+                }
+              />
+              <DetailRow
+                label="자료 등록 실행"
+                value={
+                  <StatusLabel tone={profile.role !== 'VIEWER' ? 'success' : 'warning'}>
+                    {profile.role !== 'VIEWER' ? '권한 있음' : '권한 없음'}
+                  </StatusLabel>
+                }
+              />
+            </>
+          )}
         </div>
       </div>
 
@@ -324,29 +369,35 @@ export function ProfilePage() {
           <hr className={styles.divider} />
 
           <div className={styles.notificationGrid}>
-            {notificationPrefs.map((pref) => (
-              <div key={pref.id} className={styles.notificationRow}>
-                <div className={styles.notificationCopy}>
-                  <p className={styles.notificationLabel}>
-                    {pref.label}
-                    {pref.required && <span className={styles.fieldBadgeMuted}>필수</span>}
-                  </p>
-                  <p className={styles.notificationDescription}>{pref.description}</p>
+            {notificationPrefs.map((pref) => {
+              const copy = NOTIFICATION_PREFERENCE_COPY[pref.key] ?? {
+                label: pref.key,
+                description: '',
+              }
+              return (
+                <div key={pref.key} className={styles.notificationRow}>
+                  <div className={styles.notificationCopy}>
+                    <p className={styles.notificationLabel}>
+                      {copy.label}
+                      {pref.required && <span className={styles.fieldBadgeMuted}>필수</span>}
+                    </p>
+                    <p className={styles.notificationDescription}>{copy.description}</p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={pref.enabled}
+                    aria-label={copy.label}
+                    disabled={pref.required}
+                    className={`${styles.switch} ${pref.enabled ? styles.switchOn : ''}`}
+                    onClick={() => void handleToggleNotification(pref.key)}
+                  >
+                    <span className={styles.switchThumb} />
+                    <span className={styles.switchLabel}>{pref.enabled ? '켜짐' : '꺼짐'}</span>
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={pref.enabled}
-                  aria-label={pref.label}
-                  disabled={pref.required}
-                  className={`${styles.switch} ${pref.enabled ? styles.switchOn : ''}`}
-                  onClick={() => handleToggleNotification(pref.id)}
-                >
-                  <span className={styles.switchThumb} />
-                  <span className={styles.switchLabel}>{pref.enabled ? '켜짐' : '꺼짐'}</span>
-                </button>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
 
@@ -355,12 +406,30 @@ export function ProfilePage() {
           <p className={styles.cardDescription}>계정 보호 상태와 최근 로그인 정보를 확인합니다.</p>
           <hr className={styles.divider} />
 
-          <DetailRow
-            label="계정 보호 상태"
-            value={<StatusLabel tone="success">{SECURITY_INFO.accountStatus}</StatusLabel>}
-          />
-          <DetailRow label="비밀번호 변경" value={SECURITY_INFO.passwordChangedAt} />
-          <DetailRow label="로그인 기기" value={SECURITY_INFO.loginDeviceSummary} />
+          {profile && (
+            <>
+              <DetailRow
+                label="계정 보호 상태"
+                value={
+                  <StatusLabel tone={profile.account_status === 'ACTIVE' ? 'success' : 'warning'}>
+                    {ACCOUNT_STATUS_LABEL[profile.account_status]}
+                  </StatusLabel>
+                }
+              />
+              <DetailRow
+                label="비밀번호 변경"
+                value={formatDateOnly(profile.password_changed_at)}
+              />
+              <DetailRow
+                label="로그인 기기"
+                value={
+                  profile.last_login_device
+                    ? `${profile.recent_device_count}대 · ${profile.last_login_device}`
+                    : '확인된 로그인 기록이 없습니다.'
+                }
+              />
+            </>
+          )}
 
           <div className={styles.securityActions}>
             <Button variant="secondary" onClick={() => navigate('/reset-password')}>

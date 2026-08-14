@@ -8,7 +8,27 @@ import { useToastStore } from '../../store/toastStore'
 import { ProfilePage } from './ProfilePage'
 
 // fowoco/server ProfileResponse (GET/PATCH /api/v1/auth/me/profile) 그대로.
-const PROFILE = { display_name: '김민지 HR', phone: '010-0000-1234' }
+const PROFILE = {
+  display_name: '김민지 HR',
+  phone: '010-0000-1234',
+  role: 'HR',
+  account_status: 'ACTIVE',
+  password_changed_at: '2026-07-01T00:00:00Z',
+  last_login_at: '2026-08-14T00:12:00Z',
+  last_login_device: 'Chrome · macOS',
+  recent_device_count: 1,
+}
+
+// fowoco/server NotificationPreferenceResponse[] (GET/PATCH /api/v1/notifications/preferences) 그대로.
+const NOTIFICATION_PREFERENCES = [
+  { key: 'security-permission', enabled: true, required: true },
+  { key: 'approval-request', enabled: true, required: false },
+  { key: 'document-submitted', enabled: true, required: false },
+  { key: 'document-needs-fix', enabled: true, required: false },
+  { key: 'due-soon', enabled: true, required: false },
+  { key: 'assigned', enabled: false, required: false },
+  { key: 'agent-ready', enabled: true, required: false },
+]
 
 const SETTINGS = {
   approval_policy: 'ADMIN_OR_HR',
@@ -62,6 +82,14 @@ beforeEach(() => {
         return jsonResponse({ ...PROFILE, ...JSON.parse(init.body as string) })
       }
       if (url.includes('/auth/me/profile')) return jsonResponse(PROFILE)
+      if (url.includes('/notifications/preferences') && init?.method === 'PATCH') {
+        const { enabled } = JSON.parse(init.body as string)
+        const key = url.split('/').pop()
+        return jsonResponse(
+          NOTIFICATION_PREFERENCES.map((pref) => (pref.key === key ? { ...pref, enabled } : pref)),
+        )
+      }
+      if (url.includes('/notifications/preferences')) return jsonResponse(NOTIFICATION_PREFERENCES)
       return Promise.reject(new Error(`Unexpected request: ${url}`))
     }),
   )
@@ -178,19 +206,19 @@ describe('ProfilePage', () => {
     const user = userEvent.setup()
     renderPage()
 
-    const toggle = screen.getByRole('switch', { name: '담당자 지정' })
+    const toggle = await screen.findByRole('switch', { name: '담당자 지정' })
     expect(toggle).toHaveAttribute('aria-checked', 'false')
 
     await user.click(toggle)
 
-    expect(toggle).toHaveAttribute('aria-checked', 'true')
+    await waitFor(() => expect(toggle).toHaveAttribute('aria-checked', 'true'))
   })
 
   it('shows the mandatory security notification as a disabled, always-on toggle', async () => {
     const user = userEvent.setup()
     renderPage()
 
-    const toggle = screen.getByRole('switch', { name: '보안·권한 변경 알림' })
+    const toggle = await screen.findByRole('switch', { name: '보안·권한 변경 알림' })
     expect(toggle).toHaveAttribute('aria-checked', 'true')
     expect(toggle).toBeDisabled()
 

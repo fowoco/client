@@ -28,6 +28,7 @@ export interface AiRunResponse {
   status: AiRunStatus
   analysis_outcome: AiAnalysisOutcome | null
   detected_intent: string | null
+  evidence: string | null
   error_code: string | null
   attempt_count: number
   version: number

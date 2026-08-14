@@ -391,7 +391,9 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
               </div>
               <div>
                 <p className={styles.fieldLabel}>분석 근거</p>
-                <p className={styles.fieldValue}>현재 분석 API에서 제공하지 않음</p>
+                <p className={styles.fieldValue}>
+                  {run.evidence ?? '현재 분석 API에서 제공하지 않음'}
+                </p>
               </div>
             </div>
           </div>

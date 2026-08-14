@@ -2,7 +2,24 @@ import { apiFetch } from './client'
 import type { DocumentType } from './documents'
 
 export type WorkerResponseType =
-  'ACKNOWLEDGED' | 'QUESTION' | 'NOT_UNDERSTOOD' | 'DOCUMENT_SUBMITTED' | 'DIFFICULT'
+  | 'ACKNOWLEDGED'
+  | 'QUESTION'
+  | 'NOT_UNDERSTOOD'
+  | 'DOCUMENT_SUBMITTED'
+  | 'DIFFICULT'
+  | 'SLOT_ANSWERS_SUBMITTED'
+
+export type WorkerRequestedActionType = 'ANSWER_FIELD' | 'UPLOAD_DOCUMENT'
+export type WorkerRequestedActionInputType = 'TEXT' | 'BOOLEAN' | 'MONEY'
+
+export interface WorkerRequestedAction {
+  type: WorkerRequestedActionType
+  field_key: string | null
+  label: string
+  input_type: WorkerRequestedActionInputType | null
+  required: boolean
+  document_type: DocumentType | null
+}
 
 export interface WorkerLinkIssueBody {
   expires_in_hours?: number
@@ -36,6 +53,7 @@ export interface WorkerLinkViewResponse {
   due_date: string | null
   requested_document_types: DocumentType[]
   allowed_responses: WorkerResponseType[]
+  requested_actions: WorkerRequestedAction[]
 }
 
 export interface WorkerLinkDocumentUploadResponse {
@@ -49,6 +67,7 @@ export interface WorkerResponseSubmitBody {
   response_type: WorkerResponseType
   message?: string
   upload_ids?: string[]
+  answers?: Record<string, string>
   idempotency_key: string
 }
 
@@ -72,11 +91,41 @@ export interface WorkerResponseItemResponse {
   response_id: string
   response_type: WorkerResponseType
   message: string | null
+  answers?: Record<string, string>
   upload_ids: string[]
   uploads: WorkerResponseUploadItem[]
   conversation_status: WorkerConversationStatus
   unread: boolean
   received_at: string
+}
+
+export type WorkerAnswerAction = WorkerRequestedAction & {
+  type: 'ANSWER_FIELD'
+  field_key: string
+  input_type: WorkerRequestedActionInputType
+}
+
+export function getWorkerAnswerActions(view: WorkerLinkViewResponse): WorkerAnswerAction[] {
+  const supportedInputTypes = new Set<WorkerRequestedActionInputType>(['TEXT', 'BOOLEAN', 'MONEY'])
+  return (view.requested_actions ?? []).filter(
+    (action): action is WorkerAnswerAction =>
+      action.type === 'ANSWER_FIELD' &&
+      typeof action.field_key === 'string' &&
+      action.field_key.length > 0 &&
+      action.input_type !== null &&
+      supportedInputTypes.has(action.input_type),
+  )
+}
+
+export function getWorkerRequestedDocumentTypes(view: WorkerLinkViewResponse): DocumentType[] {
+  const fromActions = (view.requested_actions ?? [])
+    .filter(
+      (action): action is WorkerRequestedAction & { document_type: DocumentType } =>
+        action.type === 'UPLOAD_DOCUMENT' && action.document_type !== null,
+    )
+    .map((action) => action.document_type)
+
+  return [...new Set(fromActions.length > 0 ? fromActions : view.requested_document_types)]
 }
 
 export interface WorkerResponsePageResponse {

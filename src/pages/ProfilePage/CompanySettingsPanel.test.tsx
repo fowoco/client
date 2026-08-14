@@ -53,7 +53,13 @@ function renderPanel() {
 
 beforeEach(() => {
   useAuthStore.setState({
-    user: { name: 'admin', email: 'admin@example.com', workplace: 'FOWOCO', role: 'ADMIN' },
+    user: {
+      name: 'admin',
+      phone: null,
+      email: 'admin@example.com',
+      workplace: 'FOWOCO',
+      role: 'ADMIN',
+    },
     status: 'ready',
   })
   useToastStore.setState({ toasts: [] })
@@ -109,7 +115,7 @@ describe('CompanySettingsPanel', () => {
 
   it('renders HR and VIEWER settings as read-only', async () => {
     useAuthStore.setState({
-      user: { name: 'hr', email: 'hr@example.com', workplace: 'FOWOCO', role: 'HR' },
+      user: { name: 'hr', phone: null, email: 'hr@example.com', workplace: 'FOWOCO', role: 'HR' },
     })
     renderPanel()
 

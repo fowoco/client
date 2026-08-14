@@ -13,6 +13,7 @@ import styles from './SignupPage.module.css'
 interface FieldErrors {
   workplace?: string
   name?: string
+  phone?: string
   email?: string
   password?: string
   confirmPassword?: string
@@ -30,9 +31,12 @@ const TERMS_VERSION = '1.0'
 const SERVER_FIELD_TO_SCREEN_FIELD: Record<string, keyof FieldErrors> = {
   company_name: 'workplace',
   display_name: 'name',
+  phone: 'phone',
   email: 'email',
   password: 'password',
 }
+
+const PHONE_PATTERN = /^[0-9+()\-\s]*$/
 
 function mapServerFieldErrors(fieldErrors: ApiFieldError[]): FieldErrors {
   const mapped: FieldErrors = {}
@@ -49,6 +53,7 @@ export function SignupPage() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [workplace, setWorkplace] = useState('')
+  const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -66,6 +71,9 @@ export function SignupPage() {
     if (!name.trim() || name.trim().length < 2) errors.name = '2자 이상 입력해 주세요.'
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = '이메일 형식을 확인합니다.'
     if (!workplace.trim()) errors.workplace = '회사명을 입력해 주세요.'
+    if (phone.trim() && !PHONE_PATTERN.test(phone.trim())) {
+      errors.phone = '연락처 형식을 확인해 주세요.'
+    }
     if (password.length < 8) errors.password = '비밀번호는 8자 이상이어야 합니다.'
     if (confirmPassword !== password) errors.confirmPassword = '비밀번호를 다시 입력해 주세요.'
     if (!termsAgreed || !privacyAgreed) errors.terms = '필수 약관에 동의해 주세요.'
@@ -85,6 +93,7 @@ export function SignupPage() {
         body: JSON.stringify({
           company_name: workplace,
           display_name: name,
+          phone: phone.trim() || null,
           email,
           password,
           agreements: {
@@ -138,7 +147,9 @@ export function SignupPage() {
             <label className={styles.label} htmlFor="name">
               이름
             </label>
-            <div className={`${styles.inputShell} ${fieldErrors.name ? styles.inputShellError : ''}`}>
+            <div
+              className={`${styles.inputShell} ${fieldErrors.name ? styles.inputShellError : ''}`}
+            >
               <input
                 id="name"
                 className={styles.input}
@@ -192,6 +203,25 @@ export function SignupPage() {
             <p className={fieldErrors.workplace ? styles.fieldError : styles.helperText}>
               {fieldErrors.workplace ?? '회사명을 입력해 주세요.'}
             </p>
+          </div>
+
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="phone">
+              연락처 (선택)
+            </label>
+            <div
+              className={`${styles.inputShell} ${fieldErrors.phone ? styles.inputShellError : ''}`}
+            >
+              <input
+                id="phone"
+                type="tel"
+                className={styles.input}
+                placeholder="010-1234-5678"
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+              />
+            </div>
+            {fieldErrors.phone && <p className={styles.fieldError}>{fieldErrors.phone}</p>}
           </div>
 
           <div className={styles.field}>
@@ -321,7 +351,10 @@ export function SignupPage() {
           </Button>
 
           <p className={styles.loginPrompt}>
-            이미 계정이 있으신가요? <Link to="/login" className={styles.loginLink}>로그인</Link>
+            이미 계정이 있으신가요?{' '}
+            <Link to="/login" className={styles.loginLink}>
+              로그인
+            </Link>
           </p>
         </form>
       </div>

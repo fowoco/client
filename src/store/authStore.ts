@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { apiFetch, setAccessToken, setAuthExpiredHandler } from '../api/client'
 import { ApiError, getErrorMessage } from '../api/errors'
+import { fetchMyProfile } from '../api/profile'
 
 // 로그인 화면·도움말에 안내하는 데모 계정.
 // fowoco/server는 DEMO_SEED_* 환경변수로 이 계정을 만든다 (README "선택 사항: 데모 로그인
@@ -13,6 +14,7 @@ export const DEMO_ACCOUNT = {
 
 export interface AuthUser {
   name: string
+  phone: string | null
   email: string
   workplace: string
   role: string
@@ -30,6 +32,7 @@ interface LoginResponseBody {
   user_id: string
   company_id: string
   company_name: string
+  display_name: string
   role: string
   access_token: string
   token_type: string
@@ -52,15 +55,13 @@ interface CurrentActorResponseBody {
   roles: string[]
 }
 
-// company_name과 화면 표시용 이름 -- GET /auth/me는 user_id/company_id/roles만 내려주고
-// 표시용 이름이나 사업장명을 주지 않는다. 로그인 시 한 번 받은 값을 여기 저장해뒀다가
-// 새로고침 세션 복원(restoreSession) 때 재사용한다. 민감정보가 아니라 localStorage에 둬도
-// 안전하다. 서버가 /auth/me에 company_name·표시용 이름을 추가해주면 이 저장소는 제거하고
-// 매번 서버 값을 그대로 쓰면 된다.
+// company_name과 email -- GET /auth/me는 user_id/company_id/roles만 내려주고 사업장명·이메일은
+// 안 준다 (표시 이름·연락처는 GET /auth/me/profile로 별도 조회 가능, restoreSession에서 사용).
+// 로그인 시 한 번 받은 company_name/email을 여기 저장해뒀다가 새로고침 세션 복원 때 재사용한다.
+// 민감정보가 아니라 localStorage에 둬도 안전하다.
 const PROFILE_STORAGE_KEY = 'fowoco.auth.profile'
 
 interface PersistedProfile {
-  name: string
   email: string
   workplace: string
 }
@@ -97,6 +98,8 @@ interface AuthState {
   logout: () => Promise<void>
   /** 새로고침 직후 등, Refresh Token 쿠키로 세션을 조용히 복원해본다. RequireAuth가 호출한다. */
   restoreSession: () => Promise<void>
+  /** ProfilePage가 PATCH /auth/me/profile 성공 후 화면 전역(헤더 등)에 반영할 때 쓴다. */
+  updateProfile: (displayName: string, phone: string | null) => void
 }
 
 function toApiErrorMessage(error: unknown, fallback: string): string {
@@ -129,12 +132,19 @@ export const useAuthStore = create<AuthState>((set) => {
 
         setAccessToken(body.access_token)
         const profile: PersistedProfile = {
-          name: email.split('@')[0],
           email,
           workplace: body.company_name,
         }
         persistProfile(profile)
-        set({ user: { ...profile, role: body.role }, status: 'ready' })
+        set({
+          user: {
+            name: body.display_name,
+            phone: null,
+            ...profile,
+            role: body.role,
+          },
+          status: 'ready',
+        })
         return { success: true }
       } catch (error) {
         return {
@@ -170,11 +180,15 @@ export const useAuthStore = create<AuthState>((set) => {
           })
           setAccessToken(refreshBody.access_token)
 
-          const me = await apiFetch<CurrentActorResponseBody>('/auth/me')
+          const [me, profile] = await Promise.all([
+            apiFetch<CurrentActorResponseBody>('/auth/me'),
+            fetchMyProfile().catch(() => null),
+          ])
           const persisted = readPersistedProfile()
           set({
             user: {
-              name: persisted?.name ?? '사용자',
+              name: profile?.display_name ?? '사용자',
+              phone: profile?.phone ?? null,
               email: persisted?.email ?? '',
               workplace: persisted?.workplace ?? '',
               role: me.roles[0] ?? '',
@@ -192,6 +206,10 @@ export const useAuthStore = create<AuthState>((set) => {
       })()
 
       return sessionRestorePromise
+    },
+
+    updateProfile: (displayName, phone) => {
+      set((state) => (state.user ? { user: { ...state.user, name: displayName, phone } } : state))
     },
   }
 })

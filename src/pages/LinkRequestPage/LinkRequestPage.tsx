@@ -1,13 +1,26 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ApiError, getErrorMessage } from '../../api/errors'
-import { fetchWorkerLink, submitWorkerResponse } from '../../api/workerLinks'
+import {
+  fetchWorkerLink,
+  getWorkerAnswerActions,
+  getWorkerRequestedDocumentTypes,
+  submitWorkerResponse,
+  type WorkerAnswerAction,
+  type WorkerResponseSubmitResponse,
+} from '../../api/workerLinks'
 import { MobileShell } from '../../components/mobile/MobileShell'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { useApiQuery } from '../../hooks/useApiQuery'
 import { DOCUMENT_TYPE_LABEL } from '../../utils/documentLabels'
 import { getOperationalDateViewModel } from '../../view-models/dateViewModel'
 import styles from './LinkRequestPage.module.css'
+import {
+  clearSlotAnswerSubmission,
+  getSlotAnswerActionSignature,
+  readSlotAnswerSubmission,
+  saveSlotAnswerSubmission,
+} from './slotAnswerSubmission'
 
 const LANGUAGE_LABEL: Record<string, string> = {
   ko: '한국어',
@@ -20,6 +33,12 @@ const LANGUAGE_LABEL: Record<string, string> = {
   mn: '몽골어',
   uz: '우즈베크어',
   ne: '네팔어',
+}
+
+function answerInputHint(action: WorkerAnswerAction) {
+  if (action.input_type === 'MONEY') return '숫자만 입력해 주세요.'
+  if (action.input_type === 'BOOLEAN') return '예 또는 아니요를 선택해 주세요.'
+  return '500자 이내로 입력해 주세요.'
 }
 
 export function LinkRequestPage() {
@@ -48,14 +67,111 @@ function WorkerLinkRequest({ token }: { token: string }) {
   const [questionComposerOpen, setQuestionComposerOpen] = useState(false)
   const [question, setQuestion] = useState('')
   const [responseError, setResponseError] = useState<string | null>(null)
+  const [answers, setAnswers] = useState<Record<string, string>>({})
+  const [submittingAnswers, setSubmittingAnswers] = useState(false)
+  const [answerSubmission, setAnswerSubmission] = useState<WorkerResponseSubmitResponse | null>(
+    null,
+  )
+  const [answerError, setAnswerError] = useState<string | null>(null)
+  const [answerRequestId, setAnswerRequestId] = useState<string | null>(null)
   const fetcher = useCallback(() => fetchWorkerLink(token), [token])
   const { status, data, error, refetch } = useApiQuery(fetcher)
+  const answerActions = data ? getWorkerAnswerActions(data) : []
+  const answerActionSignature = getSlotAnswerActionSignature(answerActions)
 
   useEffect(() => {
     if (status === 'error' && error?.status === 410) {
       navigate(`/worker-portal/${encodeURIComponent(token)}/expired`, { replace: true })
     }
   }, [error, navigate, status, token])
+
+  useEffect(() => {
+    if (status !== 'success' || !data) return
+    const stored = readSlotAnswerSubmission(token, answerActionSignature)
+    if (!answerActionSignature) {
+      setAnswers({})
+      setAnswerRequestId(stored?.idempotencyKey ?? null)
+      setAnswerSubmission(stored?.submission ?? null)
+      return
+    }
+
+    setAnswers(stored?.answers ?? {})
+    setAnswerRequestId(stored?.idempotencyKey ?? null)
+    setAnswerSubmission(stored?.submission ?? null)
+  }, [answerActionSignature, data, status, token])
+
+  function handleAnswerChange(fieldKey: string, value: string) {
+    setAnswers((current) => ({ ...current, [fieldKey]: value }))
+    setAnswerError(null)
+
+    if (answerRequestId) {
+      clearSlotAnswerSubmission(token)
+      setAnswerRequestId(null)
+    }
+  }
+
+  async function handleAnswerSubmit() {
+    if (!data || submittingAnswers || answerActions.length === 0) return
+
+    const submittedAnswers: Record<string, string> = {}
+    for (const action of answerActions) {
+      const value = answers[action.field_key]?.trim() ?? ''
+      if (action.required && !value) {
+        setAnswerError(`“${action.label}” 항목에 답변해 주세요.`)
+        return
+      }
+      if (!value) continue
+      if (action.input_type === 'TEXT' && value.length > 500) {
+        setAnswerError(`“${action.label}” 답변은 500자 이내로 입력해 주세요.`)
+        return
+      }
+      if (action.input_type === 'MONEY' && !/^\d{1,12}$/.test(value)) {
+        setAnswerError(`“${action.label}” 항목에는 12자리 이하의 숫자만 입력해 주세요.`)
+        return
+      }
+      submittedAnswers[action.field_key] = value
+    }
+
+    const idempotencyKey = answerRequestId ?? crypto.randomUUID()
+    setAnswerRequestId(idempotencyKey)
+    setSubmittingAnswers(true)
+    setAnswerError(null)
+    saveSlotAnswerSubmission(token, answerActionSignature, submittedAnswers, idempotencyKey, null)
+
+    try {
+      const result = await submitWorkerResponse(token, {
+        response_type: 'SLOT_ANSWERS_SUBMITTED',
+        answers: submittedAnswers,
+        idempotency_key: idempotencyKey,
+      })
+      setAnswerSubmission(result)
+      saveSlotAnswerSubmission(token, answerActionSignature, {}, idempotencyKey, result)
+    } catch (caught) {
+      if (caught instanceof ApiError && caught.status === 410) {
+        navigate(`/worker-portal/${encodeURIComponent(token)}/expired`, { replace: true })
+        return
+      }
+      if (caught instanceof ApiError && caught.status === 409) {
+        clearSlotAnswerSubmission(token)
+        setAnswerRequestId(null)
+        setAnswerError(
+          '이전 제출 요청과 내용이 달라 전송하지 못했습니다. 내용을 확인한 뒤 다시 제출해 주세요.',
+        )
+        return
+      }
+      if (caught instanceof ApiError && caught.status === 422) {
+        clearSlotAnswerSubmission(token)
+        setAnswerRequestId(null)
+        setAnswerError('요청된 형식과 맞지 않는 답변이 있습니다. 입력 내용을 확인해 주세요.')
+        return
+      }
+      setAnswerError(
+        caught instanceof ApiError ? getErrorMessage(caught) : '답변을 제출하지 못했습니다.',
+      )
+    } finally {
+      setSubmittingAnswers(false)
+    }
+  }
 
   async function handleQuestion() {
     if (submittingQuestion) return
@@ -144,11 +260,12 @@ function WorkerLinkRequest({ token }: { token: string }) {
   }
 
   const due = getOperationalDateViewModel('TASK_DUE', data.due_date)
-  const requestedDocumentTypes = [...new Set(data.requested_document_types)]
+  const requestedDocumentTypes = getWorkerRequestedDocumentTypes(data)
   const canContinue =
     data.allowed_responses.includes('ACKNOWLEDGED') ||
     data.allowed_responses.includes('DOCUMENT_SUBMITTED')
   const canAskQuestion = data.allowed_responses.includes('QUESTION')
+  const canSubmitAnswers = data.allowed_responses.includes('SLOT_ANSWERS_SUBMITTED')
 
   return (
     <MobileShell right={<span>보안 링크</span>}>
@@ -170,16 +287,144 @@ function WorkerLinkRequest({ token }: { token: string }) {
 
       <p className={styles.body}>{data.guidance}</p>
 
-      <section className={styles.requestedDocuments} aria-labelledby="requested-documents-title">
-        <p id="requested-documents-title" className={styles.requestedDocumentsTitle}>
-          제출할 서류 {requestedDocumentTypes.length}개
-        </p>
-        <ul className={styles.requestedDocumentsList}>
-          {requestedDocumentTypes.map((type) => (
-            <li key={type}>{DOCUMENT_TYPE_LABEL[type]}</li>
-          ))}
-        </ul>
-      </section>
+      {(answerActions.length > 0 || answerSubmission) && (
+        <section className={styles.answerSection} aria-labelledby="requested-answers-title">
+          <div className={styles.answerSectionHeader}>
+            <div>
+              <p className={styles.answerEyebrow}>회사에서 요청한 정보</p>
+              <h2 id="requested-answers-title" className={styles.answerTitle}>
+                {answerActions.length > 0
+                  ? `답변할 항목 ${answerActions.length}개`
+                  : '답변 제출 현황'}
+              </h2>
+            </div>
+            {answerActions.length > 0 && (
+              <span className={styles.requiredNotice}>요청 항목만 표시</span>
+            )}
+          </div>
+
+          {answerSubmission ? (
+            <div className={styles.answerProcessing} role="status">
+              <span className={styles.processingIcon}>✓</span>
+              <div>
+                <p className={styles.processingTitle}>답변 제출 · 처리 중</p>
+                <p className={styles.processingBody}>
+                  제출한 답변을 Agent가 업무에 반영하고 있습니다. 아직 업무가 완료된 것은 아닙니다.
+                </p>
+                <p className={styles.processingMeta}>접수 ID · {answerSubmission.response_id}</p>
+              </div>
+              <button type="button" className={styles.refreshAction} onClick={refetch}>
+                처리 상태 새로고침
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className={styles.answerFields}>
+                {answerActions.map((action) => {
+                  const inputId = `worker-answer-${action.field_key}`
+                  const hintId = `${inputId}-hint`
+                  const value = answers[action.field_key] ?? ''
+
+                  return (
+                    <div key={action.field_key} className={styles.answerField}>
+                      <label className={styles.answerLabel} htmlFor={inputId}>
+                        {action.label}
+                        {action.required && <span aria-label="필수 입력"> *</span>}
+                      </label>
+                      {action.input_type === 'BOOLEAN' ? (
+                        <div
+                          id={inputId}
+                          className={styles.booleanOptions}
+                          role="radiogroup"
+                          aria-label={action.label}
+                          aria-describedby={hintId}
+                        >
+                          {[
+                            ['true', '예'],
+                            ['false', '아니요'],
+                          ].map(([optionValue, optionLabel]) => (
+                            <label
+                              key={optionValue}
+                              className={`${styles.booleanOption} ${value === optionValue ? styles.booleanOptionSelected : ''}`}
+                            >
+                              <input
+                                type="radio"
+                                name={inputId}
+                                value={optionValue}
+                                checked={value === optionValue}
+                                disabled={submittingAnswers}
+                                onChange={(event) =>
+                                  handleAnswerChange(action.field_key, event.target.value)
+                                }
+                              />
+                              <span>{optionLabel}</span>
+                            </label>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className={styles.textInputWrap}>
+                          <input
+                            id={inputId}
+                            className={styles.answerInput}
+                            type="text"
+                            inputMode={action.input_type === 'MONEY' ? 'numeric' : 'text'}
+                            maxLength={action.input_type === 'MONEY' ? 12 : 500}
+                            value={value}
+                            disabled={submittingAnswers}
+                            aria-describedby={hintId}
+                            placeholder={action.input_type === 'MONEY' ? '예: 300000' : '답변 입력'}
+                            onChange={(event) =>
+                              handleAnswerChange(
+                                action.field_key,
+                                action.input_type === 'MONEY'
+                                  ? event.target.value.replace(/\D/g, '').slice(0, 12)
+                                  : event.target.value,
+                              )
+                            }
+                          />
+                          {action.input_type === 'MONEY' && (
+                            <span className={styles.inputSuffix}>원</span>
+                          )}
+                        </div>
+                      )}
+                      <p id={hintId} className={styles.answerHint}>
+                        {answerInputHint(action)}
+                      </p>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {answerError && (
+                <p className={styles.answerError} role="alert">
+                  {answerError}
+                </p>
+              )}
+              <button
+                type="button"
+                className={styles.answerSubmit}
+                disabled={!canSubmitAnswers || submittingAnswers}
+                onClick={handleAnswerSubmit}
+              >
+                {submittingAnswers ? '답변 제출 중…' : '답변 제출'}
+              </button>
+            </>
+          )}
+        </section>
+      )}
+
+      {requestedDocumentTypes.length > 0 && (
+        <section className={styles.requestedDocuments} aria-labelledby="requested-documents-title">
+          <p id="requested-documents-title" className={styles.requestedDocumentsTitle}>
+            제출할 서류 {requestedDocumentTypes.length}개
+          </p>
+          <ul className={styles.requestedDocumentsList}>
+            {requestedDocumentTypes.map((type) => (
+              <li key={type}>{DOCUMENT_TYPE_LABEL[type]}</li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className={styles.privacy}>
         <p className={styles.privacyTitle}>이 업무에 필요한 정보만 표시됩니다.</p>
@@ -220,31 +465,41 @@ function WorkerLinkRequest({ token }: { token: string }) {
         </p>
       )}
 
-      <div className={styles.actions}>
-        <button
-          type="button"
-          className={styles.secondary}
-          disabled={
-            !canAskQuestion || submittingQuestion || submittingAcknowledgement || questionSent
-          }
-          onClick={() => {
-            setQuestionComposerOpen(true)
-            setResponseError(null)
-          }}
-        >
-          {questionSent ? '질문 전송됨' : questionComposerOpen ? '질문 작성 중' : '질문이 있습니다'}
-        </button>
-        <button
-          type="button"
-          className={styles.primary}
-          disabled={!canContinue || submittingAcknowledgement}
-          onClick={handleAcknowledgement}
-        >
-          {submittingAcknowledgement ? '확인 중…' : '안내를 확인했습니다'}
-        </button>
-      </div>
+      {(canAskQuestion || requestedDocumentTypes.length > 0) && (
+        <div className={styles.actions}>
+          {canAskQuestion && (
+            <button
+              type="button"
+              className={styles.secondary}
+              disabled={submittingQuestion || submittingAcknowledgement || questionSent}
+              onClick={() => {
+                setQuestionComposerOpen(true)
+                setResponseError(null)
+              }}
+            >
+              {questionSent
+                ? '질문 전송됨'
+                : questionComposerOpen
+                  ? '질문 작성 중'
+                  : '질문이 있습니다'}
+            </button>
+          )}
+          {requestedDocumentTypes.length > 0 && (
+            <button
+              type="button"
+              className={styles.primary}
+              disabled={!canContinue || submittingAcknowledgement}
+              onClick={handleAcknowledgement}
+            >
+              {submittingAcknowledgement ? '확인 중…' : '서류 제출 화면으로 이동'}
+            </button>
+          )}
+        </div>
+      )}
 
-      <p className={styles.footnote}>다음 화면에서 요청받은 파일을 선택해 제출할 수 있습니다.</p>
+      {requestedDocumentTypes.length > 0 && (
+        <p className={styles.footnote}>다음 화면에서 요청받은 파일을 선택해 제출할 수 있습니다.</p>
+      )}
     </MobileShell>
   )
 }

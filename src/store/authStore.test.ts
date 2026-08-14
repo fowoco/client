@@ -63,6 +63,7 @@ describe('useAuthStore.login', () => {
         user_id: 'u-1',
         company_id: 'c-1',
         company_name: '한빛정밀',
+        display_name: '민지',
         role: 'HR',
         access_token: 'access-1',
         token_type: 'Bearer',
@@ -76,7 +77,8 @@ describe('useAuthStore.login', () => {
     expect(result).toEqual({ success: true })
     expect(getAccessToken()).toBe('access-1')
     expect(useAuthStore.getState().user).toEqual({
-      name: 'mini',
+      name: '민지',
+      phone: null,
       email: 'mini@naver.com',
       workplace: '한빛정밀',
       role: 'HR',
@@ -125,6 +127,7 @@ describe('useAuthStore.restoreSession', () => {
         }),
       )
       .mockResolvedValueOnce(jsonResponse({ user_id: 'u-1', company_id: 'c-1', roles: ['HR'] }))
+      .mockResolvedValueOnce(jsonResponse({ display_name: '민지', phone: null }))
 
     const firstRestore = useAuthStore.getState().restoreSession()
     const secondRestore = useAuthStore.getState().restoreSession()
@@ -132,27 +135,26 @@ describe('useAuthStore.restoreSession', () => {
     expect(secondRestore).toBe(firstRestore)
     await Promise.all([firstRestore, secondRestore])
 
-    expect(fetch).toHaveBeenCalledTimes(2)
+    // refresh + /auth/me + /auth/me/profile, 중복 호출 없이 딱 한 세트만.
+    expect(fetch).toHaveBeenCalledTimes(3)
     expect(useAuthStore.getState().user?.role).toBe('HR')
   })
 
-  it('restores the user from a valid refresh cookie plus /auth/me', async () => {
+  it('restores the user from a valid refresh cookie plus /auth/me and /auth/me/profile', async () => {
     // 이 프로젝트의 테스트 환경에서는 Node 내장 localStorage가 jsdom 것보다 먼저 잡혀
     // 저장이 조용히 실패할 수 있다 (구현도 이 상황을 try/catch로 감내하도록 설계했다).
     // 그래서 여기서는 실제로 저장에 성공했는지를 먼저 확인하고, 그 결과에 맞는 기대값으로
-    // 검증한다 — 저장에 성공하면 저장된 이름을, 실패하면 authStore의 fallback("사용자")을 기대한다.
+    // 검증한다 — email/workplace는 localStorage 저장, 표시이름/연락처는 /auth/me/profile 응답 기준.
     setTestLocalStorage(
       'fowoco.auth.profile',
-      JSON.stringify({ name: 'mini', email: 'mini@naver.com', workplace: '한빛정밀' }),
+      JSON.stringify({ email: 'mini@naver.com', workplace: '한빛정밀' }),
     )
-    let expectedName = '사용자'
     let expectedEmail = ''
     let expectedWorkplace = ''
     try {
       const raw = localStorage.getItem('fowoco.auth.profile')
       if (raw) {
-        const parsed = JSON.parse(raw) as { name: string; email: string; workplace: string }
-        expectedName = parsed.name
+        const parsed = JSON.parse(raw) as { email: string; workplace: string }
         expectedEmail = parsed.email
         expectedWorkplace = parsed.workplace
       }
@@ -170,17 +172,39 @@ describe('useAuthStore.restoreSession', () => {
         }),
       )
       .mockResolvedValueOnce(jsonResponse({ user_id: 'u-1', company_id: 'c-1', roles: ['HR'] }))
+      .mockResolvedValueOnce(jsonResponse({ display_name: '민지', phone: '010-1234-5678' }))
 
     await useAuthStore.getState().restoreSession()
 
     expect(useAuthStore.getState().status).toBe('ready')
     expect(useAuthStore.getState().user).toEqual({
-      name: expectedName,
+      name: '민지',
+      phone: '010-1234-5678',
       email: expectedEmail,
       workplace: expectedWorkplace,
       role: 'HR',
     })
     expect(getAccessToken()).toBe('refreshed-token')
+  })
+
+  it('falls back to a placeholder name when /auth/me/profile is unavailable', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        jsonResponse({
+          access_token: 'refreshed-token',
+          token_type: 'Bearer',
+          expires_in_seconds: 900,
+          expires_at: '2026-07-22T01:15:00Z',
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ user_id: 'u-1', company_id: 'c-1', roles: ['HR'] }))
+      .mockResolvedValueOnce(new Response(null, { status: 500 }))
+
+    await useAuthStore.getState().restoreSession()
+
+    expect(useAuthStore.getState().status).toBe('ready')
+    expect(useAuthStore.getState().user?.name).toBe('사용자')
+    expect(useAuthStore.getState().user?.phone).toBeNull()
   })
 
   it('leaves the user logged out when there is no valid refresh cookie', async () => {

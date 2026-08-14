@@ -114,6 +114,7 @@ describe('SignupPage', () => {
     expect(JSON.parse((requestInit as RequestInit).body as string)).toEqual({
       company_name: '한빛정밀',
       display_name: '김경민',
+      phone: null,
       email: 'mini@naver.com',
       password: 'password123',
       agreements: {
@@ -126,9 +127,7 @@ describe('SignupPage', () => {
 
   it('shows an inline email error when the email is already registered', async () => {
     const user = userEvent.setup()
-    vi.mocked(fetch).mockResolvedValueOnce(
-      errorResponse(409, 'EMAIL_ALREADY_REGISTERED', 'raw'),
-    )
+    vi.mocked(fetch).mockResolvedValueOnce(errorResponse(409, 'EMAIL_ALREADY_REGISTERED', 'raw'))
     renderPage()
 
     await fillValidForm(user)

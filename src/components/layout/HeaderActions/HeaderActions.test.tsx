@@ -5,7 +5,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { HeaderActions } from './HeaderActions'
 import { getSafeNotificationRoute } from './notificationPresentation'
 
-const USER = { name: '김민지', email: 'kim@example.com', workplace: '한빛정밀', role: 'HR' }
+const USER = {
+  name: '김민지',
+  phone: null,
+  email: 'kim@example.com',
+  workplace: '한빛정밀',
+  role: 'HR',
+}
 const NOTIFICATIONS = {
   items: [
     {

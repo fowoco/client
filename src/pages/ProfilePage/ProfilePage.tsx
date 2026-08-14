@@ -1,42 +1,40 @@
 import { useNavigate, useBlocker } from 'react-router-dom'
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { fetchMyProfile, updateMyProfile, type ProfileResponse } from '../../api/profile'
+import { ApiError, getErrorMessage } from '../../api/errors'
 import { Button } from '../../components/ui/Button/Button'
 import { DetailRow } from '../../components/ui/DetailRow/DetailRow'
 import { Modal } from '../../components/ui/Modal/Modal'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
+import { useApiQuery } from '../../hooks/useApiQuery'
 import { useAuthStore } from '../../store/authStore'
 import { useToastStore } from '../../store/toastStore'
 import { CompanySettingsPanel } from './CompanySettingsPanel'
 import {
   INITIAL_NOTIFICATION_PREFS,
-  INITIAL_PROFILE_FIELDS,
   PROFILE_SUMMARY,
   SECURITY_INFO,
   WORK_CONTEXT,
-  type EditableProfileFields,
 } from './profileData'
 import styles from './ProfilePage.module.css'
 
-const EDITABLE_FIELD_META: { key: keyof EditableProfileFields; label: string }[] = [
-  { key: 'name', label: '이름' },
-  { key: 'displayName', label: '표시 이름' },
-  { key: 'phone', label: '연락처' },
-  { key: 'preferredLanguage', label: '선호 언어' },
-  { key: 'timezone', label: '시간대' },
-]
+interface EditableFields {
+  displayName: string
+  phone: string
+}
 
-type FieldErrors = Partial<Record<keyof EditableProfileFields, string>>
+type FieldErrors = Partial<Record<keyof EditableFields, string>>
 
 // Figma Screen Brief 04번 항목 기준 검증 규칙.
-function validateFields(input: EditableProfileFields): FieldErrors {
+function validateFields(input: EditableFields): FieldErrors {
   const errors: FieldErrors = {}
-  const trimmedName = input.name.trim()
+  const trimmedName = input.displayName.trim()
   if (!trimmedName) {
-    errors.name = '이름을 입력해 주세요.'
+    errors.displayName = '표시 이름을 입력해 주세요.'
   } else if (/^\d+$/.test(trimmedName)) {
-    errors.name = '이름에 숫자만 입력할 수 없습니다.'
-  } else if (trimmedName.length > 30) {
-    errors.name = '이름은 30자 이하로 입력해 주세요.'
+    errors.displayName = '이름에 숫자만 입력할 수 없습니다.'
+  } else if (trimmedName.length > 80) {
+    errors.displayName = '표시 이름은 80자 이하로 입력해 주세요.'
   }
 
   const trimmedPhone = input.phone.trim()
@@ -47,24 +45,34 @@ function validateFields(input: EditableProfileFields): FieldErrors {
   return errors
 }
 
+function toFields(profile: ProfileResponse): EditableFields {
+  return { displayName: profile.display_name, phone: profile.phone ?? '' }
+}
+
 export function ProfilePage() {
   const navigate = useNavigate()
   const showToast = useToastStore((state) => state.showToast)
   const user = useAuthStore((state) => state.user)
+  const setStoreProfile = useAuthStore((state) => state.updateProfile)
 
-  const initialFields: EditableProfileFields = {
-    ...INITIAL_PROFILE_FIELDS,
-    name: user?.name ?? INITIAL_PROFILE_FIELDS.name,
-  }
-  const [fields, setFields] = useState<EditableProfileFields>(initialFields)
-  const [draft, setDraft] = useState<EditableProfileFields>(initialFields)
+  const { data: profile, status: profileStatus } = useApiQuery(fetchMyProfile)
+
+  const [fields, setFields] = useState<EditableFields | null>(null)
+  const [draft, setDraft] = useState<EditableFields | null>(null)
   const [editing, setEditing] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [notificationPrefs, setNotificationPrefs] = useState(INITIAL_NOTIFICATION_PREFS)
 
-  const changedFieldCount = EDITABLE_FIELD_META.filter(
-    ({ key }) => draft[key] !== fields[key],
-  ).length
+  useEffect(() => {
+    if (profile) setFields(toFields(profile))
+  }, [profile])
+
+  const changedFieldCount =
+    editing && fields && draft
+      ? (['displayName', 'phone'] as const).filter((key) => draft[key] !== fields[key]).length
+      : 0
   const isDirty = editing && changedFieldCount > 0
 
   // Figma "저장하지 않은 변경사항이 있습니다" 오버레이(node 1623:2530) — 편집 중 다른 화면으로
@@ -75,27 +83,46 @@ export function ProfilePage() {
   )
 
   function handleStartEdit() {
+    if (!fields) return
     setDraft(fields)
     setFieldErrors({})
+    setSaveError(null)
     setEditing(true)
   }
 
   function handleCancelEdit() {
     setEditing(false)
     setFieldErrors({})
+    setSaveError(null)
   }
 
-  function trySave(): boolean {
+  const trySave = useCallback(async (): Promise<boolean> => {
+    if (!draft) return false
     const errors = validateFields(draft)
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return false
 
-    // TODO(backend): 개인 프로필 수정 API가 없어서(#191 조사 결과) 화면 상태로만 반영한다.
-    setFields(draft)
-    setEditing(false)
-    showToast('프로필을 저장했습니다.')
-    return true
-  }
+    setSaving(true)
+    setSaveError(null)
+    try {
+      const updated = await updateMyProfile({
+        display_name: draft.displayName.trim(),
+        phone: draft.phone.trim() || null,
+      })
+      setFields(toFields(updated))
+      setStoreProfile(updated.display_name, updated.phone)
+      setEditing(false)
+      showToast('프로필을 저장했습니다.')
+      return true
+    } catch (error) {
+      setSaveError(
+        error instanceof ApiError ? getErrorMessage(error) : '프로필 저장에 실패했습니다.',
+      )
+      return false
+    } finally {
+      setSaving(false)
+    }
+  }, [draft, setStoreProfile, showToast])
 
   function handleRequestEmailChange() {
     showToast('이메일 변경 요청을 관리자에게 전달했습니다.')
@@ -119,9 +146,11 @@ export function ProfilePage() {
     blocker.proceed?.()
   }
 
-  function handleBlockerSaveAndLeave() {
-    if (trySave()) blocker.proceed?.()
+  async function handleBlockerSaveAndLeave() {
+    if (await trySave()) blocker.proceed?.()
   }
+
+  const displayName = user?.name ?? fields?.displayName ?? PROFILE_SUMMARY.role
 
   return (
     <div>
@@ -135,19 +164,23 @@ export function ProfilePage() {
             <Button variant="secondary" onClick={handleCancelEdit}>
               취소
             </Button>
-            <Button onClick={() => trySave()}>저장</Button>
+            <Button onClick={() => void trySave()} isLoading={saving}>
+              저장
+            </Button>
           </div>
         ) : (
-          <Button onClick={handleStartEdit}>프로필 수정</Button>
+          <Button onClick={handleStartEdit} disabled={profileStatus !== 'success'}>
+            프로필 수정
+          </Button>
         )}
       </div>
 
       <div className={styles.summaryCard}>
         <div className={styles.avatar} aria-hidden="true">
-          {fields.name.charAt(0) || PROFILE_SUMMARY.initial}
+          {displayName.charAt(0)}
         </div>
         <div className={styles.summaryIdentity}>
-          <p className={styles.summaryName}>{fields.name}</p>
+          <p className={styles.summaryName}>{displayName}</p>
           <p className={styles.summaryMeta}>
             {user?.role ?? PROFILE_SUMMARY.role} · {user?.email ?? PROFILE_SUMMARY.email}
           </p>
@@ -175,31 +208,69 @@ export function ProfilePage() {
           </p>
           <hr className={styles.divider} />
 
+          {saveError && <p className={styles.fieldError}>{saveError}</p>}
+
           <div className={styles.fieldGrid}>
-            {EDITABLE_FIELD_META.map(({ key, label }) => (
-              <div key={key} className={styles.field}>
-                <div className={styles.fieldMeta}>
-                  <span className={styles.fieldLabel}>{label}</span>
-                  <span className={styles.fieldBadge}>수정 가능</span>
+            {profileStatus === 'loading' && !fields && (
+              <p className={styles.cardDescription}>불러오는 중…</p>
+            )}
+            {profileStatus === 'error' && !fields && (
+              <p className={styles.fieldError}>프로필을 불러오지 못했습니다.</p>
+            )}
+            {fields && (
+              <>
+                <div className={styles.field}>
+                  <div className={styles.fieldMeta}>
+                    <span className={styles.fieldLabel}>표시 이름</span>
+                    <span className={styles.fieldBadge}>수정 가능</span>
+                  </div>
+                  {editing && draft ? (
+                    <>
+                      <input
+                        className={styles.fieldInput}
+                        value={draft.displayName}
+                        aria-label="표시 이름"
+                        onChange={(event) =>
+                          setDraft((prev) =>
+                            prev ? { ...prev, displayName: event.target.value } : prev,
+                          )
+                        }
+                      />
+                      {fieldErrors.displayName && (
+                        <p className={styles.fieldError}>{fieldErrors.displayName}</p>
+                      )}
+                    </>
+                  ) : (
+                    <p className={styles.fieldValue}>{fields.displayName}</p>
+                  )}
                 </div>
-                {editing ? (
-                  <>
-                    <input
-                      className={styles.fieldInput}
-                      value={draft[key]}
-                      aria-label={label}
-                      onChange={(event) =>
-                        setDraft((prev) => ({ ...prev, [key]: event.target.value }))
-                      }
-                    />
-                    {fieldErrors[key] && <p className={styles.fieldError}>{fieldErrors[key]}</p>}
-                  </>
-                ) : (
-                  <p className={styles.fieldValue}>{fields[key]}</p>
-                )}
-                {key === 'phone' && <p className={styles.fieldNote}>합성 Demo Data</p>}
-              </div>
-            ))}
+
+                <div className={styles.field}>
+                  <div className={styles.fieldMeta}>
+                    <span className={styles.fieldLabel}>연락처</span>
+                    <span className={styles.fieldBadge}>수정 가능</span>
+                  </div>
+                  {editing && draft ? (
+                    <>
+                      <input
+                        className={styles.fieldInput}
+                        value={draft.phone}
+                        aria-label="연락처"
+                        placeholder="010-1234-5678"
+                        onChange={(event) =>
+                          setDraft((prev) => (prev ? { ...prev, phone: event.target.value } : prev))
+                        }
+                      />
+                      {fieldErrors.phone && (
+                        <p className={styles.fieldError}>{fieldErrors.phone}</p>
+                      )}
+                    </>
+                  ) : (
+                    <p className={styles.fieldValue}>{fields.phone || '미등록'}</p>
+                  )}
+                </div>
+              </>
+            )}
 
             <div className={styles.field}>
               <div className={styles.fieldMeta}>
@@ -312,7 +383,7 @@ export function ProfilePage() {
         title="저장하지 않은 변경사항이 있습니다."
       >
         <p className={styles.blockerBody}>
-          지금 나가면 이름·연락처·알림 설정의 변경 내용이 저장되지 않습니다.
+          지금 나가면 표시 이름·연락처의 변경 내용이 저장되지 않습니다.
         </p>
         <p className={styles.blockerNote}>
           변경사항 {changedFieldCount}개 · 입력값은 현재 편집 화면에 유지됩니다.
@@ -329,7 +400,7 @@ export function ProfilePage() {
             <Button variant="secondary" onClick={handleBlockerLeaveWithoutSaving}>
               저장하지 않고 나가기
             </Button>
-            <Button onClick={handleBlockerSaveAndLeave}>변경사항 저장</Button>
+            <Button onClick={() => void handleBlockerSaveAndLeave()}>변경사항 저장</Button>
           </div>
         </div>
       </Modal>

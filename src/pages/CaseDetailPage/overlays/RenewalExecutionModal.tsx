@@ -4,6 +4,7 @@ import { StatusLabel } from '../../../components/ui/StatusLabel/StatusLabel'
 import { ApiError, getErrorMessage } from '../../../api/errors'
 import { runRenewalExecution, type RenewalExecutionResponse } from '../../../api/renewal'
 import { TASK_STATUS_LABEL, TASK_STATUS_TONE } from '../../../utils/taskStatus'
+import { getWorkerGuideReviewPresentation } from '../../../view-models/workerGuideReviewViewModel'
 import styles from './overlays.module.css'
 
 export interface RenewalExecutionModalProps {
@@ -12,7 +13,7 @@ export interface RenewalExecutionModalProps {
   taskVersion: number
   onClose: () => void
   onDownloadDocument: (fileId: string, fallbackName: string) => void
-  onApplied: () => void
+  onApplied: (result: RenewalExecutionResponse) => void
 }
 
 export function RenewalExecutionModal({
@@ -50,7 +51,7 @@ export function RenewalExecutionModal({
       })
       setResult(response)
       setSlotAnswers({})
-      onApplied()
+      onApplied(response)
     } catch (caught) {
       setError(
         caught instanceof ApiError ? getErrorMessage(caught) : 'Renewal 실행에 실패했습니다.',
@@ -77,7 +78,7 @@ export function RenewalExecutionModal({
       })
       setResult(response)
       setSlotAnswers({})
-      onApplied()
+      onApplied(response)
     } catch (caught) {
       setError(
         caught instanceof ApiError ? getErrorMessage(caught) : 'Renewal 실행에 실패했습니다.',
@@ -92,6 +93,9 @@ export function RenewalExecutionModal({
   const nonAnswerableMissingSlots =
     result?.missing_slots.filter((slot) => !answerableFields.some((field) => field.key === slot)) ??
     []
+  const guideReview = result?.guide_review_required
+    ? getWorkerGuideReviewPresentation(result.guide_failure_code)
+    : null
 
   return (
     <Modal open={open} onClose={handleClose} title="Renewal Agent 실행" size="wide">
@@ -128,6 +132,16 @@ export function RenewalExecutionModal({
             <div className={styles.policyBanner}>
               <p className={styles.policyBannerText}>
                 근로자에게 보낼 안내 초안을 저장했습니다 — 문서함에서 확인 후 링크로 전달해 주세요.
+              </p>
+            </div>
+          )}
+
+          {guideReview && (
+            <div className={styles.policyBanner} role="alert">
+              <p className={styles.policyBannerTitle}>{guideReview.title}</p>
+              <p className={styles.policyBannerText}>
+                {guideReview.description} 안내 초안과 발송 링크는 생성되지 않았습니다. 문서 탭에서
+                대상 언어와 안내문을 확인해 직접 저장해 주세요.
               </p>
             </div>
           )}

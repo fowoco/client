@@ -216,6 +216,10 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
         if (!cancelled && !controller.signal.aborted) schedulePolling()
       })
 
+    // SSE 연결이 열린 채로 과거 terminal event를 놓치는 경우에도 화면이
+    // 영구적으로 처리 중에 머물지 않도록 polling을 병행합니다.
+    schedulePolling()
+
     return () => {
       cancelled = true
       controller.abort()

@@ -59,6 +59,54 @@ const CORRECTABLE_FIELDS: Record<'PASSPORT_COPY' | 'ARC', Set<string>> = {
   ]),
 }
 
+const FIELD_REVIEW_REASON = /^(missing_required|invalid_date|low_confidence):([a-z][a-z0-9_]*)$/
+
+const REVIEW_REASON_LABEL: Record<string, string> = {
+  multiple_images: '한 번에 여러 이미지가 감지되었습니다. 제출한 원본을 확인해 주세요.',
+  template_not_matched: '지원되는 문서 양식을 확인하지 못했습니다. 올바른 문서인지 확인해 주세요.',
+  unexpected_template: '선택한 서류 종류와 인식된 문서 양식이 다릅니다.',
+}
+
+function reviewReasonLabel(reason: string): string {
+  const fieldReason = FIELD_REVIEW_REASON.exec(reason)
+  if (fieldReason) {
+    const [, reasonType, field] = fieldReason
+    const fieldLabel = FIELD_LABEL[field] ?? '필수 항목'
+    if (reasonType === 'missing_required') {
+      return `${fieldLabel} 정보가 인식되지 않았습니다. 원본을 확인해 입력해 주세요.`
+    }
+    if (reasonType === 'invalid_date') {
+      return `${fieldLabel} 날짜를 정확히 인식하지 못했습니다. 원본과 비교해 주세요.`
+    }
+    return `${fieldLabel}의 인식 정확도가 낮습니다. 원본과 비교해 주세요.`
+  }
+  return (
+    REVIEW_REASON_LABEL[reason] ?? '자동 확인이 필요한 항목이 있습니다. 원본 문서와 비교해 주세요.'
+  )
+}
+
+function initialFieldDrafts(
+  run: DocumentOcrRunResponse,
+  documentType: DocumentType,
+): Record<string, string> {
+  if (!run.result || (documentType !== 'PASSPORT_COPY' && documentType !== 'ARC')) {
+    return {}
+  }
+
+  const drafts: Record<string, string> = {
+    ...run.result.fields,
+    ...run.corrected_fields,
+  }
+  const allowed = CORRECTABLE_FIELDS[documentType]
+  run.result.review_reasons.forEach((reason) => {
+    const field = FIELD_REVIEW_REASON.exec(reason)?.[2]
+    if (field && allowed.has(field) && drafts[field] === undefined) {
+      drafts[field] = ''
+    }
+  })
+  return drafts
+}
+
 type PanelState = 'loading' | 'empty' | 'ready' | 'disabled' | 'error'
 
 interface DocumentOcrPanelProps {
@@ -83,14 +131,17 @@ export function DocumentOcrPanel({ documentId, documentType, fileId }: DocumentO
   const [busyAction, setBusyAction] = useState<'create' | 'approve' | 'reject' | null>(null)
   const requestKeyRef = useRef<string | null>(null)
 
-  const applyRun = useCallback((next: DocumentOcrRunResponse) => {
-    setRun(next)
-    setPanelState('ready')
-    setRequestError(null)
-    if (next.result) {
-      setFieldDrafts({ ...next.result.fields, ...next.corrected_fields })
-    }
-  }, [])
+  const applyRun = useCallback(
+    (next: DocumentOcrRunResponse) => {
+      setRun(next)
+      setPanelState('ready')
+      setRequestError(null)
+      if (next.result) {
+        setFieldDrafts(initialFieldDrafts(next, documentType))
+      }
+    },
+    [documentType],
+  )
 
   const loadLatest = useCallback(async () => {
     if (!supported || !fileId) return
@@ -295,14 +346,15 @@ export function DocumentOcrPanel({ documentId, documentType, fileId }: DocumentO
               <strong>원본 대조가 필요한 이유</strong>
               <ul>
                 {run.result.review_reasons.map((reason) => (
-                  <li key={reason}>{reason}</li>
+                  <li key={reason}>{reviewReasonLabel(reason)}</li>
                 ))}
               </ul>
             </div>
           )}
 
           <div className={styles.fieldList}>
-            {Object.entries(run.result.fields).map(([field, originalValue]) => {
+            {Object.entries(fieldDrafts).map(([field, draftValue]) => {
+              const originalValue = run.result?.fields[field] ?? ''
               const confidence = run.result?.field_confidences[field]
               const editable = correctableFields.has(field)
               return (
@@ -313,17 +365,19 @@ export function DocumentOcrPanel({ documentId, documentType, fileId }: DocumentO
                   </span>
                   {editable && REVIEWABLE_STATUSES.includes(run.status) ? (
                     <input
-                      value={fieldDrafts[field] ?? originalValue}
+                      value={draftValue}
+                      placeholder={originalValue ? undefined : '원본을 확인해 입력해 주세요.'}
                       onChange={(event) =>
                         setFieldDrafts((current) => ({ ...current, [field]: event.target.value }))
                       }
                     />
                   ) : (
-                    <output>{fieldDrafts[field] ?? originalValue}</output>
+                    <output>{draftValue}</output>
                   )}
                   {editable &&
                     REVIEWABLE_STATUSES.includes(run.status) &&
-                    (fieldDrafts[field] ?? originalValue) !== originalValue && (
+                    originalValue &&
+                    draftValue !== originalValue && (
                       <small className={styles.originalValue}>OCR 추출값 · {originalValue}</small>
                     )}
                 </label>

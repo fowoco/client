@@ -21,6 +21,7 @@ function document(overrides: Partial<DocumentItemResponse>): DocumentItemRespons
     display_name: '수라즈C',
     document_type: 'ARC',
     submission_status: 'MISSING',
+    source: 'LEGACY',
     expiry_date: null,
     file_id: null,
     ...overrides,

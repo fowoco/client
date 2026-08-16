@@ -31,6 +31,7 @@ function response(overrides: Partial<RenewalExecutionResponse> = {}): RenewalExe
     worker_message_draft_version: null,
     guide_review_required: false,
     guide_failure_code: null,
+    guide_review_draft: null,
     human_review_required: true,
     ...overrides,
   }
@@ -111,7 +112,8 @@ describe('RenewalExecutionModal', () => {
     await user.click(screen.getByRole('button', { name: '실행' }))
     expect(await screen.findByText('추가 정보가 필요합니다.')).toBeInTheDocument()
 
-    await user.type(screen.getByLabelText('wage'), '2500000')
+    expect(screen.getByLabelText('월 임금(원)')).toHaveAttribute('type', 'number')
+    await user.type(screen.getByLabelText('월 임금(원)'), '2500000')
     await user.click(screen.getByRole('button', { name: '답변 제출하고 다시 실행' }))
 
     expect(await screen.findByText('문서를 생성했습니다.')).toBeInTheDocument()
@@ -121,6 +123,40 @@ describe('RenewalExecutionModal', () => {
       expected_version: 5,
       slot_answers: { wage: '2500000' },
     })
+  })
+
+  it('describes NEEDS_INFO without missing slots as a checklist action', async () => {
+    const user = userEvent.setup()
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse(
+        response({
+          task_status: 'NEEDS_INFO',
+          outcome: '필수 체크리스트를 먼저 확인해 주세요.',
+          missing_slots: [],
+          requested_fields: [],
+        }),
+      ),
+    )
+
+    render(
+      <RenewalExecutionModal
+        open
+        taskId="T-1"
+        taskVersion={1}
+        onClose={vi.fn()}
+        onDownloadDocument={vi.fn()}
+        onApplied={vi.fn()}
+      />,
+    )
+
+    await user.type(
+      screen.getByPlaceholderText('예: 응웬반A 체류기간 연장 준비해줘'),
+      '체류기간 연장 준비해줘',
+    )
+    await user.click(screen.getByRole('button', { name: '실행' }))
+
+    expect(await screen.findByText('체크리스트 확인 필요')).toBeInTheDocument()
+    expect(screen.queryByText('정보 부족')).not.toBeInTheDocument()
   })
 
   it('shows an error message when the run fails', async () => {
@@ -160,7 +196,7 @@ describe('RenewalExecutionModal', () => {
     expect(await screen.findByText('Renewal 대상 업무가 아닙니다.')).toBeInTheDocument()
   })
 
-  it('shows a safe manual-review action when worker guide generation fails', async () => {
+  it('explains that an unsafe worker guide was blocked and requires HR review', async () => {
     const user = userEvent.setup()
     vi.mocked(fetch).mockResolvedValue(
       jsonResponse(
@@ -168,9 +204,9 @@ describe('RenewalExecutionModal', () => {
           task_status: 'READY_FOR_REVIEW',
           scenario: 'ask_worker',
           outcome: 'REVIEW_REQUIRED',
-          guide_review_required: true,
-          guide_failure_code: 'LANGUAGE_ASSISTANT_INVOCATION_FAILED',
           case_signals: ['REVIEW_WORKER_GUIDE'],
+          guide_review_required: true,
+          guide_failure_code: 'LANGUAGE_ASSISTANT_NOT_CONFIGURED',
         }),
       ),
     )
@@ -193,7 +229,9 @@ describe('RenewalExecutionModal', () => {
     await user.click(screen.getByRole('button', { name: '실행' }))
 
     expect(await screen.findByText('근로자 안내문을 직접 검토해 주세요')).toBeInTheDocument()
-    expect(screen.getByText(/안내 초안과 발송 링크는 생성되지 않았습니다/)).toBeInTheDocument()
-    expect(screen.queryByText('LANGUAGE_ASSISTANT_INVOCATION_FAILED')).not.toBeInTheDocument()
+    expect(screen.getByText(/다국어 안내 생성 기능이 설정되지 않았습니다/)).toBeInTheDocument()
+    expect(screen.getByText(/대상 언어와 안내문을 검토·저장/)).toBeInTheDocument()
+    expect(screen.queryByText('LANGUAGE_ASSISTANT_NOT_CONFIGURED')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '실행' })).not.toBeInTheDocument()
   })
 })

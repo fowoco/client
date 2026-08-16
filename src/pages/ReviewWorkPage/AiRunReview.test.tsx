@@ -336,4 +336,21 @@ describe('AiRunReview progress updates', () => {
 
     expect(await screen.findByLabelText('신청 목표일을 입력해 주세요. *')).toBeInTheDocument()
   })
+
+  it('polls while an SSE connection stays open without delivering an event', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.mocked(fetch).mockImplementation((input) => {
+      const url = String(input)
+      if (url.includes('/events')) return new Promise<Response>(() => undefined)
+      if (url.includes(`/ai-runs/${RUN.ai_run_id}`)) {
+        return Promise.resolve(jsonResponse(needsInfoRun()))
+      }
+      return Promise.reject(new Error(`Unexpected request: ${url}`))
+    })
+    renderProcessingReview()
+
+    await vi.advanceTimersByTimeAsync(1300)
+
+    expect(await screen.findByLabelText('신청 목표일을 입력해 주세요. *')).toBeInTheDocument()
+  })
 })

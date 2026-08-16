@@ -14,6 +14,15 @@ export interface GeneratedDocumentResult {
   worker_document_id: string | null
 }
 
+export interface RenewalGuideReviewDraft {
+  target_language: string | null
+  generation_status: string | null
+  standard_korean_text: string | null
+  easy_korean_text: string | null
+  translated_text: string | null
+  warning_codes: string[]
+}
+
 export interface RenewalExecutionResponse {
   request_id: string
   task_id: string
@@ -32,6 +41,7 @@ export interface RenewalExecutionResponse {
   worker_message_draft_version: number | null
   guide_review_required: boolean
   guide_failure_code: string | null
+  guide_review_draft: RenewalGuideReviewDraft | null
   human_review_required: boolean
 }
 

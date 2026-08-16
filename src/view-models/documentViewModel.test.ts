@@ -9,6 +9,7 @@ function document(overrides: Partial<DocumentItemResponse> = {}): DocumentItemRe
     display_name: '응웬반A',
     document_type: 'PASSPORT_COPY',
     submission_status: 'MISSING',
+    source: 'LEGACY',
     expiry_date: null,
     file_id: null,
     ...overrides,

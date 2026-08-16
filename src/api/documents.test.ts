@@ -42,6 +42,7 @@ describe('fetchDocuments', () => {
 
     await fetchDocuments({
       workerId: 'W-1',
+      taskId: 'T-1',
       documentType: 'PASSPORT_COPY',
       status: 'MISSING',
       page: 1,
@@ -50,6 +51,7 @@ describe('fetchDocuments', () => {
 
     const [url] = vi.mocked(fetch).mock.calls[0]
     expect(url).toContain('workerId=W-1')
+    expect(url).toContain('taskId=T-1')
     expect(url).toContain('documentType=PASSPORT_COPY')
     expect(url).toContain('status=MISSING')
     expect(url).toContain('page=1&size=20')

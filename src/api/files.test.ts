@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { downloadFile, uploadFile } from './files'
+import { downloadFile, previewFile, uploadFile } from './files'
 
 function jsonResponse(body: unknown) {
-  return new Response(JSON.stringify(body), { status: 201, headers: { 'Content-Type': 'application/json' } })
+  return new Response(JSON.stringify(body), {
+    status: 201,
+    headers: { 'Content-Type': 'application/json' },
+  })
 }
 
 beforeEach(() => {
@@ -16,7 +19,13 @@ afterEach(() => {
 describe('uploadFile', () => {
   it('POSTs a multipart form to /files without forcing a JSON content-type', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
-      jsonResponse({ file_id: 'file-1', name: 'passport.png', mime_type: 'image/png', size: 1024, scan_status: 'NOT_SCANNED' }),
+      jsonResponse({
+        file_id: 'file-1',
+        name: 'passport.png',
+        mime_type: 'image/png',
+        size: 1024,
+        scan_status: 'NOT_SCANNED',
+      }),
     )
     const file = new File(['x'], 'passport.png', { type: 'image/png' })
 
@@ -47,5 +56,21 @@ describe('downloadFile', () => {
     expect(result.file_name).toBe('passport copy.pdf')
     expect(result.blob.size).toBeGreaterThan(0)
     expect(String(vi.mocked(fetch).mock.calls[0][0])).toContain('/files/file%2F1/content')
+  })
+})
+
+describe('previewFile', () => {
+  it('requests the encoded preview endpoint and keeps the converted MIME type', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(new Blob(['pdf']), {
+        headers: { 'Content-Type': 'application/pdf' },
+      }),
+    )
+
+    const result = await previewFile('file/1')
+
+    expect(result.mime_type).toBe('application/pdf')
+    expect(result.blob.size).toBeGreaterThan(0)
+    expect(String(vi.mocked(fetch).mock.calls[0][0])).toContain('/files/file%2F1/preview')
   })
 })

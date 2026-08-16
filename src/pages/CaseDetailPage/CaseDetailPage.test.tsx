@@ -52,7 +52,7 @@ function task(overrides: Partial<TaskDetailResponse> = {}): TaskDetailResponse {
     workflow_catalog_version: '1',
     title: '응웬반A 체류연장 준비',
     description: null,
-    business_data: {},
+    business_data: { renewal_execution: { scenario: 'ask_worker' } },
     source: 'MANUAL',
     status: 'READY_FOR_REVIEW',
     due_date: '2026-08-01',
@@ -539,6 +539,7 @@ describe('CaseDetailPage', () => {
         display_name: null,
         document_type: 'PASSPORT_COPY',
         submission_status: 'VERIFIED',
+        source: 'WORKER_UPLOAD',
         expiry_date: '2027-01-01',
         file_id: 'file-1',
       },
@@ -548,8 +549,17 @@ describe('CaseDetailPage', () => {
 
     await user.click(screen.getByRole('tab', { name: CASE_TABS[2] }))
 
-    expect(await screen.findByText('여권 사본')).toBeInTheDocument()
+    expect(await screen.findByText('여권 사본 · 근로자 제출')).toBeInTheDocument()
     expect(screen.getByText('완료')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '여권 사본 · 근로자 제출' })).toHaveAttribute(
+      'href',
+      '/documents/doc-1',
+    )
+    const documentListRequest = vi
+      .mocked(fetch)
+      .mock.calls.find(([url]) => String(url).includes('/documents?'))
+    expect(documentListRequest?.[0]).toContain('workerId=W-1')
+    expect(documentListRequest?.[0]).toContain('taskId=T-1')
 
     await user.click(screen.getByRole('button', { name: '다운로드' }))
 
@@ -580,6 +590,40 @@ describe('CaseDetailPage', () => {
       message: '다음 서류를 제출해 주세요: 외국인등록증.',
       expected_version: 0,
     })
+  })
+
+  it('prepares an HR-editable request draft for OCR fields even when document metadata exists', async () => {
+    const user = userEvent.setup()
+    mockTaskAndActivities({
+      status: 'APPROVED',
+      business_data: {
+        renewal_execution: {
+          scenario: 'ask_worker',
+          requested_fields: [
+            { key: 'passport_number', source_hint: 'DOCUMENT_OCR' },
+            { key: 'alien_registration_number', source_hint: 'DOCUMENT_OCR' },
+          ],
+        },
+      },
+    })
+    renderPage()
+    await screen.findByText('응웬반A 체류연장 준비')
+
+    expect(screen.getByRole('button', { name: '먼저 근로자 안내 초안 준비 →' })).toBeEnabled()
+    expect(
+      screen.queryByRole('button', { name: '근로자 보안 링크 발급·재발급 →' }),
+    ).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '먼저 근로자 안내 초안 준비 →' }))
+    expect(await screen.findByText('여권 사본')).toBeInTheDocument()
+    expect(screen.getByText('외국인등록증')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '요청 초안 저장' }))
+    expect(await screen.findByText('서류 요청 초안을 저장했습니다.')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: CASE_TABS[0] }))
+    expect(
+      await screen.findByRole('button', { name: '근로자 보안 링크 발급·재발급 →' }),
+    ).toBeEnabled()
   })
 
   it('restores and updates a saved document request draft', async () => {
@@ -867,6 +911,26 @@ describe('CaseDetailPage', () => {
     expect(screen.getByText('Agent 초안')).toBeInTheDocument()
   })
 
+  it('keeps a completed Task completed instead of showing approval blockers again', async () => {
+    const user = userEvent.setup()
+    mockTaskAndActivities({ status: 'COMPLETED' }, [activity()])
+    renderPage()
+
+    expect(
+      await screen.findByText('응웬반A 체류연장 준비 업무를 완료했습니다.'),
+    ).toBeInTheDocument()
+    const approvalLabel = screen.getByText('요청문 승인')
+    expect(within(approvalLabel.parentElement as HTMLElement).getByText('완료')).toBeInTheDocument()
+    expect(
+      screen.queryByText('승인 전에는 근로자 링크 전달이나 외부 처리를 시작할 수 없습니다.'),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '완료 처리' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '활동 이력 확인' }))
+
+    expect(screen.getByText('Agent가 체류연장 요청문 초안을 작성함')).toBeInTheDocument()
+  })
+
   it('renders the blocked completion banner', async () => {
     mockTaskAndActivities()
     renderPage()
@@ -894,6 +958,7 @@ describe('CaseDetailPage', () => {
     const user = userEvent.setup()
     mockTaskAndActivities({
       status: 'DRAFT',
+      business_data: { renewal_execution: { scenario: 'ask_worker' } },
       checklist_items: [
         {
           checklist_item_id: 'chk-1',
@@ -921,6 +986,72 @@ describe('CaseDetailPage', () => {
       .mocked(fetch)
       .mock.calls.find(([url]) => String(url).includes('/approval-requests'))
     expect(call?.[1]?.method).toBe('POST')
+  })
+
+  it('allows an approval request before missing worker documents are collected', async () => {
+    mockTaskAndActivities(
+      {
+        status: 'DRAFT',
+        business_data: { renewal_execution: { scenario: 'ask_worker' } },
+        checklist_items: [
+          {
+            checklist_item_id: 'chk-1',
+            item_code: 'passport',
+            label: '여권 사본 확인',
+            required: true,
+            completed: true,
+            completed_by: 'u-1',
+            completed_at: '2026-08-16T00:00:00Z',
+            version: 2,
+          },
+        ],
+      },
+      [],
+      { missing: ['ARC'], expired: [], completion_blocked: true },
+    )
+    renderPage()
+    await screen.findByText('응웬반A 체류연장 준비')
+
+    expect(screen.getByRole('button', { name: '승인 요청' })).toBeEnabled()
+    expect(screen.getByText('누락 1건 · 만료 0건')).toBeInTheDocument()
+  })
+
+  it('requires Renewal preparation before requesting approval for a renewal task', async () => {
+    const user = userEvent.setup()
+    mockTaskAndActivities({
+      status: 'DRAFT',
+      business_data: {},
+      checklist_items: [
+        {
+          checklist_item_id: 'chk-1',
+          item_code: 'passport',
+          label: '여권 사본 확인',
+          required: true,
+          completed: true,
+          completed_by: 'u-1',
+          completed_at: '2026-08-16T00:00:00Z',
+          version: 2,
+        },
+      ],
+    })
+    renderPage()
+    await screen.findByText('응웬반A 체류연장 준비')
+
+    expect(screen.getByRole('button', { name: '승인 요청' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Renewal 실행' }))
+    expect(screen.getByRole('dialog', { name: 'Renewal Agent 실행' })).toBeInTheDocument()
+  })
+
+  it('keeps Renewal retry available while waiting for worker information', async () => {
+    const user = userEvent.setup()
+    mockTaskAndActivities({ status: 'WAITING_WORKER' })
+    renderPage()
+    await screen.findByText('응웬반A 체류연장 준비')
+
+    await user.click(screen.getByRole('button', { name: '더보기 ···' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Renewal 실행' }))
+
+    expect(screen.getByRole('dialog', { name: 'Renewal Agent 실행' })).toBeInTheDocument()
   })
 
   it('approves through the API instead of setting a local success state', async () => {
@@ -959,7 +1090,7 @@ describe('CaseDetailPage', () => {
 
   it('opens and closes the more menu', async () => {
     const user = userEvent.setup()
-    mockTaskAndActivities()
+    mockTaskAndActivities({ status: 'DRAFT' })
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
@@ -988,7 +1119,7 @@ describe('CaseDetailPage', () => {
 
   it('opens the Renewal execution modal from the more menu', async () => {
     const user = userEvent.setup()
-    mockTaskAndActivities()
+    mockTaskAndActivities({ status: 'DRAFT' })
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
@@ -1203,11 +1334,19 @@ describe('CaseDetailPage', () => {
 
   it('issues the security link through the API and shows the real URL', async () => {
     const user = userEvent.setup()
-    mockTaskAndActivities({ status: 'APPROVED' })
+    mockTaskAndActivities({ status: 'APPROVED' }, [], {}, [], [], null, null, {
+      draft_id: 'draft-1',
+      language: 'vi',
+      document_types: ['PASSPORT_COPY'],
+      message: 'Vui lòng nộp bản sao hộ chiếu.',
+      version: 1,
+      review_status: 'DRAFT',
+      updated_at: '2026-08-16T00:00:00Z',
+    })
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
-    await user.click(screen.getByRole('button', { name: '근로자 보안 링크 발급·재발급 →' }))
+    await user.click(await screen.findByRole('button', { name: '근로자 보안 링크 발급·재발급 →' }))
     const reissueDialog = screen.getByRole('dialog', { name: '보안 링크 재발급' })
     expect(within(reissueDialog).getByText('응웬반A 체류연장 준비')).toBeInTheDocument()
 

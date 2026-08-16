@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useParams, useSearchParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
   approveTask,
   buildTaskApprovalSnapshot,
@@ -174,10 +174,42 @@ const GUIDANCE_LANGUAGES = [
   { value: 'mn', label: '몽골어' },
   { value: 'uz', label: '우즈베크어' },
   { value: 'ne', label: '네팔어' },
+  { value: 'ky', label: '키르기스어' },
 ]
 
 function uniqueDocumentTypes(types: DocumentType[]): DocumentType[] {
   return [...new Set(types)]
+}
+
+const OCR_SLOT_DOCUMENT_TYPE: Record<string, DocumentType> = {
+  passport_number: 'PASSPORT_COPY',
+  passport_issue_date: 'PASSPORT_COPY',
+  passport_expiry_date: 'PASSPORT_COPY',
+  date_of_birth: 'PASSPORT_COPY',
+  nationality: 'PASSPORT_COPY',
+  full_name: 'PASSPORT_COPY',
+  surname: 'PASSPORT_COPY',
+  given_names: 'PASSPORT_COPY',
+  alien_registration_number: 'ARC',
+  visa_type: 'ARC',
+  stay_expiry_date: 'ARC',
+}
+
+function requestedOcrDocumentTypes(businessData: Record<string, unknown>): DocumentType[] {
+  const execution = businessData.renewal_execution
+  if (typeof execution !== 'object' || execution === null) return []
+  const requestedFields = (execution as Record<string, unknown>).requested_fields
+  if (!Array.isArray(requestedFields)) return []
+
+  return uniqueDocumentTypes(
+    requestedFields.flatMap((field) => {
+      if (typeof field !== 'object' || field === null) return []
+      const value = field as Record<string, unknown>
+      if (value.source_hint !== 'DOCUMENT_OCR' || typeof value.key !== 'string') return []
+      const documentType = OCR_SLOT_DOCUMENT_TYPE[value.key]
+      return documentType ? [documentType] : []
+    }),
+  )
 }
 
 function defaultDocumentRequestMessage(documentTypes: DocumentType[]): string {
@@ -293,6 +325,11 @@ export function CaseDetailPage() {
     if (documentRequestDraftStatus === 'error') return
     if (workerId && workerStatus !== 'error' && worker?.worker_id !== workerId) return
 
+    const inferredDocumentTypes = uniqueDocumentTypes([
+      ...readiness.missing,
+      ...readiness.expired,
+      ...requestedOcrDocumentTypes(task?.business_data ?? {}),
+    ])
     const savedVersion = documentRequestDraft?.version ?? null
     const preferredLanguage = worker?.preferred_language?.trim() || 'ko'
     const guideReviewRequired = task
@@ -300,27 +337,49 @@ export function CaseDetailPage() {
       : false
 
     setDocumentRequestDraftForm((current) => {
+      if (documentRequestDraft) {
+        return {
+          taskId,
+          sourceVersion: savedVersion,
+          guideReviewRequired,
+          language: documentRequestDraft.language,
+          documentTypes: documentRequestDraft.document_types,
+          message: documentRequestDraft.message ?? '',
+        }
+      }
       if (
         current?.taskId === taskId &&
-        current.sourceVersion === savedVersion &&
+        current.sourceVersion === null &&
         current.guideReviewRequired === guideReviewRequired
       ) {
-        return current
+        const documentTypes = uniqueDocumentTypes([
+          ...current.documentTypes,
+          ...inferredDocumentTypes,
+        ])
+        const canUseDefaultMessage = !guideReviewRequired && current.language === 'ko'
+        const message =
+          current.message &&
+          current.message !== defaultDocumentRequestMessage(current.documentTypes)
+            ? current.message
+            : canUseDefaultMessage
+              ? defaultDocumentRequestMessage(documentTypes)
+              : ''
+        return {
+          ...current,
+          documentTypes,
+          message,
+        }
       }
-      const documentTypes = documentRequestDraft
-        ? documentRequestDraft.document_types
-        : uniqueDocumentTypes([...readiness.missing, ...readiness.expired])
       return {
         taskId,
-        sourceVersion: savedVersion,
+        sourceVersion: null,
         guideReviewRequired,
-        language: documentRequestDraft?.language ?? preferredLanguage,
-        documentTypes,
+        language: preferredLanguage,
+        documentTypes: inferredDocumentTypes,
         message:
-          documentRequestDraft?.message ??
-          (!guideReviewRequired && preferredLanguage === 'ko'
-            ? defaultDocumentRequestMessage(documentTypes)
-            : ''),
+          !guideReviewRequired && preferredLanguage === 'ko'
+            ? defaultDocumentRequestMessage(inferredDocumentTypes)
+            : '',
       }
     })
     setDocumentRequestDraftVersion((current) => {
@@ -342,8 +401,8 @@ export function CaseDetailPage() {
   ])
   const documentsFetcher = useCallback(() => {
     if (!workerId) return Promise.resolve({ items: [], page: 0, size: 0, total_elements: 0 })
-    return fetchDocuments({ workerId, size: 100 })
-  }, [workerId])
+    return fetchDocuments({ workerId, taskId, size: 100 })
+  }, [taskId, workerId])
   const {
     status: documentsStatus,
     data: documentsPage,
@@ -611,6 +670,7 @@ export function CaseDetailPage() {
           ? { ...current, sourceVersion: savedDraft.version, message }
           : current,
       )
+      await refetchDocumentRequestDraft()
       showToast('서류 요청 초안을 저장했습니다.')
     } catch (error) {
       showToast(
@@ -839,30 +899,47 @@ export function CaseDetailPage() {
   const documentsReady =
     readinessStatus === 'success' && Boolean(readiness && !readiness.completion_blocked)
   const documentsStateUnknown = readinessStatus === 'loading' || readinessStatus === 'error'
+  const isRenewalTask = RENEWAL_TASK_TYPES.has(task.task_type)
+  const renewalPrepared =
+    !isRenewalTask ||
+    (typeof task.business_data.renewal_execution === 'object' &&
+      task.business_data.renewal_execution !== null)
+  const canRunRenewal = isRenewalTask && task.status !== 'COMPLETED' && task.status !== 'CANCELLED'
+  const renewalPreparationRequired = canRunRenewal && !renewalPrepared
   const approvalReady =
     task.status === 'APPROVED' ||
     task.status === 'WAITING_WORKER' ||
     task.status === 'WAITING_EXTERNAL'
+  const workerGuideReady =
+    documentRequestDraftVersion?.taskId === task.task_id &&
+    Boolean(documentRequestDraftForm?.message.trim())
+  const taskCompleted = task.status === 'COMPLETED'
+  const approvalSatisfied = approvalReady || taskCompleted
   const canRequestApproval =
     (task.status === 'DRAFT' || task.status === 'NEEDS_INFO') &&
     checklistReady &&
     informationReady &&
-    documentsReady
-  const canComplete = approvalReady && checklistReady && informationReady && documentsReady
+    renewalPrepared
+  const canComplete =
+    !taskCompleted && approvalReady && checklistReady && informationReady && documentsReady
   const completionBlockers = [
-    !approvalReady && '승인',
+    !approvalSatisfied && '승인',
+    !renewalPrepared && 'Agent 실행',
     !checklistReady && '필수 체크리스트',
     !informationReady && '필수 정보',
     !documentsReady && (documentsStateUnknown ? '서류 상태 확인' : '서류 준비'),
   ].filter(Boolean) as string[]
   const firstIncompleteChecklistIndex = task.checklist_items.findIndex((item) => !item.completed)
-  const agentHeadline =
-    checklistReady && informationReady && documentsReady
+  const agentHeadline = taskCompleted
+    ? `${task.title} 업무를 완료했습니다.`
+    : checklistReady && informationReady && documentsReady
       ? `${task.title} 검토 준비가 완료되었습니다.`
       : `${task.title}에 필요한 항목을 확인했습니다.`
-  const agentBody = completionBlockers.length
-    ? `${completionBlockers.join(' · ')} 확인이 필요합니다.`
-    : (task.description ?? '필수 항목과 서류가 모두 준비되었습니다.')
+  const agentBody = taskCompleted
+    ? '완료 증빙과 처리 이력을 확인할 수 있습니다.'
+    : completionBlockers.length
+      ? `${completionBlockers.join(' · ')} 확인이 필요합니다.`
+      : (task.description ?? '필수 항목과 서류가 모두 준비되었습니다.')
   const unreadWorkerResponseCount = workerResponses.filter((response) => response.unread).length
   const newestWorkerResponse = workerResponses[0]
   const currentWorkerLinkDelivery =
@@ -887,6 +964,14 @@ export function CaseDetailPage() {
 
   function handleAgentAction() {
     if (!task) return
+    if (taskCompleted) {
+      setActiveTab('활동이력')
+      return
+    }
+    if (renewalPreparationRequired) {
+      setRenewalOverlayOpen(true)
+      return
+    }
     if (task.status === 'READY_FOR_REVIEW') {
       handleOpenReview()
       return
@@ -957,7 +1042,7 @@ export function CaseDetailPage() {
                   담당자 변경
                 </button>
               </li>
-              {RENEWAL_TASK_TYPES.has(task.task_type) && (
+              {canRunRenewal && (
                 <li role="presentation">
                   <button
                     type="button"
@@ -992,11 +1077,15 @@ export function CaseDetailPage() {
               headline={agentHeadline}
               body={agentBody}
               actionLabel={
-                task.status === 'READY_FOR_REVIEW'
-                  ? '검토하기'
-                  : !documentsReady
-                    ? '문서 확인'
-                    : '항목 확인'
+                taskCompleted
+                  ? '활동 이력 확인'
+                  : renewalPreparationRequired
+                    ? 'Renewal 실행'
+                    : task.status === 'READY_FOR_REVIEW'
+                      ? '검토하기'
+                      : !documentsReady
+                        ? '문서 확인'
+                        : '항목 확인'
               }
               onAction={handleAgentAction}
             />
@@ -1066,7 +1155,7 @@ export function CaseDetailPage() {
                   })}
                 </div>
               )}
-              {approvalReady && (
+              {approvalReady && workerGuideReady && (
                 <button
                   type="button"
                   className={styles.contextLink}
@@ -1075,24 +1164,37 @@ export function CaseDetailPage() {
                   근로자 보안 링크 발급·재발급 →
                 </button>
               )}
+              {approvalReady && !workerGuideReady && (
+                <button
+                  type="button"
+                  className={styles.contextLink}
+                  onClick={() => setActiveTab('문서')}
+                >
+                  먼저 근로자 안내 초안 준비 →
+                </button>
+              )}
             </div>
 
             <div
               className={`${styles.gatesCard} ${!canComplete && task.status !== 'COMPLETED' ? styles.gatesCardBlocked : ''}`}
             >
               <h2 className={styles.cardTitle}>완료까지 필요한 조건</h2>
-              <p className={styles.gatesDescription}>현재 진행을 막는 조건을 먼저 확인하세요.</p>
+              <p className={styles.gatesDescription}>
+                {taskCompleted
+                  ? '완료 조건과 처리 결과를 확인하세요.'
+                  : '현재 진행을 막는 조건을 먼저 확인하세요.'}
+              </p>
 
               <DetailRow
                 label="요청문 승인"
                 value={
-                  approvalReady
+                  approvalSatisfied
                     ? '완료'
                     : task.status === 'READY_FOR_REVIEW'
                       ? '검토 대기'
                       : '승인 전'
                 }
-                tone={approvalReady ? 'success' : 'warning'}
+                tone={approvalSatisfied ? 'success' : 'warning'}
               />
               <DetailRow
                 label="필수 항목"
@@ -1218,7 +1320,7 @@ export function CaseDetailPage() {
           id="case-panel-2"
           role="tabpanel"
           aria-labelledby="case-tab-2"
-          className={styles.tabPanel}
+          className={`${styles.tabPanel} ${styles.documentTabPanel}`}
         >
           {documentsStatus === 'loading' && (
             <EmptyState
@@ -1254,7 +1356,14 @@ export function CaseDetailPage() {
                 const fileId = document.file_id
                 return (
                   <div key={view.id} className={styles.documentRow}>
-                    <span className={styles.documentName}>{view.typeLabel}</span>
+                    <Link
+                      className={styles.documentName}
+                      to={`/documents/${encodeURIComponent(document.worker_document_id)}`}
+                    >
+                      {view.typeLabel}
+                      {document.source === 'AI_GENERATED' && ' · Agent 생성 초안'}
+                      {document.source === 'WORKER_UPLOAD' && ' · 근로자 제출'}
+                    </Link>
                     <StatusLabel tone={view.statusTone}>{view.statusLabel}</StatusLabel>
                     <span className={styles.documentUpdatedAt}>{view.expiry.display}</span>
                     {fileId && (
@@ -1620,9 +1729,11 @@ export function CaseDetailPage() {
       </div>
 
       <p className={styles.footnote}>
-        {approvalReady
-          ? '실제 전달과 외부 제출은 담당자가 직접 수행하고 결과를 증빙으로 남깁니다.'
-          : '승인 전에는 근로자 링크 전달이나 외부 처리를 시작할 수 없습니다.'}
+        {taskCompleted
+          ? '완료 증빙과 처리 이력은 활동이력에서 확인할 수 있습니다.'
+          : approvalReady
+            ? '실제 전달과 외부 제출은 담당자가 직접 수행하고 결과를 증빙으로 남깁니다.'
+            : '승인 전에는 근로자 링크 전달이나 외부 처리를 시작할 수 없습니다.'}
       </p>
 
       <ApprovalRequestModal

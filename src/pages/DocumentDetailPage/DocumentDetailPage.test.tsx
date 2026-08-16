@@ -6,6 +6,12 @@ import type { DocumentDetailResponse, DocumentItemResponse } from '../../api/doc
 import type { DocumentOcrRunResponse } from '../../api/documentOcr'
 import { DocumentDetailPage } from './DocumentDetailPage'
 
+vi.mock('./PdfPreviewCanvas', () => ({
+  PdfPreviewCanvas: ({ url, title }: { url: string; title: string }) => (
+    <div title={title} data-preview-url={url} />
+  ),
+}))
+
 function document(overrides: Partial<DocumentItemResponse>): DocumentItemResponse {
   return {
     worker_document_id: 'D-1',
@@ -13,6 +19,7 @@ function document(overrides: Partial<DocumentItemResponse>): DocumentItemRespons
     display_name: '응웬반A',
     document_type: 'ARC',
     submission_status: 'MISSING',
+    source: 'LEGACY',
     expiry_date: null,
     file_id: null,
     ...overrides,
@@ -111,6 +118,22 @@ function errorResponse(status: number, code: string, message: string) {
   )
 }
 
+function mockFetchWithPdfPreview(responses: Response[]) {
+  let responseIndex = 0
+  vi.mocked(fetch).mockImplementation((url) => {
+    if (String(url).includes('/preview')) {
+      return Promise.resolve(
+        new Response(new Blob(['preview-pdf'], { type: 'application/pdf' }), {
+          headers: { 'Content-Type': 'application/pdf' },
+        }),
+      )
+    }
+    const response = responses[responseIndex++]
+    if (!response) throw new Error(`Unexpected request: ${String(url)}`)
+    return Promise.resolve(response)
+  })
+}
+
 function renderPage(documentId: string) {
   render(
     <MemoryRouter initialEntries={[`/documents/${documentId}`]}>
@@ -164,24 +187,25 @@ describe('DocumentDetailPage', () => {
       file_size: 3,
       file_scan_status: 'NOT_SCANNED',
     })
-    vi.mocked(fetch)
-      .mockResolvedValueOnce(jsonResponse(fileDocument))
-      .mockResolvedValueOnce(
-        errorResponse(404, 'DOCUMENT_OCR_RUN_NOT_FOUND', 'OCR 실행 이력을 찾을 수 없습니다.'),
-      )
-      .mockResolvedValueOnce(
-        new Response(new Blob(['pdf']), {
-          headers: { 'Content-Disposition': 'attachment; filename="arc.pdf"' },
-        }),
-      )
-    const createObjectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:file-1')
+    mockFetchWithPdfPreview([
+      jsonResponse(fileDocument),
+      errorResponse(404, 'DOCUMENT_OCR_RUN_NOT_FOUND', 'OCR 실행 이력을 찾을 수 없습니다.'),
+      new Response(new Blob(['pdf']), {
+        headers: { 'Content-Disposition': 'attachment; filename="arc.pdf"' },
+      }),
+    ])
+    const createObjectUrl = vi
+      .spyOn(URL, 'createObjectURL')
+      .mockReturnValueOnce('blob:preview-1')
+      .mockReturnValueOnce('blob:file-1')
     const revokeObjectUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
     const clickAnchor = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
     renderPage('D-1')
 
-    await user.click(await screen.findByRole('button', { name: '원본 다운로드' }))
+    await screen.findByTitle('외국인등록증 PDF 미리보기')
+    await user.click(screen.getByRole('button', { name: '원본 다운로드' }))
 
-    expect(createObjectUrl).toHaveBeenCalledTimes(1)
+    expect(createObjectUrl).toHaveBeenCalledTimes(2)
     expect(clickAnchor).toHaveBeenCalledTimes(1)
     expect(revokeObjectUrl).toHaveBeenCalledWith('blob:file-1')
     const downloadCall = vi
@@ -220,24 +244,21 @@ describe('DocumentDetailPage', () => {
       file_size: 3,
       file_scan_status: 'NOT_SCANNED',
     })
-    vi.mocked(fetch)
-      .mockResolvedValueOnce(jsonResponse(fileDocument))
-      .mockResolvedValueOnce(
-        errorResponse(404, 'DOCUMENT_OCR_RUN_NOT_FOUND', 'OCR 실행 이력을 찾을 수 없습니다.'),
-      )
-      .mockResolvedValueOnce(jsonResponse(ocrRun('QUEUED')))
-      .mockResolvedValueOnce(jsonResponse(OCR_READY))
-      .mockResolvedValueOnce(
-        jsonResponse(
-          ocrRun('APPROVED', {
-            ...OCR_READY,
-            status: 'APPROVED',
-            corrected_fields: { stay_expiration_date: '2026-12-31' },
-            reviewed_at: '2026-08-09T00:00:04Z',
-            version: 3,
-          }),
-        ),
-      )
+    mockFetchWithPdfPreview([
+      jsonResponse(fileDocument),
+      errorResponse(404, 'DOCUMENT_OCR_RUN_NOT_FOUND', 'OCR 실행 이력을 찾을 수 없습니다.'),
+      jsonResponse(ocrRun('QUEUED')),
+      jsonResponse(OCR_READY),
+      jsonResponse(
+        ocrRun('APPROVED', {
+          ...OCR_READY,
+          status: 'APPROVED',
+          corrected_fields: { stay_expiration_date: '2026-12-31' },
+          reviewed_at: '2026-08-09T00:00:04Z',
+          version: 3,
+        }),
+      ),
+    ])
     renderPage('D-1')
 
     await user.click(await screen.findByRole('button', { name: 'OCR 실행' }))
@@ -265,6 +286,78 @@ describe('DocumentDetailPage', () => {
     })
   })
 
+  it('lets HR fill required passport fields that OCR could not extract', async () => {
+    const user = userEvent.setup()
+    const passportDocument = detail({
+      worker_document_id: 'D-1',
+      document_type: 'PASSPORT_COPY',
+      submission_status: 'SUBMITTED',
+      file_id: 'file-1',
+      file_name: 'passport.png',
+      file_mime_type: 'image/png',
+      file_size: 3,
+      file_scan_status: 'NOT_SCANNED',
+    })
+    const missingFieldRun = ocrRun('REVIEW_REQUIRED', {
+      document_type: 'PASSPORT_COPY',
+      result: {
+        matched_template_id: 43019,
+        document_side: 'FRONT',
+        fields: {},
+        field_confidences: {},
+        review_reasons: ['missing_required:passport_number', 'missing_required:date_of_birth'],
+      },
+      completed_at: '2026-08-09T00:00:02Z',
+      version: 2,
+    })
+    mockFetchWithPdfPreview([
+      jsonResponse(passportDocument),
+      jsonResponse(missingFieldRun),
+      jsonResponse(
+        ocrRun('APPROVED', {
+          ...missingFieldRun,
+          status: 'APPROVED',
+          corrected_fields: {
+            passport_number: 'P-DEMO-001',
+            date_of_birth: '1995-04-12',
+          },
+          version: 3,
+        }),
+      ),
+    ])
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:passport-preview')
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+    renderPage('D-1')
+
+    const approveButton = await screen.findByRole('button', { name: 'OCR 검토 완료' })
+    expect(
+      screen.getByText('여권번호 정보가 인식되지 않았습니다. 원본을 확인해 입력해 주세요.'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('생년월일 정보가 인식되지 않았습니다. 원본을 확인해 입력해 주세요.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('missing_required:passport_number')).not.toBeInTheDocument()
+    expect(screen.queryByText('missing_required:date_of_birth')).not.toBeInTheDocument()
+    expect(approveButton).toBeDisabled()
+    await user.type(screen.getByLabelText('여권번호'), 'P-DEMO-001')
+    await user.type(screen.getByLabelText('생년월일'), '1995-04-12')
+    expect(approveButton).toBeEnabled()
+    await user.click(approveButton)
+
+    expect(await screen.findByText('OCR 검토를 완료했습니다.')).toBeInTheDocument()
+    const reviewCall = vi
+      .mocked(fetch)
+      .mock.calls.find(([url]) => String(url).includes('/ocr-run-1/review'))
+    expect(JSON.parse(reviewCall?.[1]?.body as string)).toEqual({
+      expected_version: 2,
+      decision: 'APPROVE',
+      corrected_fields: {
+        passport_number: 'P-DEMO-001',
+        date_of_birth: '1995-04-12',
+      },
+    })
+  })
+
   it('previews an authenticated image and revokes the object URL on unmount', async () => {
     const imageDocument = detail({
       worker_document_id: 'D-1',
@@ -276,8 +369,12 @@ describe('DocumentDetailPage', () => {
       file_scan_status: 'NOT_SCANNED',
     })
     vi.mocked(fetch).mockImplementation((url) => {
-      if (String(url).includes('/files/file-1/content')) {
-        return Promise.resolve(new Response(new Blob(['png'], { type: 'image/png' })))
+      if (String(url).includes('/files/file-1/preview')) {
+        return Promise.resolve(
+          new Response(new Blob(['png'], { type: 'image/png' }), {
+            headers: { 'Content-Type': 'image/png' },
+          }),
+        )
       }
       if (String(url).includes('/ocr-runs/latest')) {
         return Promise.resolve(errorResponse(404, 'DOCUMENT_OCR_RUN_NOT_FOUND', 'not found'))
@@ -294,13 +391,48 @@ describe('DocumentDetailPage', () => {
       </MemoryRouter>,
     )
 
-    expect(
-      await screen.findByRole('img', { name: '외국인등록증 합성 원본 미리보기' }),
-    ).toHaveAttribute('src', 'blob:preview-1')
+    expect(await screen.findByRole('img', { name: '외국인등록증 미리보기' })).toHaveAttribute(
+      'src',
+      'blob:preview-1',
+    )
     expect(createObjectUrl).toHaveBeenCalledTimes(1)
 
     rendered.unmount()
     expect(revokeObjectUrl).toHaveBeenCalledWith('blob:preview-1')
+  })
+
+  it('previews an HWPX document through the authenticated PDF conversion endpoint', async () => {
+    const hwpxDocument = detail({
+      worker_document_id: 'D-1',
+      document_type: 'CONTRACT',
+      submission_status: 'VERIFIED',
+      file_id: 'file-1',
+      file_name: '표준근로계약서.hwpx',
+      file_mime_type: 'application/hwp+zip',
+      file_size: 3,
+      file_scan_status: 'CLEAN',
+    })
+    vi.mocked(fetch).mockImplementation((url) => {
+      if (String(url).includes('/files/file-1/preview')) {
+        return Promise.resolve(
+          new Response(new Blob(['pdf'], { type: 'application/pdf' }), {
+            headers: { 'Content-Type': 'application/pdf' },
+          }),
+        )
+      }
+      return Promise.resolve(jsonResponse(hwpxDocument))
+    })
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:preview-pdf')
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+    renderPage('D-1')
+
+    expect(await screen.findByTitle('근로계약서 PDF 미리보기')).toHaveAttribute(
+      'data-preview-url',
+      'blob:preview-pdf',
+    )
+    expect(
+      vi.mocked(fetch).mock.calls.some(([url]) => String(url).includes('/files/file-1/preview')),
+    ).toBe(true)
   })
 
   it('shows a preparing message when the OCR feature returns 503', async () => {
@@ -313,11 +445,10 @@ describe('DocumentDetailPage', () => {
       file_size: 3,
       file_scan_status: 'NOT_SCANNED',
     })
-    vi.mocked(fetch)
-      .mockResolvedValueOnce(jsonResponse(fileDocument))
-      .mockResolvedValueOnce(
-        errorResponse(503, 'DOCUMENT_OCR_DISABLED', 'OCR 기능이 아직 활성화되지 않았습니다.'),
-      )
+    mockFetchWithPdfPreview([
+      jsonResponse(fileDocument),
+      errorResponse(503, 'DOCUMENT_OCR_DISABLED', 'OCR 기능이 아직 활성화되지 않았습니다.'),
+    ])
     renderPage('D-1')
 
     expect(await screen.findByText(/OCR 기능 준비 중입니다/)).toBeInTheDocument()
@@ -335,20 +466,19 @@ describe('DocumentDetailPage', () => {
       file_size: 3,
       file_scan_status: 'NOT_SCANNED',
     })
-    vi.mocked(fetch)
-      .mockResolvedValueOnce(jsonResponse(fileDocument))
-      .mockResolvedValueOnce(jsonResponse(OCR_READY))
-      .mockResolvedValueOnce(
-        jsonResponse(
-          ocrRun('REJECTED', {
-            ...OCR_READY,
-            status: 'REJECTED',
-            review_reason: '원본 이미지가 흐립니다.',
-            reviewed_at: '2026-08-09T00:00:04Z',
-            version: 3,
-          }),
-        ),
-      )
+    mockFetchWithPdfPreview([
+      jsonResponse(fileDocument),
+      jsonResponse(OCR_READY),
+      jsonResponse(
+        ocrRun('REJECTED', {
+          ...OCR_READY,
+          status: 'REJECTED',
+          review_reason: '원본 이미지가 흐립니다.',
+          reviewed_at: '2026-08-09T00:00:04Z',
+          version: 3,
+        }),
+      ),
+    ])
     renderPage('D-1')
 
     const rejectButton = await screen.findByRole('button', { name: '반려' })

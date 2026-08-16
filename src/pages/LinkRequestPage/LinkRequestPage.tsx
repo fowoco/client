@@ -33,6 +33,7 @@ const LANGUAGE_LABEL: Record<string, string> = {
   mn: '몽골어',
   uz: '우즈베크어',
   ne: '네팔어',
+  ky: '키르기스어',
 }
 
 function answerInputHint(action: WorkerAnswerAction) {

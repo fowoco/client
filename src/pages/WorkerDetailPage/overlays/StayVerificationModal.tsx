@@ -25,7 +25,6 @@ export interface StayVerificationModalProps {
   worker: WorkerResponse
   documents: DocumentItemResponse[]
   onClose: () => void
-  onUpdated: () => void
   onRegisterEvidence: () => void
 }
 
@@ -81,7 +80,6 @@ export function StayVerificationModal({
   worker,
   documents,
   onClose,
-  onUpdated,
   onRegisterEvidence,
 }: StayVerificationModalProps) {
   const [verification, setVerification] = useState<StayVerificationResponse | null>(null)
@@ -202,7 +200,6 @@ export function StayVerificationModal({
       const updated = await updateStayVerification(verification.stay_verification_id, body)
       setVerification(updated)
       setSaved(true)
-      onUpdated()
       if (updated.verification_status === 'EMPLOYMENT_ENDED') {
         try {
           const eligibility = await fetchWorkerArchiveEligibility(worker.worker_id)
@@ -227,7 +224,6 @@ export function StayVerificationModal({
     try {
       await archiveWorker(worker.worker_id, archiveReason.trim(), archiveEligibility.worker_version)
       setArchived(true)
-      onUpdated()
     } catch (error) {
       setSubmitError(readableError(error))
     } finally {

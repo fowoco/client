@@ -227,8 +227,8 @@ export function WorkerDetailPage() {
         open={stayVerificationOpen}
         worker={worker}
         documents={workerDocuments}
-        onClose={() => setStayVerificationOpen(false)}
-        onUpdated={() => {
+        onClose={() => {
+          setStayVerificationOpen(false)
           refetch()
           refetchDocuments()
         }}

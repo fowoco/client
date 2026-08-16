@@ -317,6 +317,7 @@ describe('WorkerDetailPage', () => {
 
   it('shows archive blockers only after HR confirms employment ended', async () => {
     const user = userEvent.setup()
+    let workerGetCount = 0
     vi.mocked(fetch).mockImplementation((input, init) => {
       const url = String(input)
       const method = init?.method ?? 'GET'
@@ -353,6 +354,7 @@ describe('WorkerDetailPage', () => {
       if (url.includes('/tasks')) {
         return Promise.resolve(jsonResponse({ items: [], page: 0, size: 20, total_elements: 0 }))
       }
+      workerGetCount += 1
       return Promise.resolve(jsonResponse(worker({ stay_expiry_date: '2026-08-01' })))
     })
     renderPage('W-018')
@@ -365,6 +367,7 @@ describe('WorkerDetailPage', () => {
 
     expect(await screen.findByText('운영 목록 안전 보관')).toBeInTheDocument()
     expect(screen.getByText('근무상태가 아직 재직 또는 휴직입니다.')).toBeInTheDocument()
+    expect(workerGetCount).toBe(1)
     expect(
       screen.queryByRole('button', { name: '운영 목록에서 안전 보관' }),
     ).not.toBeInTheDocument()

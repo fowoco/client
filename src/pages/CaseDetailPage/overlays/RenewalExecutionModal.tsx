@@ -4,14 +4,8 @@ import { StatusLabel } from '../../../components/ui/StatusLabel/StatusLabel'
 import { ApiError, getErrorMessage } from '../../../api/errors'
 import { runRenewalExecution, type RenewalExecutionResponse } from '../../../api/renewal'
 import { TASK_STATUS_LABEL, TASK_STATUS_TONE } from '../../../utils/taskStatus'
+import { getWorkerGuideReviewPresentation } from '../../../view-models/workerGuideReviewViewModel'
 import styles from './overlays.module.css'
-
-const GUIDE_FAILURE_LABEL: Record<string, string> = {
-  LANGUAGE_ASSISTANT_NOT_CONFIGURED: '다국어 안내 생성 기능이 아직 연결되지 않았습니다.',
-  LANGUAGE_ASSISTANT_INVOCATION_FAILED: '다국어 안내 생성 중 오류가 발생했습니다.',
-  LANGUAGE_ASSISTANT_REVIEW_REQUIRED: '생성된 다국어 안내를 담당자가 확인해야 합니다.',
-  WORKER_GUIDE_UNAVAILABLE: '근로자 안내문을 안전하게 만들지 못했습니다.',
-}
 
 const SLOT_PRESENTATION: Record<
   string,
@@ -48,7 +42,7 @@ export interface RenewalExecutionModalProps {
   taskVersion: number
   onClose: () => void
   onDownloadDocument: (fileId: string, fallbackName: string) => void
-  onApplied: () => void
+  onApplied: (result: RenewalExecutionResponse) => void
 }
 
 export function RenewalExecutionModal({
@@ -66,15 +60,11 @@ export function RenewalExecutionModal({
   const [error, setError] = useState<string | null>(null)
 
   function handleClose() {
-    const shouldRefresh = result !== null
     setInstruction('')
     setSlotAnswers({})
     setResult(null)
     setError(null)
     onClose()
-    if (shouldRefresh) {
-      onApplied()
-    }
   }
 
   async function handleRun() {
@@ -90,6 +80,7 @@ export function RenewalExecutionModal({
       })
       setResult(response)
       setSlotAnswers({})
+      onApplied(response)
     } catch (caught) {
       setError(
         caught instanceof ApiError ? getErrorMessage(caught) : 'Renewal 실행에 실패했습니다.',
@@ -116,6 +107,7 @@ export function RenewalExecutionModal({
       })
       setResult(response)
       setSlotAnswers({})
+      onApplied(response)
     } catch (caught) {
       setError(
         caught instanceof ApiError ? getErrorMessage(caught) : 'Renewal 실행에 실패했습니다.',
@@ -137,6 +129,9 @@ export function RenewalExecutionModal({
       : result
         ? TASK_STATUS_LABEL[result.task_status]
         : ''
+  const guideReview = result?.guide_review_required
+    ? getWorkerGuideReviewPresentation(result.guide_failure_code)
+    : null
 
   return (
     <Modal open={open} onClose={handleClose} title="Renewal Agent 실행" size="wide">
@@ -177,14 +172,11 @@ export function RenewalExecutionModal({
             </div>
           )}
 
-          {result.guide_review_required && (
-            <div className={styles.policyBanner} role="status">
+          {guideReview && (
+            <div className={styles.policyBanner} role="alert">
+              <p className={styles.policyBannerTitle}>{guideReview.title}</p>
               <p className={styles.policyBannerText}>
-                자동 발송을 중단했습니다.{' '}
-                {result.guide_failure_code
-                  ? (GUIDE_FAILURE_LABEL[result.guide_failure_code] ??
-                    '근로자 안내문을 담당자가 확인해야 합니다.')
-                  : '근로자 안내문을 담당자가 확인해야 합니다.'}
+                {guideReview.description} 안내 초안과 발송 링크는 생성되지 않았습니다.
               </p>
               <p className={styles.plainValue}>
                 창을 닫은 뒤 문서 확인 영역에서 대상 언어와 안내문을 검토·저장하고 승인해 주세요.

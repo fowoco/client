@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { fetchDocuments, type DocumentItemResponse } from '../../api/documents'
+import { fetchAllDocuments, type DocumentItemResponse } from '../../api/documents'
 import { getErrorMessage } from '../../api/errors'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { ListRow } from '../../components/ui/ListRow/ListRow'
@@ -50,7 +50,7 @@ export function DocumentListPage() {
   const debouncedQuery = useDebouncedValue(query)
 
   const { status, data, error, refetch } = useApiQuery(
-    useCallback(() => fetchDocuments({ workerId: workerId ?? undefined, size: 100 }), [workerId]),
+    useCallback(() => fetchAllDocuments({ workerId: workerId ?? undefined }), [workerId]),
     useCallback((page: { items: unknown[] }) => page.items.length === 0, []),
   )
   const documents = useMemo(() => data?.items ?? [], [data])
@@ -199,13 +199,6 @@ export function DocumentListPage() {
             <span>만료일</span>
             <span />
           </div>
-
-          {data && data.total_elements > data.items.length && (
-            <p className={styles.capNotice}>
-              전체 {data.total_elements}건 중 {data.items.length}건만 불러왔습니다. 찾는 서류가 안
-              보이면 검색어를 바꿔보세요.
-            </p>
-          )}
 
           {visibleDocuments.length === 0 ? (
             <div className={styles.stateWrap}>

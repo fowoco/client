@@ -180,6 +180,7 @@ function mockTaskAndActivities(
   workerLinkDelivery: WorkerLinkDeliveryResponse | null = null,
   caseProjection: CaseProjectionResponse | null = null,
   savedDocumentRequestDraft: DocumentRequestDraftResponse | null = null,
+  workerPreferredLanguage = 'ko',
 ) {
   let responsesReviewed = false
   let currentWorkerResponses = workerResponses
@@ -188,6 +189,27 @@ function mockTaskAndActivities(
   vi.mocked(fetch).mockImplementation((input, init) => {
     const url = String(input)
     if (url.includes('/activities')) return Promise.resolve(jsonResponse(activities))
+    if (url.includes('/workers/W-1')) {
+      return Promise.resolve(
+        jsonResponse({
+          worker_id: 'W-1',
+          company_id: 'C-1',
+          display_name: '응웬반A',
+          nationality_code: 'VN',
+          preferred_language: workerPreferredLanguage,
+          work_status: 'ACTIVE',
+          visa_type: 'E-9',
+          stay_expiry_date: '2026-08-01',
+          contract_start_date: null,
+          contract_end_date: null,
+          employment_permit_end_date: null,
+          employment_activity_end_date: null,
+          created_at: '2026-07-01T00:00:00Z',
+          updated_at: '2026-07-01T00:00:00Z',
+          version: 1,
+        }),
+      )
+    }
     if (url.includes('/cases/') && url.endsWith('/projection')) {
       return Promise.resolve(
         caseProjection
@@ -654,6 +676,48 @@ describe('CaseDetailPage', () => {
       expected_version: 3,
     })
     expect(await screen.findByText('저장본 v4')).toBeInTheDocument()
+  })
+
+  it('uses the worker language and requires HR text when guide generation needs review', async () => {
+    const user = userEvent.setup()
+    mockTaskAndActivities(
+      {
+        business_data: {
+          renewal_execution: {
+            guide_review_required: true,
+            guide_failure_code: 'LANGUAGE_ASSISTANT_INVOCATION_FAILED',
+          },
+        },
+      },
+      [],
+      { missing: ['ARC'], completion_blocked: true },
+      [],
+      [],
+      null,
+      null,
+      null,
+      'vi',
+    )
+    renderPage()
+    await screen.findByText('응웬반A 체류연장 준비')
+
+    await user.click(screen.getByRole('tab', { name: CASE_TABS[2] }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('근로자 안내문을 직접 검토해 주세요')
+    expect(screen.getByLabelText('안내 언어')).toHaveValue('vi')
+    expect(screen.getByLabelText('근로자 안내문')).toHaveValue('')
+    expect(screen.queryByText('LANGUAGE_ASSISTANT_INVOCATION_FAILED')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '요청 초안 저장' }))
+    expect(await screen.findByText('근로자에게 표시할 안내문을 입력해 주세요.')).toBeInTheDocument()
+    expect(
+      vi
+        .mocked(fetch)
+        .mock.calls.some(
+          ([url, init]) =>
+            String(url).includes('/document-request-draft') && init?.method === 'PUT',
+        ),
+    ).toBe(false)
   })
 
   it('shows real unread worker responses and marks them as reviewed', async () => {

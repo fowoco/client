@@ -69,16 +69,13 @@ describe('RenewalExecutionModal', () => {
     await user.click(screen.getByRole('button', { name: '실행' }))
 
     expect(await screen.findByText('문서를 생성했습니다.')).toBeInTheDocument()
-    expect(onApplied).not.toHaveBeenCalled()
+    expect(onApplied).toHaveBeenCalledOnce()
     const call = vi.mocked(fetch).mock.calls[0]
     expect(String(call[0])).toContain('/tasks/T-1/renewal-run')
     expect(JSON.parse(String(call[1]?.body))).toEqual({
       instruction: '체류기간 연장 준비해줘',
       expected_version: 1,
     })
-
-    await user.click(screen.getByText('닫기'))
-    expect(onApplied).toHaveBeenCalledOnce()
   })
 
   it('lets HR answer user-input slots and resubmits with the answers', async () => {
@@ -231,9 +228,10 @@ describe('RenewalExecutionModal', () => {
     )
     await user.click(screen.getByRole('button', { name: '실행' }))
 
-    expect(await screen.findByText(/자동 발송을 중단했습니다/)).toBeInTheDocument()
-    expect(screen.getByText(/다국어 안내 생성 기능이 아직 연결되지 않았습니다/)).toBeInTheDocument()
+    expect(await screen.findByText('근로자 안내문을 직접 검토해 주세요')).toBeInTheDocument()
+    expect(screen.getByText(/다국어 안내 생성 기능이 설정되지 않았습니다/)).toBeInTheDocument()
     expect(screen.getByText(/대상 언어와 안내문을 검토·저장/)).toBeInTheDocument()
+    expect(screen.queryByText('LANGUAGE_ASSISTANT_NOT_CONFIGURED')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '실행' })).not.toBeInTheDocument()
   })
 })

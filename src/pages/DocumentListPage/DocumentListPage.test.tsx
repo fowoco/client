@@ -260,13 +260,37 @@ describe('DocumentListPage', () => {
     expect(await screen.findByText('등록된 서류가 없습니다')).toBeInTheDocument()
   })
 
-  it('shows a cap notice when the server has more documents than the fetched page', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(
-      jsonResponse({ items: DOCUMENTS, page: 0, size: 100, total_elements: 150 }),
+  it('loads every document page before computing the list and metrics', async () => {
+    const paginatedDocuments = Array.from({ length: 102 }, (_, index) =>
+      document({
+        worker_document_id: `D-PAGE-${index + 1}`,
+        display_name: `페이지 근로자 ${index + 1}`,
+        submission_status: 'VERIFIED',
+      }),
     )
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        jsonResponse({
+          items: paginatedDocuments.slice(0, 100),
+          page: 0,
+          size: 100,
+          total_elements: 102,
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          items: paginatedDocuments.slice(100),
+          page: 1,
+          size: 100,
+          total_elements: 102,
+        }),
+      )
     renderPage()
 
-    expect(await screen.findByText(/전체 150건 중 4건만 불러왔습니다/)).toBeInTheDocument()
+    expect(await screen.findByRole('tab', { name: '전체 102' })).toBeInTheDocument()
+    expect(screen.getByText('페이지 근로자 102')).toBeInTheDocument()
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2)
+    expect(String(vi.mocked(fetch).mock.calls[1][0])).toContain('page=1')
   })
 
   it('opens the HWP/HWPX upload modal', async () => {

@@ -64,6 +64,34 @@ export function fetchDocuments(params: FetchDocumentsParams = {}): Promise<Docum
   return apiFetch<DocumentPageResponse>(`/documents?${query.toString()}`)
 }
 
+const DOCUMENT_PAGE_SIZE = 100
+
+export async function fetchAllDocuments(
+  params: Omit<FetchDocumentsParams, 'page' | 'size'> = {},
+): Promise<DocumentPageResponse> {
+  const firstPage = await fetchDocuments({ ...params, page: 0, size: DOCUMENT_PAGE_SIZE })
+  const pageCount = Math.ceil(firstPage.total_elements / DOCUMENT_PAGE_SIZE)
+  if (pageCount <= 1) return firstPage
+
+  const remainingPages = await Promise.all(
+    Array.from({ length: pageCount - 1 }, (_, index) =>
+      fetchDocuments({ ...params, page: index + 1, size: DOCUMENT_PAGE_SIZE }),
+    ),
+  )
+  const itemsById = new Map(
+    [firstPage, ...remainingPages]
+      .flatMap((page) => page.items)
+      .map((document) => [document.worker_document_id, document]),
+  )
+
+  return {
+    items: [...itemsById.values()],
+    page: 0,
+    size: itemsById.size,
+    total_elements: firstPage.total_elements,
+  }
+}
+
 export function fetchDocument(documentId: string): Promise<DocumentDetailResponse> {
   return apiFetch<DocumentDetailResponse>(`/documents/${encodeURIComponent(documentId)}`)
 }

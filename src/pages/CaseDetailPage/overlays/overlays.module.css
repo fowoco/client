@@ -182,6 +182,13 @@
   color: var(--status-warning);
 }
 
+.policyBannerTitle {
+  margin: 0 0 4px;
+  color: var(--status-warning);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .successNote {
   margin: 0 0 var(--fowoco-spacing-16);
   font-size: 13px;

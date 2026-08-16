@@ -23,6 +23,7 @@ import {
 import { ApiError, getErrorMessage } from '../../api/errors'
 import { downloadFile } from '../../api/files'
 import { cancelTask, fetchTaskById, updateChecklistItem, type TaskType } from '../../api/tasks'
+import { fetchWorkerById } from '../../api/workers'
 import {
   adoptWorkerResponseDocuments,
   fetchTaskWorkerLinkDelivery,
@@ -53,6 +54,10 @@ import { DOCUMENT_TYPE_LABEL } from '../../utils/documentLabels'
 import { TASK_SOURCE_LABEL, TASK_STATUS_LABEL, TASK_STATUS_TONE } from '../../utils/taskStatus'
 import { getDocumentViewModel } from '../../view-models/documentViewModel'
 import { getOperationalDateViewModel } from '../../view-models/dateViewModel'
+import {
+  getWorkerGuideReviewPresentation,
+  getWorkerGuideReviewState,
+} from '../../view-models/workerGuideReviewViewModel'
 import {
   getWorkerRequestStateViewModel,
   type WorkerRequestState,
@@ -151,6 +156,8 @@ async function fetchTaskWorkerLinkDeliveryOrNull(
 
 interface DocumentRequestDraftForm {
   taskId: string
+  sourceVersion: number | null
+  guideReviewRequired: boolean
   language: string
   documentTypes: DocumentType[]
   message: string
@@ -248,6 +255,13 @@ export function CaseDetailPage() {
     refetch: refetchTask,
   } = useApiQuery(taskFetcher)
 
+  const workerId = task?.worker_id
+  const workerFetcher = useCallback(() => {
+    if (!workerId) return Promise.resolve(null)
+    return fetchWorkerById(workerId)
+  }, [workerId])
+  const { status: workerStatus, data: worker } = useApiQuery(workerFetcher)
+
   const activitiesFetcher = useCallback(() => fetchTaskActivities(taskId ?? ''), [taskId])
   const { data: activities, refetch: refetchActivities } = useApiQuery(activitiesFetcher)
   const activityRows = activities ?? []
@@ -277,25 +291,55 @@ export function CaseDetailPage() {
   useEffect(() => {
     if (!taskId || !readiness || documentRequestDraftStatus === 'loading') return
     if (documentRequestDraftStatus === 'error') return
+    if (workerId && workerStatus !== 'error' && worker?.worker_id !== workerId) return
+
+    const savedVersion = documentRequestDraft?.version ?? null
+    const preferredLanguage = worker?.preferred_language?.trim() || 'ko'
+    const guideReviewRequired = task
+      ? getWorkerGuideReviewState(task.business_data).required
+      : false
 
     setDocumentRequestDraftForm((current) => {
-      if (current?.taskId === taskId) return current
+      if (
+        current?.taskId === taskId &&
+        current.sourceVersion === savedVersion &&
+        current.guideReviewRequired === guideReviewRequired
+      ) {
+        return current
+      }
       const documentTypes = documentRequestDraft
         ? documentRequestDraft.document_types
         : uniqueDocumentTypes([...readiness.missing, ...readiness.expired])
       return {
         taskId,
-        language: documentRequestDraft?.language ?? 'ko',
+        sourceVersion: savedVersion,
+        guideReviewRequired,
+        language: documentRequestDraft?.language ?? preferredLanguage,
         documentTypes,
-        message: documentRequestDraft?.message ?? defaultDocumentRequestMessage(documentTypes),
+        message:
+          documentRequestDraft?.message ??
+          (!guideReviewRequired && preferredLanguage === 'ko'
+            ? defaultDocumentRequestMessage(documentTypes)
+            : ''),
       }
     })
-    setDocumentRequestDraftVersion(
-      documentRequestDraft ? { taskId, version: documentRequestDraft.version } : null,
-    )
-  }, [documentRequestDraft, documentRequestDraftStatus, readiness, taskId])
-
-  const workerId = task?.worker_id
+    setDocumentRequestDraftVersion((current) => {
+      if (!documentRequestDraft) return null
+      if (current?.taskId === taskId && current.version === documentRequestDraft.version) {
+        return current
+      }
+      return { taskId, version: documentRequestDraft.version }
+    })
+  }, [
+    documentRequestDraft,
+    documentRequestDraftStatus,
+    readiness,
+    task,
+    taskId,
+    worker,
+    workerId,
+    workerStatus,
+  ])
   const documentsFetcher = useCallback(() => {
     if (!workerId) return Promise.resolve({ items: [], page: 0, size: 0, total_elements: 0 })
     return fetchDocuments({ workerId, size: 100 })
@@ -563,7 +607,9 @@ export function CaseDetailPage() {
       })
       setDocumentRequestDraftVersion({ taskId: task.task_id, version: savedDraft.version })
       setDocumentRequestDraftForm((current) =>
-        current?.taskId === task.task_id ? { ...current, message } : current,
+        current?.taskId === task.task_id
+          ? { ...current, sourceVersion: savedDraft.version, message }
+          : current,
       )
       showToast('서류 요청 초안을 저장했습니다.')
     } catch (error) {
@@ -781,6 +827,10 @@ export function CaseDetailPage() {
   }
 
   const taskDue = getOperationalDateViewModel('TASK_DUE', task.due_date)
+  const guideReviewState = getWorkerGuideReviewState(task.business_data)
+  const guideReview = guideReviewState.required
+    ? getWorkerGuideReviewPresentation(guideReviewState.failureCode)
+    : null
   const approvalBadge = getApprovalBadge(task.status)
   const requiredChecklist = task.checklist_items.filter((item) => item.required)
   const completedRequiredChecklist = requiredChecklist.filter((item) => item.completed).length
@@ -1267,6 +1317,16 @@ export function CaseDetailPage() {
                   ))}
                 </div>
 
+                {guideReview && documentRequestDraftVersion?.taskId !== task.task_id && (
+                  <div className={styles.documentRequestReview} role="alert">
+                    <strong>{guideReview.title}</strong>
+                    <p>
+                      {guideReview.description} 대상 언어를 확인하고 안내문을 직접 작성해 저장해
+                      주세요. 저장 전에는 근로자에게 전달되지 않습니다.
+                    </p>
+                  </div>
+                )}
+
                 <label className={styles.documentRequestLabel} htmlFor="document-request-language">
                   안내 언어
                 </label>
@@ -1636,11 +1696,13 @@ export function CaseDetailPage() {
           taskVersion={task.version}
           onClose={() => setRenewalOverlayOpen(false)}
           onDownloadDocument={handleDownloadDocument}
-          onApplied={() => {
+          onApplied={(result) => {
+            if (result.guide_review_required) setActiveTab(CASE_TABS[2])
             refetchTask()
             refetchDocuments()
             refetchActivities()
             refetchReadiness()
+            refetchDocumentRequestDraft()
           }}
         />
       )}

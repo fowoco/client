@@ -30,6 +30,8 @@ export interface RenewalExecutionResponse {
   generated_documents: GeneratedDocumentResult[]
   worker_message_draft_id: string | null
   worker_message_draft_version: number | null
+  guide_review_required: boolean
+  guide_failure_code: string | null
   human_review_required: boolean
 }
 

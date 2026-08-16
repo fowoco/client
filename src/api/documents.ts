@@ -8,8 +8,10 @@ export type DocumentType =
   | 'PERMIT'
   | 'EMPLOYMENT_EXTENSION_APPLICATION'
   | 'INTEGRATED_APPLICATION'
+  | 'IDENTITY_GUARANTY'
   | 'RESIDENCE_PROOF'
 export type SubmissionStatus = 'DRAFT' | 'MISSING' | 'SUBMITTED' | 'VERIFIED'
+export type DocumentSource = 'LEGACY' | 'DEMO_SEED' | 'HR_UPLOAD' | 'WORKER_UPLOAD' | 'AI_GENERATED'
 
 export interface DocumentItemResponse {
   worker_document_id: string
@@ -17,6 +19,7 @@ export interface DocumentItemResponse {
   display_name: string | null
   document_type: DocumentType
   submission_status: SubmissionStatus
+  source: DocumentSource
   expiry_date: string | null
   file_id: string | null
 }
@@ -39,6 +42,7 @@ export interface DocumentDetailResponse extends DocumentItemResponse {
 
 export interface FetchDocumentsParams {
   workerId?: string
+  taskId?: string
   documentType?: DocumentType
   status?: SubmissionStatus
   expiryBefore?: string
@@ -51,6 +55,7 @@ export interface FetchDocumentsParams {
 export function fetchDocuments(params: FetchDocumentsParams = {}): Promise<DocumentPageResponse> {
   const query = new URLSearchParams()
   if (params.workerId) query.set('workerId', params.workerId)
+  if (params.taskId) query.set('taskId', params.taskId)
   if (params.documentType) query.set('documentType', params.documentType)
   if (params.status) query.set('status', params.status)
   if (params.expiryBefore) query.set('expiryBefore', params.expiryBefore)
@@ -118,6 +123,7 @@ export interface WorkerDocumentResponse {
   worker_id: string
   document_type: DocumentType
   submission_status: SubmissionStatus
+  source: DocumentSource
   expiry_date: string | null
   destination: string | null
   note: string | null

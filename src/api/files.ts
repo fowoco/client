@@ -33,6 +33,11 @@ export interface FileDownloadResponse {
   file_name: string | null
 }
 
+export interface FilePreviewResponse {
+  blob: Blob
+  mime_type: string | null
+}
+
 function getDownloadFileName(contentDisposition: string | null): string | null {
   if (!contentDisposition) return null
 
@@ -53,5 +58,13 @@ export async function downloadFile(fileId: string): Promise<FileDownloadResponse
   return {
     blob: await response.blob(),
     file_name: getDownloadFileName(response.headers.get('Content-Disposition')),
+  }
+}
+
+export async function previewFile(fileId: string): Promise<FilePreviewResponse> {
+  const response = await apiFetchBlob(`/files/${encodeURIComponent(fileId)}/preview`)
+  return {
+    blob: await response.blob(),
+    mime_type: response.headers.get('Content-Type'),
   }
 }

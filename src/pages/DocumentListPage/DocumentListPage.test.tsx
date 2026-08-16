@@ -21,6 +21,7 @@ function document(overrides: Partial<DocumentItemResponse>): DocumentItemRespons
     display_name: '수라즈C',
     document_type: 'ARC',
     submission_status: 'MISSING',
+    source: 'LEGACY',
     expiry_date: null,
     file_id: null,
     ...overrides,
@@ -28,7 +29,12 @@ function document(overrides: Partial<DocumentItemResponse>): DocumentItemRespons
 }
 
 const DOCUMENTS: DocumentItemResponse[] = [
-  document({ worker_document_id: 'D-1', display_name: '수라즈C', document_type: 'ARC', submission_status: 'MISSING' }),
+  document({
+    worker_document_id: 'D-1',
+    display_name: '수라즈C',
+    document_type: 'ARC',
+    submission_status: 'MISSING',
+  }),
   document({
     worker_document_id: 'D-2',
     display_name: '쩐티B',
@@ -56,12 +62,24 @@ const DOCUMENTS: DocumentItemResponse[] = [
 ]
 
 function jsonResponse(body: unknown, init: ResponseInit = {}) {
-  return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' }, ...init })
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+    ...init,
+  })
 }
 
 function errorResponse(status: number, code: string, message: string) {
   return jsonResponse(
-    { timestamp: '2026-07-27T01:23:45Z', status, code, message, path: '/api/v1/documents', request_id: 'req-1', field_errors: [] },
+    {
+      timestamp: '2026-07-27T01:23:45Z',
+      status,
+      code,
+      message,
+      path: '/api/v1/documents',
+      request_id: 'req-1',
+      field_errors: [],
+    },
     { status },
   )
 }
@@ -146,7 +164,9 @@ describe('DocumentListPage', () => {
 
     await waitFor(() => expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2))
     expect(String(vi.mocked(fetch).mock.calls[1][0])).not.toContain('workerId=')
-    expect(screen.queryByText('업무함에서 선택한 근로자의 문서만 표시합니다.')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('업무함에서 선택한 근로자의 문서만 표시합니다.'),
+    ).not.toBeInTheDocument()
   })
 
   it('filters documents by tab', async () => {

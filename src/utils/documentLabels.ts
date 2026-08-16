@@ -8,6 +8,7 @@ export const DOCUMENT_TYPE_LABEL: Record<DocumentType, string> = {
   PERMIT: '고용허가서',
   EMPLOYMENT_EXTENSION_APPLICATION: '취업활동기간 연장신청서',
   INTEGRATED_APPLICATION: '통합신청서',
+  IDENTITY_GUARANTY: '신원보증서',
   RESIDENCE_PROOF: '체류지 입증자료',
 }
 

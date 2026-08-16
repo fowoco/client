@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { fetchDocument } from '../../api/documents'
 import { ApiError, getErrorMessage } from '../../api/errors'
-import { downloadFile } from '../../api/files'
+import { downloadFile, previewFile } from '../../api/files'
 import { Button } from '../../components/ui/Button/Button'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
 import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
@@ -11,6 +11,7 @@ import { useToastStore } from '../../store/toastStore'
 import { saveBlobAsFile } from '../../utils/fileDownload'
 import { getDocumentViewModel } from '../../view-models/documentViewModel'
 import { DocumentOcrPanel } from './DocumentOcrPanel'
+import { PdfPreviewCanvas } from './PdfPreviewCanvas'
 import styles from './DocumentDetailPage.module.css'
 
 export function DocumentDetailPage() {
@@ -26,24 +27,29 @@ export function DocumentDetailPage() {
     refetch,
   } = useApiQuery(useCallback(() => fetchDocument(documentId ?? ''), [documentId]))
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [previewMimeType, setPreviewMimeType] = useState<string | null>(null)
   const [previewError, setPreviewError] = useState(false)
 
   const fileId = document?.file_id ?? null
   const fileMimeType = document?.file_mime_type ?? null
-  const canPreviewImage = Boolean(fileId && fileMimeType?.startsWith('image/'))
+  const canPreview = Boolean(fileId && isPreviewableMimeType(fileMimeType))
+  const previewIsImage = previewMimeType?.startsWith('image/') ?? false
+  const previewIsPdf = previewMimeType === 'application/pdf'
 
   useEffect(() => {
     let cancelled = false
     let objectUrl: string | null = null
     setPreviewUrl(null)
+    setPreviewMimeType(null)
     setPreviewError(false)
-    if (!canPreviewImage || !fileId) return
+    if (!canPreview || !fileId) return
 
-    downloadFile(fileId)
-      .then((downloaded) => {
+    previewFile(fileId)
+      .then((preview) => {
         if (cancelled) return
-        objectUrl = URL.createObjectURL(downloaded.blob)
+        objectUrl = URL.createObjectURL(preview.blob)
         setPreviewUrl(objectUrl)
+        setPreviewMimeType(preview.mime_type)
       })
       .catch(() => {
         if (!cancelled) setPreviewError(true)
@@ -53,7 +59,7 @@ export function DocumentDetailPage() {
       cancelled = true
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
-  }, [canPreviewImage, fileId])
+  }, [canPreview, fileId])
 
   if (fetchStatus === 'loading') {
     return (
@@ -144,25 +150,28 @@ export function DocumentDetailPage() {
         <h2 className={styles.cardTitle}>첨부 파일</h2>
         <div className={styles.previewBox}>
           <p className={styles.previewFileName}>{document.file_name ?? view.typeLabel}</p>
-          {canPreviewImage && previewUrl && (
+          {previewIsImage && previewUrl && (
             <img
               className={styles.previewImage}
               src={previewUrl}
-              alt={`${view.typeLabel} 합성 원본 미리보기`}
+              alt={`${view.typeLabel} 미리보기`}
             />
+          )}
+          {previewIsPdf && previewUrl && (
+            <PdfPreviewCanvas url={previewUrl} title={`${view.typeLabel} PDF 미리보기`} />
           )}
           <p className={styles.previewNote}>
             {!fileId && '이 문서에는 연결된 파일이 없습니다.'}
             {fileId &&
-              canPreviewImage &&
+              canPreview &&
               !previewUrl &&
               !previewError &&
-              '이미지 미리보기를 불러오는 중입니다.'}
+              '문서 미리보기를 불러오는 중입니다.'}
             {fileId &&
-              canPreviewImage &&
+              canPreview &&
               previewError &&
               '미리보기를 불러오지 못했습니다. 원본 다운로드를 이용해 주세요.'}
-            {fileId && !canPreviewImage && '사업장 권한을 확인한 뒤 원본 파일을 내려받습니다.'}
+            {fileId && !canPreview && '이 형식은 원본 파일 다운로드만 지원합니다.'}
           </p>
           {fileId && (
             <Button variant="secondary" disabled={downloading} onClick={handleDownload}>
@@ -191,5 +200,17 @@ export function DocumentDetailPage() {
         fileId={document.file_id}
       />
     </div>
+  )
+}
+
+function isPreviewableMimeType(mimeType: string | null) {
+  if (!mimeType) return false
+  return (
+    mimeType.startsWith('image/') ||
+    mimeType === 'application/pdf' ||
+    mimeType === 'application/x-hwp' ||
+    mimeType === 'application/hwp' ||
+    mimeType === 'application/vnd.hancom.hwp' ||
+    mimeType === 'application/hwp+zip'
   )
 }

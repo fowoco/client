@@ -8,8 +8,8 @@ import { fetchMyProfile } from '../api/profile'
 // 계정 만들기" 참고). 비밀번호는 서버가 DEMO_SEED_ADMIN_PASSWORD 최소 길이(12자)를 강제하므로
 // "1234"처럼 짧은 값은 쓸 수 없다 — 로컬 seed 값과 반드시 일치시켜야 한다.
 export const DEMO_ACCOUNT = {
-  email: 'demo.admin@example.com',
-  password: 'fowoco-demo-1234',
+  email: import.meta.env.VITE_DEMO_ACCOUNT_EMAIL?.trim() || 'demo.admin@example.com',
+  password: import.meta.env.VITE_DEMO_ACCOUNT_PASSWORD || 'fowoco-demo-1234',
 }
 
 export interface AuthUser {

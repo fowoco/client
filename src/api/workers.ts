@@ -89,3 +89,42 @@ export function patchWorker(workerId: string, body: WorkerPatchBody): Promise<Wo
     body: JSON.stringify(body),
   })
 }
+
+export type WorkerArchiveBlocker =
+  | 'ACTIVE_EMPLOYMENT_STATUS'
+  | 'OPEN_TASK'
+  | 'PENDING_APPROVAL'
+  | 'ACTIVE_WORKER_LINK'
+  | 'ALREADY_ARCHIVED'
+
+export interface WorkerArchiveEligibilityResponse {
+  worker_id: string
+  archivable: boolean
+  blockers: WorkerArchiveBlocker[]
+  worker_version: number
+}
+
+export interface WorkerArchiveResponse {
+  worker_id: string
+  archived_at: string
+  archived_by: string
+  archive_reason: string
+  worker_version: number
+}
+
+export function fetchWorkerArchiveEligibility(
+  workerId: string,
+): Promise<WorkerArchiveEligibilityResponse> {
+  return apiFetch(`/workers/${encodeURIComponent(workerId)}/archive-eligibility`)
+}
+
+export function archiveWorker(
+  workerId: string,
+  reason: string,
+  expectedVersion: number,
+): Promise<WorkerArchiveResponse> {
+  return apiFetch(`/workers/${encodeURIComponent(workerId)}/archive`, {
+    method: 'POST',
+    body: JSON.stringify({ reason, expected_version: expectedVersion }),
+  })
+}

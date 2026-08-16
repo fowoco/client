@@ -38,11 +38,36 @@ function worker(overrides: Partial<WorkerResponse>): WorkerResponse {
 
 const WORKERS: WorkerResponse[] = [
   worker({ worker_id: 'W-021', display_name: '응웬반A', stay_expiry_date: isoDateOffset(12) }),
-  worker({ worker_id: 'W-018', display_name: '쩐티B', nationality_code: 'VN', stay_expiry_date: isoDateOffset(21) }),
-  worker({ worker_id: 'W-032', display_name: '수라즈C', nationality_code: 'NP', stay_expiry_date: isoDateOffset(35) }),
-  worker({ worker_id: 'W-014', display_name: '아흐메드D', nationality_code: 'BD', stay_expiry_date: isoDateOffset(62) }),
-  worker({ worker_id: 'W-027', display_name: '솜차이E', nationality_code: 'TH', stay_expiry_date: null }),
-  worker({ worker_id: 'W-041', display_name: '판반F', nationality_code: 'VN', stay_expiry_date: isoDateOffset(5) }),
+  worker({
+    worker_id: 'W-018',
+    display_name: '쩐티B',
+    nationality_code: 'VN',
+    stay_expiry_date: isoDateOffset(21),
+  }),
+  worker({
+    worker_id: 'W-032',
+    display_name: '수라즈C',
+    nationality_code: 'NP',
+    stay_expiry_date: isoDateOffset(35),
+  }),
+  worker({
+    worker_id: 'W-014',
+    display_name: '아흐메드D',
+    nationality_code: 'BD',
+    stay_expiry_date: isoDateOffset(62),
+  }),
+  worker({
+    worker_id: 'W-027',
+    display_name: '솜차이E',
+    nationality_code: 'TH',
+    stay_expiry_date: null,
+  }),
+  worker({
+    worker_id: 'W-041',
+    display_name: '판반F',
+    nationality_code: 'VN',
+    stay_expiry_date: isoDateOffset(5),
+  }),
 ]
 
 function jsonResponse(body: unknown, init: ResponseInit = {}) {
@@ -55,7 +80,15 @@ function jsonResponse(body: unknown, init: ResponseInit = {}) {
 
 function errorResponse(status: number, code: string, message: string) {
   return jsonResponse(
-    { timestamp: '2026-07-27T01:23:45Z', status, code, message, path: '/api/v1/workers', request_id: 'req-1', field_errors: [] },
+    {
+      timestamp: '2026-07-27T01:23:45Z',
+      status,
+      code,
+      message,
+      path: '/api/v1/workers',
+      request_id: 'req-1',
+      field_errors: [],
+    },
     { status },
   )
 }
@@ -68,8 +101,13 @@ function mockWorkersAndEmptyTasks(workers: WorkerResponse[], totalElements = wor
   vi.mocked(fetch).mockImplementation((input) => {
     const url = String(input)
     if (url.includes('/activities')) return Promise.resolve(jsonResponse([]))
-    if (url.includes('/tasks')) return Promise.resolve(jsonResponse({ items: [], page: 0, size: 100, total_elements: 0, total_pages: 0 }))
-    return Promise.resolve(jsonResponse({ items: workers, page: 0, size: 100, total_elements: totalElements }))
+    if (url.includes('/tasks'))
+      return Promise.resolve(
+        jsonResponse({ items: [], page: 0, size: 100, total_elements: 0, total_pages: 0 }),
+      )
+    return Promise.resolve(
+      jsonResponse({ items: workers, page: 0, size: 100, total_elements: totalElements }),
+    )
   })
 }
 
@@ -156,7 +194,9 @@ describe('WorkerListPage', () => {
     mockWorkersAndEmptyTasks(WORKERS)
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '기본정보·서류·안내이력 더 보기 ▾' }))
+    await user.click(
+      await screen.findByRole('button', { name: '기본정보·서류·안내이력 더 보기 ▾' }),
+    )
 
     expect(await screen.findByText('근로자 상세 페이지')).toBeInTheDocument()
   })
@@ -228,6 +268,20 @@ describe('WorkerListPage', () => {
     expect(comfortableRow).toHaveClass(styles.workerDeadlineComfortable)
   })
 
+  it('describes an expired stay date as a record requiring urgent verification', async () => {
+    mockWorkersAndEmptyTasks([
+      worker({
+        worker_id: 'W-EXPIRED',
+        display_name: '만료확인대상',
+        stay_expiry_date: isoDateOffset(-3),
+      }),
+    ])
+    renderPage()
+
+    expect((await screen.findAllByText('기록상 D+3 경과 · 긴급 확인')).length).toBeGreaterThan(0)
+    expect(screen.queryByText('D+3 체류만료')).not.toBeInTheDocument()
+  })
+
   it('shows AI recommendation cards and decision summary for the selected worker', async () => {
     vi.mocked(fetch).mockImplementation((input) => {
       const url = String(input)
@@ -292,7 +346,9 @@ describe('WorkerListPage', () => {
       const method = init?.method ?? 'GET'
       if (url.includes('/activities')) return Promise.resolve(jsonResponse([]))
       if (url.includes('/tasks')) {
-        return Promise.resolve(jsonResponse({ items: [], page: 0, size: 100, total_elements: 0, total_pages: 0 }))
+        return Promise.resolve(
+          jsonResponse({ items: [], page: 0, size: 100, total_elements: 0, total_pages: 0 }),
+        )
       }
       if (url.includes('/workers') && method === 'POST') {
         return Promise.resolve(jsonResponse(newWorker, { status: 201 }))

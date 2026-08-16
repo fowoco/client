@@ -51,6 +51,18 @@
   color: var(--text-secondary);
 }
 
+.verificationButton {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--status-critical);
+  border-radius: var(--fowoco-radius-6);
+  background: var(--surface-default);
+  color: var(--status-critical);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .sectionCard {
   margin-top: 16px;
   padding: var(--fowoco-spacing-16) var(--fowoco-spacing-24);

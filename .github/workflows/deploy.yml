@@ -23,6 +23,10 @@ jobs:
         with:
           context: .
           push: true
+          build-args: |
+            VITE_API_BASE_URL=/api/v1
+            VITE_DEMO_ACCOUNT_EMAIL=${{ secrets.VITE_DEMO_ACCOUNT_EMAIL }}
+            VITE_DEMO_ACCOUNT_PASSWORD=${{ secrets.VITE_DEMO_ACCOUNT_PASSWORD }}
           tags: |
             ghcr.io/fowoco/client:latest
             ghcr.io/fowoco/client:${{ github.sha }}

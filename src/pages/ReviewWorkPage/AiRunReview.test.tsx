@@ -100,6 +100,16 @@ function processingRun(): AiRunResponse {
   }
 }
 
+function contextRequiredRun(): AiRunResponse {
+  return {
+    ...processingRun(),
+    status: 'SUCCEEDED',
+    analysis_outcome: 'CONTEXT_REQUIRED',
+    detected_intent: 'EXPIRY_RENEWAL',
+    version: 1,
+  }
+}
+
 function needsInfoRun(): AiRunResponse {
   return {
     ...processingRun(),
@@ -349,6 +359,27 @@ describe('AiRunReview progress updates', () => {
     })
     renderProcessingReview()
 
+    await vi.advanceTimersByTimeAsync(1300)
+
+    expect(await screen.findByLabelText('신청 목표일을 입력해 주세요. *')).toBeInTheDocument()
+  })
+
+  it('keeps polling when PLAN succeeded but context enrichment is still running', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.mocked(fetch).mockImplementation((input) => {
+      const url = String(input)
+      if (url.includes('/events')) return new Promise<Response>(() => undefined)
+      if (url.includes(`/ai-runs/${RUN.ai_run_id}`)) {
+        return Promise.resolve(jsonResponse(needsInfoRun()))
+      }
+      return Promise.reject(new Error(`Unexpected request: ${url}`))
+    })
+
+    render(
+      <MemoryRouter>
+        <AiRunReview initialRun={contextRequiredRun()} />
+      </MemoryRouter>,
+    )
     await vi.advanceTimersByTimeAsync(1300)
 
     expect(await screen.findByLabelText('신청 목표일을 입력해 주세요. *')).toBeInTheDocument()

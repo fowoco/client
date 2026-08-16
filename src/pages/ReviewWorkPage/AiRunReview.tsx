@@ -136,7 +136,10 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
     workerId: initialDraft?.workerId ?? '',
   }
 
-  const isProcessing = run.status === 'QUEUED' || run.status === 'RUNNING'
+  const isProcessing =
+    run.status === 'QUEUED' ||
+    run.status === 'RUNNING' ||
+    run.analysis_outcome === 'CONTEXT_REQUIRED'
 
   useEffect(() => {
     if (!isProcessing) return

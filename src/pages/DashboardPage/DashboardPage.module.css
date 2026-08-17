@@ -238,6 +238,13 @@
   color: var(--text-secondary);
 }
 
+.commandError {
+  margin: 5px 0 0;
+  font-size: 11px;
+  line-height: 17px;
+  color: var(--color-danger-700, #b42318);
+}
+
 .quickPromptPanel {
   min-width: 0;
   padding: 16px 18px;

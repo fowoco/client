@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { createAiRun } from '../../api/aiRuns'
+import { ApiError, getErrorMessage } from '../../api/errors'
 import { fetchWorkers } from '../../api/workers'
 import { useDashboardToday } from '../../components/layout/dashboardTodayContext'
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState'
@@ -15,10 +17,17 @@ import {
   buildDashboardWorkItems,
   buildUpcomingExpiries,
 } from './dashboardData'
+import {
+  saveActiveWorkRequestDraft,
+  saveAiRunWorkRequestDraft,
+  type WorkRequestDraft,
+} from '../CreateWorkPage/workRequestDraft'
 
 export function DashboardPage() {
   const navigate = useNavigate()
   const [agentRequest, setAgentRequest] = useState('')
+  const [analyzing, setAnalyzing] = useState(false)
+  const [analysisError, setAnalysisError] = useState<string | null>(null)
   const agentRequestRef = useRef<HTMLTextAreaElement>(null)
   const { status, data: today, error, refetch, lastUpdatedAt } = useDashboardToday()
   // 우선 업무 카드의 근로자 이름을 표시하기 위한 조회 — today API의 priority_tasks에는
@@ -71,11 +80,33 @@ export function DashboardPage() {
 
   const headline = status === 'empty' ? '현재 등록된 업무가 없습니다.' : '오늘의 업무를 확인하세요.'
 
-  function handleAgentRequestSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleAgentRequestSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const prefill = agentRequest.trim()
-    if (!prefill) return
-    navigate('/tasks/new', { state: { prefill } })
+    const instruction = agentRequest.trim()
+    if (!instruction || analyzing) return
+
+    setAnalyzing(true)
+    setAnalysisError(null)
+    try {
+      const aiRun = await createAiRun(instruction, globalThis.crypto.randomUUID())
+      const draft: WorkRequestDraft = {
+        request: instruction,
+        mode: 'nl',
+        workerId: '',
+        attachments: [],
+      }
+      saveActiveWorkRequestDraft(draft)
+      saveAiRunWorkRequestDraft(aiRun.ai_run_id, draft)
+      navigate(`/tasks/new/review?aiRunId=${encodeURIComponent(aiRun.ai_run_id)}`, {
+        state: { aiRun, draft },
+      })
+    } catch (error) {
+      setAnalysisError(
+        error instanceof ApiError ? getErrorMessage(error) : '요청을 분석하지 못했습니다.',
+      )
+    } finally {
+      setAnalyzing(false)
+    }
   }
 
   function handleAgentRequestKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -142,15 +173,20 @@ export function DashboardPage() {
                 <button
                   type="submit"
                   className={styles.commandSubmit}
-                  disabled={agentRequest.trim() === ''}
+                  disabled={agentRequest.trim() === '' || analyzing}
                 >
                   <img src={commandSubmitIcon} alt="" aria-hidden="true" />
-                  <span>업무 분석</span>
+                  <span>{analyzing ? '분석 중' : '업무 분석'}</span>
                 </button>
               </div>
               <p id="agent-request-hint" className={styles.commandHint}>
                 입력한 원문 그대로 분석합니다 · Enter로 분석 · Shift+Enter로 줄바꿈
               </p>
+              {analysisError && (
+                <p className={styles.commandError} role="alert">
+                  {analysisError}
+                </p>
+              )}
             </form>
           </div>
 

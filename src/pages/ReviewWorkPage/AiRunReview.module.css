@@ -273,6 +273,21 @@
   margin-top: 16px;
 }
 
+.questionLabel {
+  display: block;
+  margin: 12px 0 4px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.questionHelp {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--text-secondary);
+}
+
 .questionInput {
   width: 100%;
   min-height: 42px;

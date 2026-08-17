@@ -73,7 +73,24 @@ function statusPresentation(run: AiRunResponse): {
 }
 
 function inputType(question: AiRunQuestion) {
-  return question.input_type.toUpperCase() === 'DATE' ? 'date' : 'text'
+  const declaredType = question.input_type.toUpperCase()
+  if (question.slot_key === 'due_at' || declaredType === 'DATETIME') return 'datetime-local'
+  if (declaredType === 'DATE' || question.slot_key.endsWith('_date')) return 'date'
+  if (declaredType === 'NUMBER' || declaredType === 'MONEY') return 'number'
+  return 'text'
+}
+
+function questionPresentation(question: AiRunQuestion) {
+  if (question.slot_key === 'due_at') {
+    return {
+      label: '업무 준비 완료 희망일',
+      help: '이 날짜와 시간까지 필요한 정보와 서류 준비를 마칠 예정입니다.',
+    }
+  }
+  return {
+    label: question.label,
+    help: null,
+  }
 }
 
 export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
@@ -397,9 +414,9 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
                 <p className={styles.fieldValue}>{intentLabel(run.detected_intent)}</p>
               </div>
               <div>
-                <p className={styles.fieldLabel}>분석 근거</p>
+                <p className={styles.fieldLabel}>{run.evidence ? '분석 근거' : '판단 기준'}</p>
                 <p className={styles.fieldValue}>
-                  {run.evidence ?? '현재 분석 API에서 제공하지 않음'}
+                  {run.evidence ?? '입력한 요청 전체를 기준으로 분류했습니다.'}
                 </p>
               </div>
             </div>
@@ -408,29 +425,41 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
           {run.analysis_outcome === 'NEEDS_INFO' && (
             <div className={styles.missingCard}>
               <h2 className={styles.missingTitle}>HR이 확인할 정보 {run.questions.length}개</h2>
-              {run.questions.map((question) => (
-                <div key={question.slot_key} className={styles.questionField}>
-                  <label
-                    htmlFor={`ai-question-${question.slot_key}`}
-                    className={styles.missingQuestion}
-                  >
-                    {question.label}
-                    {question.required ? ' *' : ''}
-                  </label>
-                  <input
-                    id={`ai-question-${question.slot_key}`}
-                    type={inputType(question)}
-                    className={styles.questionInput}
-                    value={answers[question.slot_key] ?? ''}
-                    onChange={(event) =>
-                      setAnswers((current) => ({
-                        ...current,
-                        [question.slot_key]: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-              ))}
+              {run.questions.map((question) => {
+                const questionView = questionPresentation(question)
+                const helpId = questionView.help
+                  ? `ai-question-${question.slot_key}-help`
+                  : undefined
+                return (
+                  <div key={question.slot_key} className={styles.questionField}>
+                    <label
+                      htmlFor={`ai-question-${question.slot_key}`}
+                      className={styles.questionLabel}
+                    >
+                      {questionView.label}
+                      {question.required ? ' *' : ''}
+                    </label>
+                    {questionView.help && (
+                      <p id={helpId} className={styles.questionHelp}>
+                        {questionView.help}
+                      </p>
+                    )}
+                    <input
+                      id={`ai-question-${question.slot_key}`}
+                      type={inputType(question)}
+                      className={styles.questionInput}
+                      aria-describedby={helpId}
+                      value={answers[question.slot_key] ?? ''}
+                      onChange={(event) =>
+                        setAnswers((current) => ({
+                          ...current,
+                          [question.slot_key]: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                )
+              })}
               <p className={styles.missingWarning}>
                 답변은 현재 분석 실행에 저장되며 새 분석 시도로 이어집니다.
               </p>
@@ -587,8 +616,7 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
         </p>
       )}
       <p className={styles.footnote}>
-        분석 근거는 API가 실제 근거 데이터를 제공할 때만 표시합니다. 근거 없는 확률 점수는 사용하지
-        않습니다.
+        Agent가 원문에서 실제 근거 구절을 제공한 경우에만 해당 구절을 표시합니다.
       </p>
     </div>
   )

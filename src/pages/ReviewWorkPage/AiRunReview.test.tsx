@@ -122,7 +122,7 @@ function needsInfoRun(): AiRunResponse {
       {
         slot_key: 'due_at',
         label: '신청 목표일을 입력해 주세요.',
-        input_type: 'DATE',
+        input_type: 'TEXT',
         required: true,
         answer: null,
       },
@@ -270,7 +270,7 @@ describe('AiRunReview 분석 근거', () => {
     expect(await screen.findByText('체류만료일이 30일 이내로 확인됨')).toBeInTheDocument()
   })
 
-  it('falls back to a placeholder when the API has no evidence yet', async () => {
+  it('explains that the full request was used when the API has no evidence span', async () => {
     mockCatalogAndWorkers()
     render(
       <MemoryRouter>
@@ -278,7 +278,23 @@ describe('AiRunReview 분석 근거', () => {
       </MemoryRouter>,
     )
 
-    expect(await screen.findByText('현재 분석 API에서 제공하지 않음')).toBeInTheDocument()
+    expect(await screen.findByText('입력한 요청 전체를 기준으로 분류했습니다.')).toBeInTheDocument()
+  })
+})
+
+describe('AiRunReview 추가 정보 입력', () => {
+  it('renders due_at as a user-friendly date and time picker even when Server sends TEXT', () => {
+    render(
+      <MemoryRouter>
+        <AiRunReview initialRun={needsInfoRun()} />
+      </MemoryRouter>,
+    )
+
+    const dueAtInput = screen.getByLabelText('업무 준비 완료 희망일 *')
+    expect(dueAtInput).toHaveAttribute('type', 'datetime-local')
+    expect(
+      screen.getByText('이 날짜와 시간까지 필요한 정보와 서류 준비를 마칠 예정입니다.'),
+    ).toBeInTheDocument()
   })
 })
 
@@ -316,7 +332,7 @@ describe('AiRunReview progress updates', () => {
 
     renderProcessingReview()
 
-    expect(await screen.findByLabelText('신청 목표일을 입력해 주세요. *')).toBeInTheDocument()
+    expect(await screen.findByLabelText('업무 준비 완료 희망일 *')).toBeInTheDocument()
     expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).includes('/events'))).toBe(true)
     expect(
       vi
@@ -344,7 +360,7 @@ describe('AiRunReview progress updates', () => {
     )
     await vi.advanceTimersByTimeAsync(1300)
 
-    expect(await screen.findByLabelText('신청 목표일을 입력해 주세요. *')).toBeInTheDocument()
+    expect(await screen.findByLabelText('업무 준비 완료 희망일 *')).toBeInTheDocument()
   })
 
   it('polls while an SSE connection stays open without delivering an event', async () => {
@@ -361,7 +377,7 @@ describe('AiRunReview progress updates', () => {
 
     await vi.advanceTimersByTimeAsync(1300)
 
-    expect(await screen.findByLabelText('신청 목표일을 입력해 주세요. *')).toBeInTheDocument()
+    expect(await screen.findByLabelText('업무 준비 완료 희망일 *')).toBeInTheDocument()
   })
 
   it('keeps polling when PLAN succeeded but context enrichment is still running', async () => {
@@ -382,6 +398,6 @@ describe('AiRunReview progress updates', () => {
     )
     await vi.advanceTimersByTimeAsync(1300)
 
-    expect(await screen.findByLabelText('신청 목표일을 입력해 주세요. *')).toBeInTheDocument()
+    expect(await screen.findByLabelText('업무 준비 완료 희망일 *')).toBeInTheDocument()
   })
 })

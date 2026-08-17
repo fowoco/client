@@ -42,7 +42,7 @@ describe('ReviewWorkPage', () => {
         {
           slot_key: 'due_at',
           label: '신청 목표일을 입력해 주세요.',
-          input_type: 'DATE',
+          input_type: 'TEXT',
           required: true,
           answer: null,
         },
@@ -55,7 +55,10 @@ describe('ReviewWorkPage', () => {
     renderPage('/tasks/new/review', { aiRun })
 
     expect(screen.getByText(aiRun.instruction)).toBeInTheDocument()
-    expect(screen.getByLabelText('신청 목표일을 입력해 주세요. *')).toBeInTheDocument()
+    expect(screen.getByLabelText('업무 준비 완료 희망일 *')).toHaveAttribute(
+      'type',
+      'datetime-local',
+    )
   })
 
   it('redirects to the request input screen when there is no aiRunId to review', async () => {

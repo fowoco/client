@@ -299,6 +299,29 @@
   box-sizing: border-box;
 }
 
+.dateTimeSelect {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(88px, 1fr)) repeat(2, minmax(76px, 0.8fr));
+  gap: 8px;
+}
+
+.dateTimeSelect select {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 10px;
+  color: var(--text-primary);
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
+  font: inherit;
+}
+
+@media (max-width: 760px) {
+  .dateTimeSelect {
+    grid-template-columns: repeat(3, minmax(72px, 1fr));
+  }
+}
+
 .errorCard {
   padding: var(--fowoco-spacing-20) var(--fowoco-spacing-24);
   background: var(--fowoco-red-50, #fff1f1);

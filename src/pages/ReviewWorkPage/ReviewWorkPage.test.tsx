@@ -55,10 +55,7 @@ describe('ReviewWorkPage', () => {
     renderPage('/tasks/new/review', { aiRun })
 
     expect(screen.getByText(aiRun.instruction)).toBeInTheDocument()
-    expect(screen.getByLabelText('업무 준비 완료 희망일 *')).toHaveAttribute(
-      'type',
-      'datetime-local',
-    )
+    expect(screen.getByRole('group', { name: '업무 준비 완료 희망일 *' })).toBeInTheDocument()
   })
 
   it('redirects to the request input screen when there is no aiRunId to review', async () => {

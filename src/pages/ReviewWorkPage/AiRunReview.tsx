@@ -74,10 +74,139 @@ function statusPresentation(run: AiRunResponse): {
 
 function inputType(question: AiRunQuestion) {
   const declaredType = question.input_type.toUpperCase()
-  if (question.slot_key === 'due_at' || declaredType === 'DATETIME') return 'datetime-local'
+  if (declaredType === 'DATETIME') return 'datetime-local'
   if (declaredType === 'DATE' || question.slot_key.endsWith('_date')) return 'date'
   if (declaredType === 'NUMBER' || declaredType === 'MONEY') return 'number'
   return 'text'
+}
+
+const DEFAULT_DUE_HOUR = 18
+
+function localDateTimeValue(date = new Date()) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}T${String(DEFAULT_DUE_HOUR).padStart(2, '0')}:00`
+}
+
+function normalizeDueAtValue(value?: string | null) {
+  if (!value) return localDateTimeValue()
+  const dateTimeMatch = value.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/)
+  if (dateTimeMatch) return `${dateTimeMatch[1]}T${dateTimeMatch[2]}:${dateTimeMatch[3]}`
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return `${value}T18:00`
+  return localDateTimeValue()
+}
+
+function initialAnswer(question: AiRunQuestion) {
+  if (question.slot_key === 'due_at') return normalizeDueAtValue(question.answer)
+  return question.answer ?? ''
+}
+
+function initialAnswers(questions: AiRunQuestion[]) {
+  return Object.fromEntries(
+    questions.map((question) => [question.slot_key, initialAnswer(question)]),
+  )
+}
+
+interface DueAtSelectProps {
+  value: string
+  labelId: string
+  helpId?: string
+  onChange: (value: string) => void
+}
+
+function DueAtSelect({ value, labelId, helpId, onChange }: DueAtSelectProps) {
+  const normalized = normalizeDueAtValue(value)
+  const [datePart, timePart] = normalized.split('T')
+  const [year, month, day] = datePart.split('-').map(Number)
+  const [hour, minute] = timePart.split(':').map(Number)
+  const currentYear = new Date().getFullYear()
+  const firstYear = Math.min(currentYear, year)
+  const years = Array.from(
+    { length: Math.max(4, year - firstYear + 1) },
+    (_, index) => firstYear + index,
+  )
+  const daysInMonth = new Date(year, month, 0).getDate()
+  const minuteOptions = [0, 30].includes(minute) ? [0, 30] : [0, 30, minute].sort((a, b) => a - b)
+
+  function update(
+    next: Partial<{ year: number; month: number; day: number; hour: number; minute: number }>,
+  ) {
+    const nextYear = next.year ?? year
+    const nextMonth = next.month ?? month
+    const maxDay = new Date(nextYear, nextMonth, 0).getDate()
+    const nextDay = Math.min(next.day ?? day, maxDay)
+    const nextHour = next.hour ?? hour
+    const nextMinute = next.minute ?? minute
+    onChange(
+      `${nextYear}-${String(nextMonth).padStart(2, '0')}-${String(nextDay).padStart(2, '0')}T${String(nextHour).padStart(2, '0')}:${String(nextMinute).padStart(2, '0')}`,
+    )
+  }
+
+  return (
+    <div
+      className={styles.dateTimeSelect}
+      role="group"
+      aria-labelledby={labelId}
+      aria-describedby={helpId}
+    >
+      <select
+        aria-label="업무 준비 완료 희망일 연도"
+        value={year}
+        onChange={(event) => update({ year: Number(event.target.value) })}
+      >
+        {years.map((option) => (
+          <option key={option} value={option}>
+            {option}년
+          </option>
+        ))}
+      </select>
+      <select
+        aria-label="업무 준비 완료 희망일 월"
+        value={month}
+        onChange={(event) => update({ month: Number(event.target.value) })}
+      >
+        {Array.from({ length: 12 }, (_, index) => index + 1).map((option) => (
+          <option key={option} value={option}>
+            {option}월
+          </option>
+        ))}
+      </select>
+      <select
+        aria-label="업무 준비 완료 희망일 일"
+        value={day}
+        onChange={(event) => update({ day: Number(event.target.value) })}
+      >
+        {Array.from({ length: daysInMonth }, (_, index) => index + 1).map((option) => (
+          <option key={option} value={option}>
+            {option}일
+          </option>
+        ))}
+      </select>
+      <select
+        aria-label="업무 준비 완료 희망 시"
+        value={hour}
+        onChange={(event) => update({ hour: Number(event.target.value) })}
+      >
+        {Array.from({ length: 24 }, (_, index) => index).map((option) => (
+          <option key={option} value={option}>
+            {String(option).padStart(2, '0')}시
+          </option>
+        ))}
+      </select>
+      <select
+        aria-label="업무 준비 완료 희망 분"
+        value={minute}
+        onChange={(event) => update({ minute: Number(event.target.value) })}
+      >
+        {minuteOptions.map((option) => (
+          <option key={option} value={option}>
+            {String(option).padStart(2, '0')}분
+          </option>
+        ))}
+      </select>
+    </div>
+  )
 }
 
 function questionPresentation(question: AiRunQuestion) {
@@ -97,9 +226,7 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
   const navigate = useNavigate()
   const [run, setRun] = useState(initialRun)
   const [answers, setAnswers] = useState<Record<string, string>>(() =>
-    Object.fromEntries(
-      initialRun.questions.map((question) => [question.slot_key, question.answer ?? '']),
-    ),
+    initialAnswers(initialRun.questions),
   )
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(() =>
     initialRun.candidates.length === 1 && initialRun.candidates[0].missing_slots.length === 0
@@ -248,11 +375,7 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
   }, [isProcessing, run.ai_run_id])
 
   useEffect(() => {
-    setAnswers(
-      Object.fromEntries(
-        run.questions.map((question) => [question.slot_key, question.answer ?? '']),
-      ),
-    )
+    setAnswers(initialAnswers(run.questions))
   }, [run.questions])
 
   useEffect(() => {
@@ -430,33 +553,46 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
                 const helpId = questionView.help
                   ? `ai-question-${question.slot_key}-help`
                   : undefined
+                const labelId = `ai-question-${question.slot_key}-label`
                 return (
                   <div key={question.slot_key} className={styles.questionField}>
-                    <label
-                      htmlFor={`ai-question-${question.slot_key}`}
-                      className={styles.questionLabel}
-                    >
+                    <p id={labelId} className={styles.questionLabel}>
                       {questionView.label}
                       {question.required ? ' *' : ''}
-                    </label>
+                    </p>
                     {questionView.help && (
                       <p id={helpId} className={styles.questionHelp}>
                         {questionView.help}
                       </p>
                     )}
-                    <input
-                      id={`ai-question-${question.slot_key}`}
-                      type={inputType(question)}
-                      className={styles.questionInput}
-                      aria-describedby={helpId}
-                      value={answers[question.slot_key] ?? ''}
-                      onChange={(event) =>
-                        setAnswers((current) => ({
-                          ...current,
-                          [question.slot_key]: event.target.value,
-                        }))
-                      }
-                    />
+                    {question.slot_key === 'due_at' ? (
+                      <DueAtSelect
+                        value={answers[question.slot_key] ?? ''}
+                        labelId={labelId}
+                        helpId={helpId}
+                        onChange={(value) =>
+                          setAnswers((current) => ({
+                            ...current,
+                            [question.slot_key]: value,
+                          }))
+                        }
+                      />
+                    ) : (
+                      <input
+                        id={`ai-question-${question.slot_key}`}
+                        type={inputType(question)}
+                        className={styles.questionInput}
+                        aria-labelledby={labelId}
+                        aria-describedby={helpId}
+                        value={answers[question.slot_key] ?? ''}
+                        onChange={(event) =>
+                          setAnswers((current) => ({
+                            ...current,
+                            [question.slot_key]: event.target.value,
+                          }))
+                        }
+                      />
+                    )}
                   </div>
                 )
               })}

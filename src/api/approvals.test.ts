@@ -19,11 +19,28 @@ function jsonResponse(body: unknown, status = 200) {
 
 function task(): TaskDetailResponse {
   return {
-    task_id: 'T-1', target_type: 'WORKER', worker_id: 'W-1', case_id: null, task_type: 'STAY_PERIOD_EXTENSION',
-    workflow_id: 'wf-stay', workflow_catalog_version: '3', title: '체류기간 연장', description: '안내',
-    business_data: { office: '수원' }, source: 'MANUAL', status: 'DRAFT', due_date: '2026-08-10',
-    content_revision: 2, version: 7, missing_required_slots: [], checklist_items: [], created_by: 'U-1',
-    updated_by: 'U-1', created_at: '2026-08-01T00:00:00Z', updated_at: '2026-08-01T00:00:00Z',
+    task_id: 'T-1',
+    target_type: 'WORKER',
+    worker_id: 'W-1',
+    case_id: null,
+    task_type: 'STAY_PERIOD_EXTENSION',
+    workflow_id: 'wf-stay',
+    workflow_catalog_version: '3',
+    title: '체류기간 연장',
+    description: '안내',
+    business_data: { office: '수원' },
+    source: 'MANUAL',
+    status: 'DRAFT',
+    due_date: '2026-08-10',
+    assignee: { user_id: 'U-1', display_name: '김현준' },
+    content_revision: 2,
+    version: 7,
+    missing_required_slots: [],
+    checklist_items: [],
+    created_by: 'U-1',
+    updated_by: 'U-1',
+    created_at: '2026-08-01T00:00:00Z',
+    updated_at: '2026-08-01T00:00:00Z',
   }
 }
 
@@ -36,8 +53,14 @@ describe('approval APIs', () => {
       expected_version: 7,
       ai_snapshot: null,
       hr_snapshot: {
-        target_type: 'WORKER', worker_id: 'W-1', task_type: 'STAY_PERIOD_EXTENSION', workflow_id: 'wf-stay',
-        title: '체류기간 연장', description: '안내', due_date: '2026-08-10', business_data: { office: '수원' },
+        target_type: 'WORKER',
+        worker_id: 'W-1',
+        task_type: 'STAY_PERIOD_EXTENSION',
+        workflow_id: 'wf-stay',
+        title: '체류기간 연장',
+        description: '안내',
+        due_date: '2026-08-10',
+        business_data: { office: '수원' },
       },
       changed_fields: ['task_content'],
       source_versions: { workflow_catalog_version: '3', content_revision: 2 },
@@ -45,7 +68,9 @@ describe('approval APIs', () => {
   })
 
   it('uses the approval, decision, external submission, evidence and completion endpoints', async () => {
-    vi.mocked(fetch).mockImplementation(() => Promise.resolve(jsonResponse({ task_id: 'T-1' }, 201)))
+    vi.mocked(fetch).mockImplementation(() =>
+      Promise.resolve(jsonResponse({ task_id: 'T-1' }, 201)),
+    )
 
     await requestTaskApproval('T-1', buildTaskApprovalSnapshot(task()))
     await approveTask('T-1', { expected_version: 8 })

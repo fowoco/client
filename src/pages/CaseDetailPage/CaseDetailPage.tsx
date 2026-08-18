@@ -22,7 +22,14 @@ import {
 } from '../../api/documents'
 import { ApiError, getErrorMessage } from '../../api/errors'
 import { downloadFile } from '../../api/files'
-import { cancelTask, fetchTaskById, updateChecklistItem, type TaskType } from '../../api/tasks'
+import { fetchCompanyMembers, type CompanyMemberItemResponse } from '../../api/settings'
+import {
+  cancelTask,
+  changeTaskAssignee,
+  fetchTaskById,
+  updateChecklistItem,
+  type TaskType,
+} from '../../api/tasks'
 import { fetchWorkerById } from '../../api/workers'
 import {
   adoptWorkerResponseDocuments,
@@ -71,6 +78,7 @@ import {
 } from '../WorkListPage/workInboxPresentation'
 import { ApprovalDecisionModal } from './overlays/ApprovalDecisionModal'
 import { ApprovalRequestModal } from './overlays/ApprovalRequestModal'
+import { AssigneeChangeModal } from './overlays/AssigneeChangeModal'
 import {
   ExternalCompletionModal,
   type ExternalCompletionSubmission,
@@ -246,6 +254,11 @@ export function CaseDetailPage() {
   const [approvalOverlay, setApprovalOverlay] = useState<ApprovalOverlay>('none')
   const [completionOverlay, setCompletionOverlay] = useState<CompletionOverlay>('none')
   const [actionPending, setActionPending] = useState(false)
+  const [assigneeOverlayOpen, setAssigneeOverlayOpen] = useState(false)
+  const [assigneeMembers, setAssigneeMembers] = useState<CompanyMemberItemResponse[]>([])
+  const [assigneeMembersLoading, setAssigneeMembersLoading] = useState(false)
+  const [assigneeSubmitting, setAssigneeSubmitting] = useState(false)
+  const [assigneeErrorMessage, setAssigneeErrorMessage] = useState<string | null>(null)
   const [togglingItemId, setTogglingItemId] = useState<string | null>(null)
   const [linkOverlay, setLinkOverlay] = useState<LinkOverlay>('none')
   const [deliveryConfirmReturn, setDeliveryConfirmReturn] = useState<DeliveryConfirmReturn>('none')
@@ -632,10 +645,48 @@ export function CaseDetailPage() {
     }
   }
 
-  function handleReassignCase() {
-    // TODO(backend): PATCH /api/work-items/:id/assignee -> 담당자 변경 (이슈 #315)
+  async function handleReassignCase() {
     setMoreMenuOpen(false)
-    showToast('담당자 변경은 준비 중입니다.')
+    setAssigneeOverlayOpen(true)
+    setAssigneeMembersLoading(true)
+    setAssigneeErrorMessage(null)
+    try {
+      const response = await fetchCompanyMembers({ activeOnly: true })
+      setAssigneeMembers(
+        response.items.filter((member) =>
+          member.roles?.some((role) => role === 'ADMIN' || role === 'HR'),
+        ),
+      )
+    } catch (error) {
+      setAssigneeMembers([])
+      setAssigneeErrorMessage(
+        error instanceof ApiError ? getErrorMessage(error) : '담당자 목록을 불러오지 못했습니다.',
+      )
+    } finally {
+      setAssigneeMembersLoading(false)
+    }
+  }
+
+  async function handleChangeAssignee(assigneeId: string) {
+    if (!task || assigneeSubmitting) return
+    setAssigneeSubmitting(true)
+    setAssigneeErrorMessage(null)
+    try {
+      const updatedTask = await changeTaskAssignee(task.task_id, {
+        assignee_id: assigneeId,
+        expected_version: task.version,
+      })
+      setAssigneeOverlayOpen(false)
+      refetchTask()
+      refetchActivities()
+      showToast(`${updatedTask.assignee.display_name}님에게 담당 업무를 변경했습니다.`)
+    } catch (error) {
+      setAssigneeErrorMessage(
+        error instanceof ApiError ? getErrorMessage(error) : '담당자를 변경하지 못했습니다.',
+      )
+    } finally {
+      setAssigneeSubmitting(false)
+    }
   }
 
   function handleExpandContext() {
@@ -1032,16 +1083,18 @@ export function CaseDetailPage() {
                   취소
                 </button>
               </li>
-              <li role="presentation">
-                <button
-                  type="button"
-                  role="menuitem"
-                  className={styles.moreMenuItem}
-                  onClick={handleReassignCase}
-                >
-                  담당자 변경
-                </button>
-              </li>
+              {userRole !== 'VIEWER' && (
+                <li role="presentation">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className={styles.moreMenuItem}
+                    onClick={handleReassignCase}
+                  >
+                    담당자 변경
+                  </button>
+                </li>
+              )}
               {canRunRenewal && (
                 <li role="presentation">
                   <button
@@ -1752,6 +1805,18 @@ export function CaseDetailPage() {
         submitting={actionPending}
         onClose={() => setApprovalOverlay('none')}
         onSubmit={handleSubmitApprovalRequest}
+      />
+      <AssigneeChangeModal
+        open={assigneeOverlayOpen}
+        currentAssigneeId={task.assignee.user_id}
+        members={assigneeMembers}
+        loading={assigneeMembersLoading}
+        submitting={assigneeSubmitting}
+        errorMessage={assigneeErrorMessage}
+        onClose={() => {
+          if (!assigneeSubmitting) setAssigneeOverlayOpen(false)
+        }}
+        onSubmit={handleChangeAssignee}
       />
       <ApprovalDecisionModal
         open={approvalOverlay === 'decision'}

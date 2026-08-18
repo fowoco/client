@@ -48,6 +48,7 @@ export interface TaskDetailResponse {
   source: TaskSource
   status: TaskStatus
   due_date: string | null
+  assignee: TaskAssigneeResponse
   content_revision: number
   version: number
   missing_required_slots: string[]
@@ -56,6 +57,11 @@ export interface TaskDetailResponse {
   updated_by: string
   created_at: string
   updated_at: string
+}
+
+export interface TaskAssigneeResponse {
+  user_id: string
+  display_name: string
 }
 
 export interface TaskSummaryResponse {
@@ -145,6 +151,21 @@ export interface UpdateTaskBody {
 
 export function updateTask(taskId: string, body: UpdateTaskBody): Promise<TaskDetailResponse> {
   return apiFetch<TaskDetailResponse>(`/tasks/${encodeURIComponent(taskId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  })
+}
+
+export interface ChangeTaskAssigneeBody {
+  assignee_id: string
+  expected_version: number
+}
+
+export function changeTaskAssignee(
+  taskId: string,
+  body: ChangeTaskAssigneeBody,
+): Promise<TaskDetailResponse> {
+  return apiFetch<TaskDetailResponse>(`/tasks/${encodeURIComponent(taskId)}/assignee`, {
     method: 'PATCH',
     body: JSON.stringify(body),
   })

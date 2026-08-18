@@ -28,7 +28,39 @@
   outline-offset: 2px;
 }
 
+.selectInput {
+  width: 100%;
+  box-sizing: border-box;
+  height: 48px;
+  padding: 0 15px;
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.selectInput:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
+.statusNote,
+.errorNote {
+  margin: var(--fowoco-spacing-12) 0 0;
+  font-size: 12px;
+}
+
+.statusNote {
+  color: var(--text-secondary);
+}
+
+.errorNote {
+  color: var(--status-critical);
+}
+
 .fieldLabel {
+  display: block;
   margin: 0 0 8px;
   font-size: 12px;
   color: var(--text-secondary);

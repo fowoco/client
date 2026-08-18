@@ -56,6 +56,7 @@ function task(overrides: Partial<TaskDetailResponse> = {}): TaskDetailResponse {
     source: 'MANUAL',
     status: 'READY_FOR_REVIEW',
     due_date: '2026-08-01',
+    assignee: { user_id: 'U-1', display_name: '김현준' },
     content_revision: 1,
     version: 1,
     missing_required_slots: [],
@@ -188,6 +189,22 @@ function mockTaskAndActivities(
   let currentDocumentRequestDraft = savedDocumentRequestDraft
   vi.mocked(fetch).mockImplementation((input, init) => {
     const url = String(input)
+    if (url.includes('/company-members')) {
+      return Promise.resolve(
+        jsonResponse({
+          items: [
+            { user_id: 'U-1', display_name: '김현준', roles: ['HR'], active: true },
+            { user_id: 'U-2', display_name: '김채린', roles: ['HR'], active: true },
+            { user_id: 'U-3', display_name: '조회 전용', roles: ['VIEWER'], active: true },
+          ],
+        }),
+      )
+    }
+    if (url.endsWith('/tasks/T-1/assignee')) {
+      return Promise.resolve(
+        jsonResponse(task({ assignee: { user_id: 'U-2', display_name: '김채린' }, version: 2 })),
+      )
+    }
     if (url.includes('/activities')) return Promise.resolve(jsonResponse(activities))
     if (url.includes('/workers/W-1')) {
       return Promise.resolve(
@@ -1140,7 +1157,7 @@ describe('CaseDetailPage', () => {
     expect(screen.getByRole('dialog', { name: 'Renewal Agent 실행' })).toBeInTheDocument()
   })
 
-  it('shows a toast when the assignee change action is clicked', async () => {
+  it('changes the task assignee from the more menu', async () => {
     const user = userEvent.setup()
     mockTaskAndActivities()
     renderPage()
@@ -1149,8 +1166,25 @@ describe('CaseDetailPage', () => {
     await user.click(screen.getByRole('button', { name: '더보기 ···' }))
     await user.click(screen.getByRole('menuitem', { name: '담당자 변경' }))
 
-    expect(screen.getByText('담당자 변경은 준비 중입니다.')).toBeInTheDocument()
+    const dialog = await screen.findByRole('dialog', { name: '담당자 변경' })
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    expect(within(dialog).queryByRole('option', { name: /조회 전용/ })).not.toBeInTheDocument()
+    await user.selectOptions(within(dialog).getByLabelText('새 담당자'), 'U-2')
+    await user.click(within(dialog).getByRole('button', { name: '담당자 변경' }))
+
+    const changeCall = await waitFor(() => {
+      const call = vi
+        .mocked(fetch)
+        .mock.calls.find(([url]) => String(url).endsWith('/tasks/T-1/assignee'))
+      expect(call).toBeDefined()
+      return call!
+    })
+    expect(changeCall[1]?.method).toBe('PATCH')
+    expect(JSON.parse(changeCall[1]?.body as string)).toEqual({
+      assignee_id: 'U-2',
+      expected_version: 1,
+    })
+    expect(await screen.findByText('김채린님에게 담당 업무를 변경했습니다.')).toBeInTheDocument()
   })
 
   it('cancels the task via the more menu when a reason is entered', async () => {

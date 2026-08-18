@@ -42,10 +42,18 @@ const STATUS_FILTER_OPTIONS: { value: WorkerStatusFilter; label: string }[] = [
 ]
 
 function computeWorkerStatus(tasks: TaskSummaryResponse[]): Exclude<WorkerStatusFilter, 'all'> {
-  if (tasks.some((task) => task.status === 'READY_FOR_REVIEW' || task.status === 'WAITING_WORKER' || task.status === 'WAITING_EXTERNAL')) {
+  if (
+    tasks.some(
+      (task) =>
+        task.status === 'READY_FOR_REVIEW' ||
+        task.status === 'WAITING_WORKER' ||
+        task.status === 'WAITING_EXTERNAL',
+    )
+  ) {
     return 'needs-review'
   }
-  if (tasks.some((task) => task.status === 'DRAFT' || task.status === 'NEEDS_INFO')) return 'ai-suggested'
+  if (tasks.some((task) => task.status === 'DRAFT' || task.status === 'NEEDS_INFO'))
+    return 'ai-suggested'
   return 'done'
 }
 
@@ -75,7 +83,11 @@ function visaTypeLabel(worker: WorkerResponse): string {
 function toRow(worker: WorkerResponse) {
   const deadlineDays = daysUntil(worker.stay_expiry_date)
   const expiry = getOperationalDateViewModel('STAY_EXPIRY', worker.stay_expiry_date)
-  const label = expiry.missing ? expiry.display : `${expiry.relative} 체류만료`
+  const label = expiry.missing
+    ? expiry.display
+    : expiry.expired
+      ? `기록상 ${expiry.relative} 경과 · 긴급 확인`
+      : `${expiry.relative} 체류만료`
   return { worker, deadlineDays, label }
 }
 
@@ -118,14 +130,15 @@ export function WorkerListPage() {
       .sort((a, b) => (a.deadlineDays ?? Infinity) - (b.deadlineDays ?? Infinity))
   }, [data])
 
-  const isDefaultView = debouncedQuery.trim() === '' && deadlineFilter === '90' && statusFilter === 'all'
+  const isDefaultView =
+    debouncedQuery.trim() === '' && deadlineFilter === '90' && statusFilter === 'all'
 
   const filteredRows = useMemo(() => {
     const normalized = debouncedQuery.trim().toLowerCase()
     return rows.filter((row) => {
-      const matchesQuery =
-        !normalized || row.worker.display_name.toLowerCase().includes(normalized)
-      const matchesDeadline = row.deadlineDays === null || row.deadlineDays <= Number(deadlineFilter)
+      const matchesQuery = !normalized || row.worker.display_name.toLowerCase().includes(normalized)
+      const matchesDeadline =
+        row.deadlineDays === null || row.deadlineDays <= Number(deadlineFilter)
       const matchesStatus =
         statusFilter === 'all' ||
         computeWorkerStatus(tasksByWorker.get(row.worker.worker_id) ?? []) === statusFilter
@@ -133,15 +146,22 @@ export function WorkerListPage() {
     })
   }, [rows, debouncedQuery, deadlineFilter, statusFilter, tasksByWorker])
 
-  const visibleRows = isDefaultView && !showAll ? filteredRows.slice(0, PRIORITY_COUNT) : filteredRows
+  const visibleRows =
+    isDefaultView && !showAll ? filteredRows.slice(0, PRIORITY_COUNT) : filteredRows
 
   const selectedRow = rows.find((row) => row.worker.worker_id === workerId) ?? rows[0]
-  const selectedDeadlineTier = selectedRow ? getUrgencyTier(selectedRow.deadlineDays) : 'comfortable'
+  const selectedDeadlineTier = selectedRow
+    ? getUrgencyTier(selectedRow.deadlineDays)
+    : 'comfortable'
 
-  const selectedWorkerTasks = selectedRow ? tasksByWorker.get(selectedRow.worker.worker_id) ?? [] : []
+  const selectedWorkerTasks = selectedRow
+    ? (tasksByWorker.get(selectedRow.worker.worker_id) ?? [])
+    : []
   const draftTask = selectedWorkerTasks.find((task) => task.status === 'DRAFT') ?? null
   const waitingTask =
-    selectedWorkerTasks.find((task) => task.status === 'WAITING_WORKER' || task.status === 'WAITING_EXTERNAL') ?? null
+    selectedWorkerTasks.find(
+      (task) => task.status === 'WAITING_WORKER' || task.status === 'WAITING_EXTERNAL',
+    ) ?? null
   const primaryTask =
     selectedWorkerTasks.find((task) => task.status === 'READY_FOR_REVIEW') ??
     draftTask ??
@@ -177,7 +197,12 @@ export function WorkerListPage() {
       </p>
 
       <div className={styles.toolbar}>
-        <SearchInput value={query} onChange={setQuery} placeholder="이름 검색" ariaLabel="근로자 검색" />
+        <SearchInput
+          value={query}
+          onChange={setQuery}
+          placeholder="이름 검색"
+          ariaLabel="근로자 검색"
+        />
         <Dropdown
           options={STATUS_FILTER_OPTIONS}
           value={statusFilter}
@@ -219,7 +244,11 @@ export function WorkerListPage() {
 
       {status === 'empty' && (
         <div className={styles.stateWrap}>
-          <EmptyState kind="empty" title="등록된 근로자가 없습니다" body="근로자를 등록하면 여기에 표시됩니다." />
+          <EmptyState
+            kind="empty"
+            title="등록된 근로자가 없습니다"
+            body="근로자를 등록하면 여기에 표시됩니다."
+          />
         </div>
       )}
 
@@ -229,8 +258,8 @@ export function WorkerListPage() {
             <p className={styles.listHeader}>근로자 {data?.total_elements ?? rows.length}명</p>
             {data && data.total_elements > data.items.length && (
               <p className={styles.capNotice}>
-                전체 {data.total_elements}명 중 {data.items.length}명만 불러왔습니다. 찾는 근로자가 안 보이면
-                검색어를 바꿔보세요.
+                전체 {data.total_elements}명 중 {data.items.length}명만 불러왔습니다. 찾는 근로자가
+                안 보이면 검색어를 바꿔보세요.
               </p>
             )}
 
@@ -248,10 +277,15 @@ export function WorkerListPage() {
                   key={row.worker.worker_id}
                   type="button"
                   className={`${styles.workerRow} ${
-                    row.worker.worker_id === selectedRow.worker.worker_id ? styles.workerRowActive : ''
+                    row.worker.worker_id === selectedRow.worker.worker_id
+                      ? styles.workerRowActive
+                      : ''
                   }`}
                   onClick={() =>
-                    navigate({ pathname: `/workers/${row.worker.worker_id}`, search: location.search })
+                    navigate({
+                      pathname: `/workers/${row.worker.worker_id}`,
+                      search: location.search,
+                    })
                   }
                 >
                   <div className={styles.workerRowTop}>
@@ -282,11 +316,14 @@ export function WorkerListPage() {
             <div className={styles.detailHeader}>
               <h2 className={styles.detailName}>{selectedRow.worker.display_name}</h2>
               {selectedDeadlineTier !== 'comfortable' && (
-                <StatusLabel tone={URGENCY_TONE[selectedDeadlineTier]}>{selectedRow.label}</StatusLabel>
+                <StatusLabel tone={URGENCY_TONE[selectedDeadlineTier]}>
+                  {selectedRow.label}
+                </StatusLabel>
               )}
             </div>
             <p className={styles.detailMeta}>
-              {selectedRow.worker.nationality_code} · {visaTypeLabel(selectedRow.worker)} | 연락처·사번 준비 중
+              {selectedRow.worker.nationality_code} · {visaTypeLabel(selectedRow.worker)} |
+              연락처·사번 준비 중
             </p>
 
             <hr className={styles.divider} />
@@ -303,7 +340,9 @@ export function WorkerListPage() {
                         <p className={styles.aiCardTitle}>{draftTask.title}</p>
                         <p className={styles.aiCardMeta}>AI 준비 완료 · HR 검토 필요</p>
                       </div>
-                      <Button onClick={() => navigate(`/tasks/${draftTask.task_id}`)}>초안 검토</Button>
+                      <Button onClick={() => navigate(`/tasks/${draftTask.task_id}`)}>
+                        초안 검토
+                      </Button>
                     </div>
                   )}
                   {waitingTask && (
@@ -312,7 +351,10 @@ export function WorkerListPage() {
                         <p className={styles.aiCardTitle}>{waitingTask.title}</p>
                         <p className={styles.aiCardMeta}>근로자 응답 대기 · HR 확인</p>
                       </div>
-                      <Button variant="secondary" onClick={() => navigate(`/tasks/${waitingTask.task_id}`)}>
+                      <Button
+                        variant="secondary"
+                        onClick={() => navigate(`/tasks/${waitingTask.task_id}`)}
+                      >
                         문서 확인
                       </Button>
                     </div>
@@ -335,7 +377,9 @@ export function WorkerListPage() {
                     onClick={() => navigate(`/tasks/${task.task_id}`)}
                   >
                     <span className={styles.currentTaskTitle}>{task.title}</span>
-                    <span className={styles.currentTaskStatus}>{TASK_STATUS_LABEL[task.status]}</span>
+                    <span className={styles.currentTaskStatus}>
+                      {TASK_STATUS_LABEL[task.status]}
+                    </span>
                   </button>
                 ))}
               </div>

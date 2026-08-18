@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { fetchWorkerActivities, type WorkerActivityType } from '../../api/audit'
 import { fetchDocuments } from '../../api/documents'
 import { fetchTasks } from '../../api/tasks'
 import { fetchWorkerById } from '../../api/workers'
@@ -10,11 +11,19 @@ import { StatusLabel } from '../../components/ui/StatusLabel/StatusLabel'
 import { WorkerFormModal } from '../../components/worker/WorkerFormModal'
 import { useApiQuery } from '../../hooks/useApiQuery'
 import { TASK_STATUS_LABEL, TASK_STATUS_TONE } from '../../utils/taskStatus'
+import { formatEventTime } from '../../utils/datetime'
 import { getDocumentViewModel } from '../../view-models/documentViewModel'
 import { getOperationalDateViewModel } from '../../view-models/dateViewModel'
 import { RegisterDocumentModal } from './overlays/RegisterDocumentModal'
 import { StayVerificationModal } from './overlays/StayVerificationModal'
 import styles from './WorkerDetailPage.module.css'
+
+const WORKER_ACTIVITY_LABEL: Record<WorkerActivityType, string> = {
+  GUIDANCE_SENT: '안내 전송',
+  GUIDANCE_OPENED: '근로자 확인',
+  WORKER_RESPONSE_SUBMITTED: '근로자 응답',
+  RESPONSE_REVIEWED: '담당자 확인',
+}
 
 export function WorkerDetailPage() {
   const { workerId } = useParams()
@@ -31,6 +40,17 @@ export function WorkerDetailPage() {
     useCallback(() => fetchTasks({ workerId: workerId ?? '', size: 20 }), [workerId]),
   )
   const workerTasks = taskPage?.items ?? []
+
+  const {
+    status: activityStatus,
+    data: activityPage,
+    error: activityError,
+    refetch: refetchActivities,
+  } = useApiQuery(
+    useCallback(() => fetchWorkerActivities(workerId ?? '', undefined, 20), [workerId]),
+    useCallback((page: { items: unknown[] }) => page.items.length === 0, []),
+  )
+  const workerActivities = activityPage?.items ?? []
 
   const [registerModalOpen, setRegisterModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
@@ -175,12 +195,49 @@ export function WorkerDetailPage() {
 
       <div className={styles.sectionCard}>
         <h2 className={styles.cardTitle}>안내이력</h2>
-        {/* TODO(#156): Audit API 연동 후 실제 활동 이력으로 대체 */}
-        <EmptyState
-          kind="empty"
-          title="안내이력 연동 준비 중입니다"
-          body="Audit API 연동 후 표시됩니다."
-        />
+        {activityStatus === 'loading' && (
+          <EmptyState
+            kind="loading"
+            title="안내이력을 불러오는 중입니다"
+            body="근로자에게 전달한 안내와 회신 기록을 확인하고 있습니다."
+          />
+        )}
+        {activityStatus === 'error' && (
+          <EmptyState
+            kind="error"
+            title="안내이력을 불러오지 못했습니다"
+            body={activityError ? getErrorMessage(activityError) : '잠시 후 다시 시도해 주세요.'}
+            actionLabel="다시 시도"
+            onAction={refetchActivities}
+          />
+        )}
+        {activityStatus === 'empty' && (
+          <EmptyState
+            kind="empty"
+            title="안내이력이 없습니다"
+            body="안내를 보내거나 근로자가 응답하면 시간순으로 표시됩니다."
+          />
+        )}
+        {activityStatus === 'success' && (
+          <ol className={styles.activityList}>
+            {workerActivities.map((activity) => (
+              <li key={activity.activity_id} className={styles.activityRow}>
+                <div className={styles.activityMain}>
+                  <span className={styles.activityType}>
+                    {WORKER_ACTIVITY_LABEL[activity.type]}
+                  </span>
+                  <span className={styles.activitySummary}>{activity.summary}</span>
+                  <Link to={`/tasks/${activity.task_id}`} className={styles.activityTaskLink}>
+                    {activity.task_title}
+                  </Link>
+                </div>
+                <time className={styles.activityTime} dateTime={activity.occurred_at}>
+                  {formatEventTime(activity.occurred_at)}
+                </time>
+              </li>
+            ))}
+          </ol>
+        )}
       </div>
 
       <div className={styles.sectionCard}>

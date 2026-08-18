@@ -64,9 +64,38 @@ export interface AuditPageResponse {
   next_cursor: string | null
 }
 
+export type WorkerActivityType =
+  'GUIDANCE_SENT' | 'GUIDANCE_OPENED' | 'WORKER_RESPONSE_SUBMITTED' | 'RESPONSE_REVIEWED'
+
+export interface WorkerActivityResponse {
+  activity_id: string
+  type: WorkerActivityType
+  task_id: string
+  task_title: string
+  summary: string
+  occurred_at: string
+}
+
+export interface WorkerActivityPageResponse {
+  items: WorkerActivityResponse[]
+  next_cursor: string | null
+}
+
 // GET /api/v1/tasks/{taskId}/activities — VIEWER도 조회 가능한 화면용 안전 타임라인.
 export function fetchTaskActivities(taskId: string): Promise<AuditEventResponse[]> {
   return apiFetch<AuditEventResponse[]>(`/tasks/${encodeURIComponent(taskId)}/activities`)
+}
+
+export function fetchWorkerActivities(
+  workerId: string,
+  cursor?: string,
+  limit = 20,
+): Promise<WorkerActivityPageResponse> {
+  const query = new URLSearchParams({ limit: String(limit) })
+  if (cursor) query.set('cursor', cursor)
+  return apiFetch<WorkerActivityPageResponse>(
+    `/workers/${encodeURIComponent(workerId)}/activities?${query.toString()}`,
+  )
 }
 
 export interface FetchAuditEventsParams {

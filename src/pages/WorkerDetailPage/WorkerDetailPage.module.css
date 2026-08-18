@@ -125,3 +125,79 @@
   font-size: 12px;
   color: var(--text-secondary);
 }
+
+.activityList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.activityRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 14px 0;
+  border-top: 1px solid var(--border-default);
+}
+
+.activityRow:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.activityMain {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 4px 12px;
+  min-width: 0;
+}
+
+.activityType {
+  grid-row: span 2;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--brand-primary);
+}
+
+.activitySummary {
+  min-width: 0;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.activityTaskLink {
+  width: fit-content;
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.activityTaskLink:hover {
+  color: var(--brand-primary);
+  text-decoration: underline;
+}
+
+.activityTime {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+@media (max-width: 640px) {
+  .activityRow {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .activityMain {
+    grid-template-columns: 1fr;
+  }
+
+  .activityType {
+    grid-row: auto;
+  }
+}

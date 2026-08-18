@@ -122,7 +122,7 @@ function needsInfoRun(): AiRunResponse {
       {
         slot_key: 'due_at',
         label: '신청 목표일을 입력해 주세요.',
-        input_type: 'DATE',
+        input_type: 'TEXT',
         required: true,
         answer: null,
       },
@@ -270,7 +270,7 @@ describe('AiRunReview 분석 근거', () => {
     expect(await screen.findByText('체류만료일이 30일 이내로 확인됨')).toBeInTheDocument()
   })
 
-  it('falls back to a placeholder when the API has no evidence yet', async () => {
+  it('does not render an evidence field when the API has no evidence span', async () => {
     mockCatalogAndWorkers()
     render(
       <MemoryRouter>
@@ -278,7 +278,114 @@ describe('AiRunReview 분석 근거', () => {
       </MemoryRouter>,
     )
 
-    expect(await screen.findByText('현재 분석 API에서 제공하지 않음')).toBeInTheDocument()
+    expect((await screen.findAllByText('요청 유형')).length).toBeGreaterThan(0)
+    expect(screen.queryByText('판단 기준')).not.toBeInTheDocument()
+    expect(screen.queryByText('입력한 요청 전체를 기준으로 분류했습니다.')).not.toBeInTheDocument()
+  })
+})
+
+describe('AiRunReview 실패 안내', () => {
+  it('explains how to recover when the worker target is not found', () => {
+    render(
+      <MemoryRouter>
+        <AiRunReview
+          initialRun={{
+            ...RUN,
+            status: 'FAILED',
+            analysis_outcome: null,
+            error_code: 'TARGET_NOT_FOUND',
+            candidates: [],
+          }}
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getAllByText('근로자를 찾지 못했습니다.').length).toBeGreaterThan(0)
+    expect(
+      screen.getAllByText(
+        '등록된 정확한 이름으로 요청을 수정하거나 근로자 목록에서 이름을 확인해 주세요.',
+      ).length,
+    ).toBeGreaterThan(0)
+    expect(screen.getByText(/참고 코드: TARGET_NOT_FOUND/)).toBeInTheDocument()
+    expect(screen.queryByText('분석을 계속할 수 없습니다')).not.toBeInTheDocument()
+  })
+})
+
+describe('AiRunReview 추가 정보 입력', () => {
+  it('renders due_at as year, month, day and time dropdowns defaulted to today', () => {
+    render(
+      <MemoryRouter>
+        <AiRunReview initialRun={needsInfoRun()} />
+      </MemoryRouter>,
+    )
+
+    const today = new Date()
+    expect(screen.getByRole('group', { name: '업무 준비 완료 희망일 *' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: '업무 준비 완료 희망일 연도' })).toHaveValue(
+      String(today.getFullYear()),
+    )
+    expect(screen.getByRole('combobox', { name: '업무 준비 완료 희망일 월' })).toHaveValue(
+      String(today.getMonth() + 1),
+    )
+    expect(screen.getByRole('combobox', { name: '업무 준비 완료 희망일 일' })).toHaveValue(
+      String(today.getDate()),
+    )
+    expect(screen.getByRole('combobox', { name: '업무 준비 완료 희망 시' })).toHaveValue('18')
+    expect(screen.getByRole('combobox', { name: '업무 준비 완료 희망 분' })).toHaveValue('0')
+    expect(
+      screen.getByText('이 날짜와 시간까지 필요한 정보와 서류 준비를 마칠 예정입니다.'),
+    ).toBeInTheDocument()
+  })
+
+  it('combines dropdown selections into the Server due_at answer format', async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(needsInfoRun()))
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter>
+        <AiRunReview initialRun={needsInfoRun()} />
+      </MemoryRouter>,
+    )
+
+    const nextYear = new Date().getFullYear() + 1
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: '업무 준비 완료 희망일 연도' }),
+      String(nextYear),
+    )
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: '업무 준비 완료 희망일 월' }),
+      '12',
+    )
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: '업무 준비 완료 희망일 일' }),
+      '20',
+    )
+    await user.selectOptions(screen.getByRole('combobox', { name: '업무 준비 완료 희망 시' }), '17')
+    await user.selectOptions(screen.getByRole('combobox', { name: '업무 준비 완료 희망 분' }), '30')
+    await user.click(screen.getByRole('button', { name: '답변하고 다시 분석' }))
+
+    const answerCall = vi
+      .mocked(fetch)
+      .mock.calls.find(([input]) => String(input).includes('/answers'))
+    expect(JSON.parse(String(answerCall?.[1]?.body))).toEqual({
+      expected_version: 2,
+      answers: { due_at: `${nextYear}-12-20T17:30` },
+    })
+  })
+
+  it('restores a date-only Server answer without replacing it with today', () => {
+    const run = needsInfoRun()
+    run.questions[0] = { ...run.questions[0], answer: '2027-02-03' }
+
+    render(
+      <MemoryRouter>
+        <AiRunReview initialRun={run} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('combobox', { name: '업무 준비 완료 희망일 연도' })).toHaveValue('2027')
+    expect(screen.getByRole('combobox', { name: '업무 준비 완료 희망일 월' })).toHaveValue('2')
+    expect(screen.getByRole('combobox', { name: '업무 준비 완료 희망일 일' })).toHaveValue('3')
+    expect(screen.getByRole('combobox', { name: '업무 준비 완료 희망 시' })).toHaveValue('18')
   })
 })
 
@@ -316,7 +423,7 @@ describe('AiRunReview progress updates', () => {
 
     renderProcessingReview()
 
-    expect(await screen.findByLabelText('신청 목표일을 입력해 주세요. *')).toBeInTheDocument()
+    expect(await screen.findByLabelText('업무 준비 완료 희망일 *')).toBeInTheDocument()
     expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).includes('/events'))).toBe(true)
     expect(
       vi
@@ -344,7 +451,7 @@ describe('AiRunReview progress updates', () => {
     )
     await vi.advanceTimersByTimeAsync(1300)
 
-    expect(await screen.findByLabelText('신청 목표일을 입력해 주세요. *')).toBeInTheDocument()
+    expect(await screen.findByLabelText('업무 준비 완료 희망일 *')).toBeInTheDocument()
   })
 
   it('polls while an SSE connection stays open without delivering an event', async () => {
@@ -361,7 +468,7 @@ describe('AiRunReview progress updates', () => {
 
     await vi.advanceTimersByTimeAsync(1300)
 
-    expect(await screen.findByLabelText('신청 목표일을 입력해 주세요. *')).toBeInTheDocument()
+    expect(await screen.findByLabelText('업무 준비 완료 희망일 *')).toBeInTheDocument()
   })
 
   it('keeps polling when PLAN succeeded but context enrichment is still running', async () => {
@@ -382,6 +489,6 @@ describe('AiRunReview progress updates', () => {
     )
     await vi.advanceTimersByTimeAsync(1300)
 
-    expect(await screen.findByLabelText('신청 목표일을 입력해 주세요. *')).toBeInTheDocument()
+    expect(await screen.findByLabelText('업무 준비 완료 희망일 *')).toBeInTheDocument()
   })
 })

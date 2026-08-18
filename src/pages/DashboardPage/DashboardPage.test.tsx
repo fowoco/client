@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DashboardTodayResponse } from '../../api/dashboard'
+import type { AiRunResponse } from '../../api/aiRuns'
 import { DashboardTodayProvider } from '../../components/layout/DashboardTodayProvider'
 import { DashboardPage } from './DashboardPage'
 import { AI_REQUEST_PROMPT_CHIPS } from './dashboardData'
@@ -103,10 +104,10 @@ function WorkerDetailProbe() {
   return <p>근로자 상세 {workerId}</p>
 }
 
-function WorkCreateProbe() {
+function WorkReviewProbe() {
   const location = useLocation()
-  const prefill = (location.state as { prefill?: string } | null)?.prefill
-  return <p>업무 생성 {prefill}</p>
+  const state = location.state as { draft?: { request?: string } } | null
+  return <p>{`업무 검토 ${state?.draft?.request ?? ''}${location.search}`}</p>
 }
 
 function WorkListProbe() {
@@ -120,7 +121,7 @@ function renderPage() {
       <DashboardTodayProvider>
         <Routes>
           <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/tasks/new" element={<WorkCreateProbe />} />
+          <Route path="/tasks/new/review" element={<WorkReviewProbe />} />
           <Route path="/tasks" element={<WorkListProbe />} />
           <Route path="/tasks/:taskId" element={<TaskDetailProbe />} />
           <Route path="/workers/:workerId/detail" element={<WorkerDetailProbe />} />
@@ -130,6 +131,23 @@ function renderPage() {
   )
 }
 
+const AI_RUN_RESPONSE: AiRunResponse = {
+  ai_run_id: 'AI-RUN-1',
+  request_id: 'REQUEST-1',
+  instruction: '응웬반A 체류기간 연장 준비',
+  status: 'SUCCEEDED',
+  analysis_outcome: 'CONTEXT_REQUIRED',
+  detected_intent: 'EXPIRY_RENEWAL',
+  evidence: null,
+  error_code: null,
+  attempt_count: 1,
+  version: 1,
+  questions: [],
+  candidates: [],
+  created_at: '2026-08-18T00:00:00Z',
+  updated_at: '2026-08-18T00:00:00Z',
+}
+
 beforeEach(() => {
   vi.stubGlobal(
     'fetch',
@@ -137,6 +155,9 @@ beforeEach(() => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
       if (url.includes('/workers')) {
         return Promise.resolve(jsonResponse({ items: [], page: 0, size: 100, total_elements: 0 }))
+      }
+      if (url.includes('/ai-runs')) {
+        return Promise.resolve(jsonResponse(AI_RUN_RESPONSE))
       }
       return Promise.resolve(jsonResponse(TODAY_RESPONSE))
     }),
@@ -307,7 +328,7 @@ describe('DashboardPage', () => {
     expect((await screen.findAllByText('응웬반A 체류연장 요청문')).length).toBeGreaterThan(0)
   })
 
-  it('fills the input from a prompt chip and forwards it on submit', async () => {
+  it('fills the input from a prompt chip and starts analysis with one submit', async () => {
     const user = userEvent.setup()
     renderPage()
 
@@ -318,7 +339,14 @@ describe('DashboardPage', () => {
 
     await user.click(screen.getByRole('button', { name: '업무 분석' }))
 
-    expect(await screen.findByText(`업무 생성 ${AI_REQUEST_PROMPT_CHIPS[0]}`)).toBeInTheDocument()
+    expect(
+      await screen.findByText(`업무 검토 ${AI_REQUEST_PROMPT_CHIPS[0]}?aiRunId=AI-RUN-1`),
+    ).toBeInTheDocument()
+    const aiRunCall = vi
+      .mocked(fetch)
+      .mock.calls.find(([input]) => String(input).includes('/ai-runs'))
+    expect(aiRunCall?.[1]).toMatchObject({ method: 'POST' })
+    expect(aiRunCall?.[1]?.body).toBe(JSON.stringify({ instruction: AI_REQUEST_PROMPT_CHIPS[0] }))
   })
 
   it('accepts a natural-language request directly and submits it with Enter', async () => {
@@ -328,6 +356,36 @@ describe('DashboardPage', () => {
     const requestInput = await screen.findByRole('textbox', { name: '업무 내용' })
     await user.type(requestInput, '응웬반A 체류기간 연장 준비{Enter}')
 
-    expect(await screen.findByText('업무 생성 응웬반A 체류기간 연장 준비')).toBeInTheDocument()
+    expect(
+      await screen.findByText('업무 검토 응웬반A 체류기간 연장 준비?aiRunId=AI-RUN-1'),
+    ).toBeInTheDocument()
+  })
+
+  it('shows an API error without leaving the dashboard', async () => {
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+      if (url.includes('/workers')) {
+        return Promise.resolve(jsonResponse({ items: [], page: 0, size: 100, total_elements: 0 }))
+      }
+      if (url.includes('/ai-runs')) {
+        return Promise.resolve(
+          jsonResponse(
+            { code: 'AI_UNAVAILABLE', message: 'AI 분석 서비스를 사용할 수 없습니다.' },
+            { status: 503 },
+          ),
+        )
+      }
+      return Promise.resolve(jsonResponse(TODAY_RESPONSE))
+    })
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.type(await screen.findByRole('textbox', { name: '업무 내용' }), '체류연장 준비')
+    await user.click(screen.getByRole('button', { name: '업무 분석' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'AI 분석 서비스를 사용할 수 없습니다.',
+    )
+    expect(screen.getByRole('heading', { name: '오늘의 업무를 확인하세요.' })).toBeInTheDocument()
   })
 })

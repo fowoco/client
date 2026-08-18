@@ -187,9 +187,17 @@
   margin-top: 16px;
 }
 
+.fieldGridSingle {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
 @media (max-width: 560px) {
   .fieldGrid,
-  .fieldGridTwo {
+  .fieldGridTwo,
+  .fieldGridSingle {
     grid-template-columns: 1fr;
   }
 }
@@ -273,6 +281,21 @@
   margin-top: 16px;
 }
 
+.questionLabel {
+  display: block;
+  margin: 12px 0 4px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.questionHelp {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--text-secondary);
+}
+
 .questionInput {
   width: 100%;
   min-height: 42px;
@@ -282,6 +305,29 @@
   border: 1px solid var(--border-default);
   border-radius: var(--fowoco-radius-6);
   box-sizing: border-box;
+}
+
+.dateTimeSelect {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(88px, 1fr)) repeat(2, minmax(76px, 0.8fr));
+  gap: 8px;
+}
+
+.dateTimeSelect select {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 10px;
+  color: var(--text-primary);
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
+  font: inherit;
+}
+
+@media (max-width: 760px) {
+  .dateTimeSelect {
+    grid-template-columns: repeat(3, minmax(72px, 1fr));
+  }
 }
 
 .errorCard {

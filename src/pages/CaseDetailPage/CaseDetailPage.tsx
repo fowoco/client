@@ -1155,6 +1155,15 @@ export function CaseDetailPage() {
                   })}
                 </div>
               )}
+              {!checklistReady && (
+                <Button
+                  variant="secondary"
+                  className={styles.workflowAction}
+                  onClick={() => setActiveTab('체크리스트')}
+                >
+                  필수 항목 확인하기
+                </Button>
+              )}
               {approvalReady && workerGuideReady && (
                 <button
                   type="button"

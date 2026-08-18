@@ -28,15 +28,77 @@ interface AiRunReviewProps {
   initialDraft?: WorkRequestDraft | null
 }
 
+interface FailurePresentation {
+  title: string
+  description: string
+}
+
+function failurePresentation(errorCode: string | null): FailurePresentation {
+  switch (errorCode) {
+    case 'TARGET_NOT_FOUND':
+      return {
+        title: '근로자를 찾지 못했습니다.',
+        description:
+          '등록된 정확한 이름으로 요청을 수정하거나 근로자 목록에서 이름을 확인해 주세요.',
+      }
+    case 'TARGET_AMBIGUOUS':
+      return {
+        title: '근로자를 한 명으로 특정할 수 없습니다.',
+        description: '같은 이름의 근로자가 있을 수 있습니다. 더 구체적인 이름으로 요청해 주세요.',
+      }
+    case 'UNSUPPORTED_INTENT':
+      return {
+        title: '아직 지원하지 않는 업무 요청입니다.',
+        description: '체류기간 연장 등 현재 지원하는 업무로 요청을 수정해 주세요.',
+      }
+    case 'CONTEXT_ROUND_LIMIT':
+      return {
+        title: '필요한 정보 확인을 마치지 못했습니다.',
+        description: '요청 내용을 조금 더 구체적으로 작성한 뒤 다시 분석해 주세요.',
+      }
+    case 'TARGET_CHANGED':
+      return {
+        title: '분석 중 근로자 정보가 변경되었습니다.',
+        description: '최신 근로자 정보를 확인한 뒤 같은 요청을 다시 분석해 주세요.',
+      }
+    case 'RUNTIME_DISABLED':
+    case 'RUNTIME_UNAVAILABLE':
+    case 'TRANSPORT_FAILURE':
+    case 'DEADLINE_EXCEEDED':
+    case 'CIRCUIT_OPEN':
+    case 'BULKHEAD_FULL':
+      return {
+        title: 'Agent에 일시적으로 연결할 수 없습니다.',
+        description: '잠시 후 같은 요청을 다시 분석해 주세요.',
+      }
+    case 'UNSUPPORTED_WORKFLOW':
+    case 'FORBIDDEN_FIELD':
+    case 'INVALID_CONTEXT_RESPONSE':
+    case 'INVALID_RESPONSE_CONTRACT':
+    case 'CONTRACT_VERSION_MISMATCH':
+    case 'KNOWLEDGE_VERSION_MISMATCH':
+      return {
+        title: 'Agent 처리 설정을 확인해야 합니다.',
+        description: '입력 내용은 유지되었습니다. 관리자 확인 후 다시 시도해 주세요.',
+      }
+    default:
+      return {
+        title: 'Agent가 요청을 완료하지 못했습니다.',
+        description: '입력 내용은 유지됩니다. 같은 요청을 다시 분석하거나 내용을 수정해 주세요.',
+      }
+  }
+}
+
 function statusPresentation(run: AiRunResponse): {
   title: string
   description: string
   tone: StatusTone
 } {
   if (run.status === 'FAILED') {
+    const failure = failurePresentation(run.error_code)
     return {
-      title: 'Agent가 요청을 완료하지 못했습니다.',
-      description: '입력 내용은 유지됩니다. 같은 요청을 다시 분석하거나 내용을 수정해 주세요.',
+      title: failure.title,
+      description: failure.description,
       tone: 'critical',
     }
   }
@@ -73,16 +135,160 @@ function statusPresentation(run: AiRunResponse): {
 }
 
 function inputType(question: AiRunQuestion) {
-  return question.input_type.toUpperCase() === 'DATE' ? 'date' : 'text'
+  const declaredType = question.input_type.toUpperCase()
+  if (declaredType === 'DATETIME') return 'datetime-local'
+  if (declaredType === 'DATE' || question.slot_key.endsWith('_date')) return 'date'
+  if (declaredType === 'NUMBER' || declaredType === 'MONEY') return 'number'
+  return 'text'
+}
+
+const DEFAULT_DUE_HOUR = 18
+
+function localDateTimeValue(date = new Date()) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}T${String(DEFAULT_DUE_HOUR).padStart(2, '0')}:00`
+}
+
+function normalizeDueAtValue(value?: string | null) {
+  if (!value) return localDateTimeValue()
+  const dateTimeMatch = value.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/)
+  if (dateTimeMatch) return `${dateTimeMatch[1]}T${dateTimeMatch[2]}:${dateTimeMatch[3]}`
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return `${value}T18:00`
+  return localDateTimeValue()
+}
+
+function initialAnswer(question: AiRunQuestion) {
+  if (question.slot_key === 'due_at') return normalizeDueAtValue(question.answer)
+  return question.answer ?? ''
+}
+
+function initialAnswers(questions: AiRunQuestion[]) {
+  return Object.fromEntries(
+    questions.map((question) => [question.slot_key, initialAnswer(question)]),
+  )
+}
+
+interface DueAtSelectProps {
+  value: string
+  labelId: string
+  helpId?: string
+  onChange: (value: string) => void
+}
+
+function DueAtSelect({ value, labelId, helpId, onChange }: DueAtSelectProps) {
+  const normalized = normalizeDueAtValue(value)
+  const [datePart, timePart] = normalized.split('T')
+  const [year, month, day] = datePart.split('-').map(Number)
+  const [hour, minute] = timePart.split(':').map(Number)
+  const currentYear = new Date().getFullYear()
+  const firstYear = Math.min(currentYear, year)
+  const years = Array.from(
+    { length: Math.max(4, year - firstYear + 1) },
+    (_, index) => firstYear + index,
+  )
+  const daysInMonth = new Date(year, month, 0).getDate()
+  const minuteOptions = [0, 30].includes(minute) ? [0, 30] : [0, 30, minute].sort((a, b) => a - b)
+
+  function update(
+    next: Partial<{ year: number; month: number; day: number; hour: number; minute: number }>,
+  ) {
+    const nextYear = next.year ?? year
+    const nextMonth = next.month ?? month
+    const maxDay = new Date(nextYear, nextMonth, 0).getDate()
+    const nextDay = Math.min(next.day ?? day, maxDay)
+    const nextHour = next.hour ?? hour
+    const nextMinute = next.minute ?? minute
+    onChange(
+      `${nextYear}-${String(nextMonth).padStart(2, '0')}-${String(nextDay).padStart(2, '0')}T${String(nextHour).padStart(2, '0')}:${String(nextMinute).padStart(2, '0')}`,
+    )
+  }
+
+  return (
+    <div
+      className={styles.dateTimeSelect}
+      role="group"
+      aria-labelledby={labelId}
+      aria-describedby={helpId}
+    >
+      <select
+        aria-label="업무 준비 완료 희망일 연도"
+        value={year}
+        onChange={(event) => update({ year: Number(event.target.value) })}
+      >
+        {years.map((option) => (
+          <option key={option} value={option}>
+            {option}년
+          </option>
+        ))}
+      </select>
+      <select
+        aria-label="업무 준비 완료 희망일 월"
+        value={month}
+        onChange={(event) => update({ month: Number(event.target.value) })}
+      >
+        {Array.from({ length: 12 }, (_, index) => index + 1).map((option) => (
+          <option key={option} value={option}>
+            {option}월
+          </option>
+        ))}
+      </select>
+      <select
+        aria-label="업무 준비 완료 희망일 일"
+        value={day}
+        onChange={(event) => update({ day: Number(event.target.value) })}
+      >
+        {Array.from({ length: daysInMonth }, (_, index) => index + 1).map((option) => (
+          <option key={option} value={option}>
+            {option}일
+          </option>
+        ))}
+      </select>
+      <select
+        aria-label="업무 준비 완료 희망 시"
+        value={hour}
+        onChange={(event) => update({ hour: Number(event.target.value) })}
+      >
+        {Array.from({ length: 24 }, (_, index) => index).map((option) => (
+          <option key={option} value={option}>
+            {String(option).padStart(2, '0')}시
+          </option>
+        ))}
+      </select>
+      <select
+        aria-label="업무 준비 완료 희망 분"
+        value={minute}
+        onChange={(event) => update({ minute: Number(event.target.value) })}
+      >
+        {minuteOptions.map((option) => (
+          <option key={option} value={option}>
+            {String(option).padStart(2, '0')}분
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
+function questionPresentation(question: AiRunQuestion) {
+  if (question.slot_key === 'due_at') {
+    return {
+      label: '업무 준비 완료 희망일',
+      help: '이 날짜와 시간까지 필요한 정보와 서류 준비를 마칠 예정입니다.',
+    }
+  }
+  return {
+    label: question.label,
+    help: null,
+  }
 }
 
 export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
   const navigate = useNavigate()
   const [run, setRun] = useState(initialRun)
   const [answers, setAnswers] = useState<Record<string, string>>(() =>
-    Object.fromEntries(
-      initialRun.questions.map((question) => [question.slot_key, question.answer ?? '']),
-    ),
+    initialAnswers(initialRun.questions),
   )
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(() =>
     initialRun.candidates.length === 1 && initialRun.candidates[0].missing_slots.length === 0
@@ -95,6 +301,7 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
   const [error, setError] = useState<string | null>(null)
   const decisionKeys = useRef(new Map<string, string>())
   const presentation = statusPresentation(run)
+  const failure = failurePresentation(run.error_code)
   const hasCandidates = run.candidates.length > 0
 
   const catalogFetcher = useCallback(() => {
@@ -231,11 +438,7 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
   }, [isProcessing, run.ai_run_id])
 
   useEffect(() => {
-    setAnswers(
-      Object.fromEntries(
-        run.questions.map((question) => [question.slot_key, question.answer ?? '']),
-      ),
-    )
+    setAnswers(initialAnswers(run.questions))
   }, [run.questions])
 
   useEffect(() => {
@@ -391,46 +594,71 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
             <h2 className={styles.cardTitle}>Agent가 확인한 요청</h2>
             <p className={styles.cardBadge}>사용자가 입력한 원문</p>
             <p className={styles.instruction}>{run.instruction}</p>
-            <div className={styles.fieldGridTwo}>
+            <div className={run.evidence ? styles.fieldGridTwo : styles.fieldGridSingle}>
               <div>
                 <p className={styles.fieldLabel}>요청 유형</p>
                 <p className={styles.fieldValue}>{intentLabel(run.detected_intent)}</p>
               </div>
-              <div>
-                <p className={styles.fieldLabel}>분석 근거</p>
-                <p className={styles.fieldValue}>
-                  {run.evidence ?? '현재 분석 API에서 제공하지 않음'}
-                </p>
-              </div>
+              {run.evidence && (
+                <div>
+                  <p className={styles.fieldLabel}>분석 근거</p>
+                  <p className={styles.fieldValue}>{run.evidence}</p>
+                </div>
+              )}
             </div>
           </div>
 
           {run.analysis_outcome === 'NEEDS_INFO' && (
             <div className={styles.missingCard}>
               <h2 className={styles.missingTitle}>HR이 확인할 정보 {run.questions.length}개</h2>
-              {run.questions.map((question) => (
-                <div key={question.slot_key} className={styles.questionField}>
-                  <label
-                    htmlFor={`ai-question-${question.slot_key}`}
-                    className={styles.missingQuestion}
-                  >
-                    {question.label}
-                    {question.required ? ' *' : ''}
-                  </label>
-                  <input
-                    id={`ai-question-${question.slot_key}`}
-                    type={inputType(question)}
-                    className={styles.questionInput}
-                    value={answers[question.slot_key] ?? ''}
-                    onChange={(event) =>
-                      setAnswers((current) => ({
-                        ...current,
-                        [question.slot_key]: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-              ))}
+              {run.questions.map((question) => {
+                const questionView = questionPresentation(question)
+                const helpId = questionView.help
+                  ? `ai-question-${question.slot_key}-help`
+                  : undefined
+                const labelId = `ai-question-${question.slot_key}-label`
+                return (
+                  <div key={question.slot_key} className={styles.questionField}>
+                    <p id={labelId} className={styles.questionLabel}>
+                      {questionView.label}
+                      {question.required ? ' *' : ''}
+                    </p>
+                    {questionView.help && (
+                      <p id={helpId} className={styles.questionHelp}>
+                        {questionView.help}
+                      </p>
+                    )}
+                    {question.slot_key === 'due_at' ? (
+                      <DueAtSelect
+                        value={answers[question.slot_key] ?? ''}
+                        labelId={labelId}
+                        helpId={helpId}
+                        onChange={(value) =>
+                          setAnswers((current) => ({
+                            ...current,
+                            [question.slot_key]: value,
+                          }))
+                        }
+                      />
+                    ) : (
+                      <input
+                        id={`ai-question-${question.slot_key}`}
+                        type={inputType(question)}
+                        className={styles.questionInput}
+                        aria-labelledby={labelId}
+                        aria-describedby={helpId}
+                        value={answers[question.slot_key] ?? ''}
+                        onChange={(event) =>
+                          setAnswers((current) => ({
+                            ...current,
+                            [question.slot_key]: event.target.value,
+                          }))
+                        }
+                      />
+                    )}
+                  </div>
+                )
+              })}
               <p className={styles.missingWarning}>
                 답변은 현재 분석 실행에 저장되며 새 분석 시도로 이어집니다.
               </p>
@@ -439,12 +667,11 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
 
           {run.status === 'FAILED' && (
             <div className={styles.errorCard} role="alert">
-              <h2 className={styles.missingTitle}>분석을 계속할 수 없습니다</h2>
-              <p className={styles.missingQuestion}>
-                오류 코드: {run.error_code ?? 'UNKNOWN_ERROR'}
-              </p>
+              <h2 className={styles.missingTitle}>{failure.title}</h2>
+              <p className={styles.missingQuestion}>{failure.description}</p>
               <p className={styles.emptyState}>
-                업무는 생성되지 않았습니다. 원문은 그대로 유지됩니다.
+                업무는 생성되지 않았습니다. 원문은 그대로 유지됩니다. 참고 코드:{' '}
+                {run.error_code ?? 'UNKNOWN_ERROR'}
               </p>
             </div>
           )}
@@ -587,8 +814,7 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
         </p>
       )}
       <p className={styles.footnote}>
-        분석 근거는 API가 실제 근거 데이터를 제공할 때만 표시합니다. 근거 없는 확률 점수는 사용하지
-        않습니다.
+        Agent가 원문에서 실제 근거 구절을 제공한 경우에만 해당 구절을 표시합니다.
       </p>
     </div>
   )

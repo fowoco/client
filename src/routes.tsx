@@ -51,16 +51,6 @@ const ReviewWorkPage = lazy(() =>
     default: module.ReviewWorkPage,
   })),
 )
-const TicketDetailPage = lazy(() =>
-  import('./pages/TicketDetailPage/TicketDetailPage').then((module) => ({
-    default: module.TicketDetailPage,
-  })),
-)
-const TicketListPage = lazy(() =>
-  import('./pages/TicketListPage/TicketListPage').then((module) => ({
-    default: module.TicketListPage,
-  })),
-)
 const WorkerDetailPage = lazy(() =>
   import('./pages/WorkerDetailPage/WorkerDetailPage').then((module) => ({
     default: module.WorkerDetailPage,
@@ -104,8 +94,6 @@ export const router = createBrowserRouter([
           { path: '/tasks/new/review', element: <ReviewWorkPage /> },
           { path: '/tasks/:taskId', element: <CaseDetailPage /> },
           { path: '/agent', element: <AgentLogPage /> },
-          { path: '/tickets', element: <TicketListPage /> },
-          { path: '/tickets/:ticketId', element: <TicketDetailPage /> },
           { path: '/profile', element: <ProfilePage /> },
         ],
       },

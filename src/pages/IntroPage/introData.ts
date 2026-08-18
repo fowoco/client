@@ -36,13 +36,7 @@ export const HERO_HIGHLIGHTS: HeroHighlight[] = [
   { icon: 'lock', label: '전달·제출은 담당자가 직접 수행' },
 ]
 
-export type FeatureIconKey =
-  | 'agent'
-  | 'calendar'
-  | 'contract'
-  | 'folder'
-  | 'globe'
-  | 'radar'
+export type FeatureIconKey = 'agent' | 'calendar' | 'contract' | 'folder' | 'globe' | 'radar'
 
 export interface Feature {
   icon: FeatureIconKey
@@ -90,12 +84,16 @@ export interface Step {
 }
 
 // FOWOCO_Intent·Domain·Slot 학습가이드의 처리 파이프라인(Intent → Domain → Slot →
-// Workflow Resolver → Case/티켓)을 그대로 반영한 6단계.
+// Workflow Resolver → Case/Task)를 그대로 반영한 6단계.
 export const STEPS: Step[] = [
   { no: '01', title: '자연어 요청', description: '"응웬반A 체류연장 준비해줘"처럼 편하게 요청' },
-  { no: '02', title: 'Intent·Domain 분류', description: '무슨 일을, 어느 업무 영역에서 하려는지 파악' },
+  {
+    no: '02',
+    title: 'Intent·Domain 분류',
+    description: '무슨 일을, 어느 업무 영역에서 하려는지 파악',
+  },
   { no: '03', title: 'Slot 추출·검증', description: '근로자·날짜·서류 등 실행에 필요한 값 확인' },
-  { no: '04', title: 'Case·티켓 생성', description: '새 Case 또는 기존 Case의 Subflow로 연결' },
+  { no: '04', title: 'Case·Task 생성', description: '새 Case와 실행할 업무 단계로 연결' },
   { no: '05', title: '담당자 검토·승인', description: '근거를 확인하고 최종 결정' },
   { no: '06', title: '직접 실행·기록', description: '전달·제출은 사람이, 결과는 Case에 기록' },
 ]
@@ -131,7 +129,8 @@ export const TRUST_ITEMS: TrustItem[] = [
   },
 ]
 
-export type WorkflowIconKey = 'contract' | 'workerAdd' | 'exit' | 'folder' | 'payroll' | 'instruction'
+export type WorkflowIconKey =
+  'contract' | 'workerAdd' | 'exit' | 'folder' | 'payroll' | 'instruction'
 
 export interface Workflow {
   icon: WorkflowIconKey
@@ -146,19 +145,22 @@ export const WORKFLOWS: Workflow[] = [
     icon: 'contract',
     kind: 'Master',
     title: '재계약·연장',
-    description: '계약·고용허가·취업활동·체류기간, 4개의 만료일을 각각 확인해 하나의 Case로 관리합니다.',
+    description:
+      '계약·고용허가·취업활동·체류기간, 4개의 만료일을 각각 확인해 하나의 Case로 관리합니다.',
   },
   {
     icon: 'workerAdd',
     kind: 'Master',
     title: '신규등록',
-    description: '여권·외국인등록증·계약서를 분석해 근로자 프로필 초안을 만들고 초기 업무를 생성합니다.',
+    description:
+      '여권·외국인등록증·계약서를 분석해 근로자 프로필 초안을 만들고 초기 업무를 생성합니다.',
   },
   {
     icon: 'exit',
     kind: 'Master',
     title: '퇴사·고용변동',
-    description: '사건 유형과 기준일을 확정하면 신고기한 후보를 계산하고 처리 결과를 Case에 남깁니다.',
+    description:
+      '사건 유형과 기준일을 확정하면 신고기한 후보를 계산하고 처리 결과를 Case에 남깁니다.',
   },
   {
     icon: 'folder',
@@ -176,7 +178,8 @@ export const WORKFLOWS: Workflow[] = [
     icon: 'instruction',
     kind: 'Reusable',
     title: '업무·근무일정 안내',
-    description: '모호한 지시를 날짜·장소·수량이 분명한 문장으로 바꿔 쉬운 한국어와 모국어로 전달합니다.',
+    description:
+      '모호한 지시를 날짜·장소·수량이 분명한 문장으로 바꿔 쉬운 한국어와 모국어로 전달합니다.',
   },
 ]
 

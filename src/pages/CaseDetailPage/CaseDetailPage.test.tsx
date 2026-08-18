@@ -938,6 +938,17 @@ describe('CaseDetailPage', () => {
     expect(await screen.findByText(/완료 처리 불가 · 승인 · 필수 체크리스트/)).toBeInTheDocument()
   })
 
+  it('offers a visible action that opens the checklist required for progress', async () => {
+    const user = userEvent.setup()
+    mockTaskAndActivities()
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: '필수 항목 확인하기' }))
+
+    expect(screen.getByRole('tab', { name: '체크리스트' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('button', { name: /여권 사본 확인/ })).toBeInTheDocument()
+  })
+
   it('blocks completion and offers retry when document readiness cannot be verified', async () => {
     const user = userEvent.setup()
     mockTaskAndActivities({}, [], errorResponse(503, 'SERVICE_UNAVAILABLE', '서류 상태 확인 지연'))

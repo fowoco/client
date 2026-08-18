@@ -28,15 +28,77 @@ interface AiRunReviewProps {
   initialDraft?: WorkRequestDraft | null
 }
 
+interface FailurePresentation {
+  title: string
+  description: string
+}
+
+function failurePresentation(errorCode: string | null): FailurePresentation {
+  switch (errorCode) {
+    case 'TARGET_NOT_FOUND':
+      return {
+        title: '근로자를 찾지 못했습니다.',
+        description:
+          '등록된 정확한 이름으로 요청을 수정하거나 근로자 목록에서 이름을 확인해 주세요.',
+      }
+    case 'TARGET_AMBIGUOUS':
+      return {
+        title: '근로자를 한 명으로 특정할 수 없습니다.',
+        description: '같은 이름의 근로자가 있을 수 있습니다. 더 구체적인 이름으로 요청해 주세요.',
+      }
+    case 'UNSUPPORTED_INTENT':
+      return {
+        title: '아직 지원하지 않는 업무 요청입니다.',
+        description: '체류기간 연장 등 현재 지원하는 업무로 요청을 수정해 주세요.',
+      }
+    case 'CONTEXT_ROUND_LIMIT':
+      return {
+        title: '필요한 정보 확인을 마치지 못했습니다.',
+        description: '요청 내용을 조금 더 구체적으로 작성한 뒤 다시 분석해 주세요.',
+      }
+    case 'TARGET_CHANGED':
+      return {
+        title: '분석 중 근로자 정보가 변경되었습니다.',
+        description: '최신 근로자 정보를 확인한 뒤 같은 요청을 다시 분석해 주세요.',
+      }
+    case 'RUNTIME_DISABLED':
+    case 'RUNTIME_UNAVAILABLE':
+    case 'TRANSPORT_FAILURE':
+    case 'DEADLINE_EXCEEDED':
+    case 'CIRCUIT_OPEN':
+    case 'BULKHEAD_FULL':
+      return {
+        title: 'Agent에 일시적으로 연결할 수 없습니다.',
+        description: '잠시 후 같은 요청을 다시 분석해 주세요.',
+      }
+    case 'UNSUPPORTED_WORKFLOW':
+    case 'FORBIDDEN_FIELD':
+    case 'INVALID_CONTEXT_RESPONSE':
+    case 'INVALID_RESPONSE_CONTRACT':
+    case 'CONTRACT_VERSION_MISMATCH':
+    case 'KNOWLEDGE_VERSION_MISMATCH':
+      return {
+        title: 'Agent 처리 설정을 확인해야 합니다.',
+        description: '입력 내용은 유지되었습니다. 관리자 확인 후 다시 시도해 주세요.',
+      }
+    default:
+      return {
+        title: 'Agent가 요청을 완료하지 못했습니다.',
+        description: '입력 내용은 유지됩니다. 같은 요청을 다시 분석하거나 내용을 수정해 주세요.',
+      }
+  }
+}
+
 function statusPresentation(run: AiRunResponse): {
   title: string
   description: string
   tone: StatusTone
 } {
   if (run.status === 'FAILED') {
+    const failure = failurePresentation(run.error_code)
     return {
-      title: 'Agent가 요청을 완료하지 못했습니다.',
-      description: '입력 내용은 유지됩니다. 같은 요청을 다시 분석하거나 내용을 수정해 주세요.',
+      title: failure.title,
+      description: failure.description,
       tone: 'critical',
     }
   }
@@ -239,6 +301,7 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
   const [error, setError] = useState<string | null>(null)
   const decisionKeys = useRef(new Map<string, string>())
   const presentation = statusPresentation(run)
+  const failure = failurePresentation(run.error_code)
   const hasCandidates = run.candidates.length > 0
 
   const catalogFetcher = useCallback(() => {
@@ -531,17 +594,17 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
             <h2 className={styles.cardTitle}>Agent가 확인한 요청</h2>
             <p className={styles.cardBadge}>사용자가 입력한 원문</p>
             <p className={styles.instruction}>{run.instruction}</p>
-            <div className={styles.fieldGridTwo}>
+            <div className={run.evidence ? styles.fieldGridTwo : styles.fieldGridSingle}>
               <div>
                 <p className={styles.fieldLabel}>요청 유형</p>
                 <p className={styles.fieldValue}>{intentLabel(run.detected_intent)}</p>
               </div>
-              <div>
-                <p className={styles.fieldLabel}>{run.evidence ? '분석 근거' : '판단 기준'}</p>
-                <p className={styles.fieldValue}>
-                  {run.evidence ?? '입력한 요청 전체를 기준으로 분류했습니다.'}
-                </p>
-              </div>
+              {run.evidence && (
+                <div>
+                  <p className={styles.fieldLabel}>분석 근거</p>
+                  <p className={styles.fieldValue}>{run.evidence}</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -604,12 +667,11 @@ export function AiRunReview({ initialRun, initialDraft }: AiRunReviewProps) {
 
           {run.status === 'FAILED' && (
             <div className={styles.errorCard} role="alert">
-              <h2 className={styles.missingTitle}>분석을 계속할 수 없습니다</h2>
-              <p className={styles.missingQuestion}>
-                오류 코드: {run.error_code ?? 'UNKNOWN_ERROR'}
-              </p>
+              <h2 className={styles.missingTitle}>{failure.title}</h2>
+              <p className={styles.missingQuestion}>{failure.description}</p>
               <p className={styles.emptyState}>
-                업무는 생성되지 않았습니다. 원문은 그대로 유지됩니다.
+                업무는 생성되지 않았습니다. 원문은 그대로 유지됩니다. 참고 코드:{' '}
+                {run.error_code ?? 'UNKNOWN_ERROR'}
               </p>
             </div>
           )}

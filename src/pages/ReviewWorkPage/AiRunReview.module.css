@@ -187,9 +187,17 @@
   margin-top: 16px;
 }
 
+.fieldGridSingle {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
 @media (max-width: 560px) {
   .fieldGrid,
-  .fieldGridTwo {
+  .fieldGridTwo,
+  .fieldGridSingle {
     grid-template-columns: 1fr;
   }
 }

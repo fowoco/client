@@ -1,4 +1,5 @@
 import styles from './AgentSummary.module.css'
+import { Button } from '../Button/Button'
 
 export interface AgentSummaryProps {
   headline: string
@@ -13,9 +14,9 @@ export function AgentSummary({ headline, body, actionLabel, onAction }: AgentSum
       <p className={styles.kicker}>AGENT가 준비한 다음 행동</p>
       <p className={styles.headline}>{headline}</p>
       <p className={styles.body}>{body}</p>
-      <button type="button" className={styles.action} onClick={onAction}>
+      <Button className={styles.action} onClick={onAction}>
         {actionLabel}
-      </button>
+      </Button>
     </div>
   )
 }

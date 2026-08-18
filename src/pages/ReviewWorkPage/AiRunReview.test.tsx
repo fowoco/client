@@ -270,7 +270,7 @@ describe('AiRunReview 분석 근거', () => {
     expect(await screen.findByText('체류만료일이 30일 이내로 확인됨')).toBeInTheDocument()
   })
 
-  it('explains that the full request was used when the API has no evidence span', async () => {
+  it('does not render an evidence field when the API has no evidence span', async () => {
     mockCatalogAndWorkers()
     render(
       <MemoryRouter>
@@ -278,7 +278,36 @@ describe('AiRunReview 분석 근거', () => {
       </MemoryRouter>,
     )
 
-    expect(await screen.findByText('입력한 요청 전체를 기준으로 분류했습니다.')).toBeInTheDocument()
+    expect((await screen.findAllByText('요청 유형')).length).toBeGreaterThan(0)
+    expect(screen.queryByText('판단 기준')).not.toBeInTheDocument()
+    expect(screen.queryByText('입력한 요청 전체를 기준으로 분류했습니다.')).not.toBeInTheDocument()
+  })
+})
+
+describe('AiRunReview 실패 안내', () => {
+  it('explains how to recover when the worker target is not found', () => {
+    render(
+      <MemoryRouter>
+        <AiRunReview
+          initialRun={{
+            ...RUN,
+            status: 'FAILED',
+            analysis_outcome: null,
+            error_code: 'TARGET_NOT_FOUND',
+            candidates: [],
+          }}
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getAllByText('근로자를 찾지 못했습니다.').length).toBeGreaterThan(0)
+    expect(
+      screen.getAllByText(
+        '등록된 정확한 이름으로 요청을 수정하거나 근로자 목록에서 이름을 확인해 주세요.',
+      ).length,
+    ).toBeGreaterThan(0)
+    expect(screen.getByText(/참고 코드: TARGET_NOT_FOUND/)).toBeInTheDocument()
+    expect(screen.queryByText('분석을 계속할 수 없습니다')).not.toBeInTheDocument()
   })
 })
 

@@ -259,6 +259,10 @@
   text-align: center;
 }
 
+.workflowAction {
+  margin-top: var(--fowoco-spacing-16);
+}
+
 .stepTitle {
   margin: 0;
   font-size: 14px;

@@ -31,8 +31,6 @@ function getPageTitle(pathname: string) {
   if (pathname === '/profile') return '설정'
   if (pathname === '/workers') return '근로자 정보'
   if (pathname.startsWith('/workers/')) return '근로자 정보'
-  if (pathname.startsWith('/tickets/')) return '지원 요청 상세'
-  if (pathname === '/tickets') return '지원 요청'
   return 'FOWOCO'
 }
 

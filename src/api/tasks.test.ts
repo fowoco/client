@@ -1,8 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cancelTask, createTask, fetchTaskById, fetchTasks, updateChecklistItem, updateTask } from './tasks'
+import {
+  cancelTask,
+  changeTaskAssignee,
+  createTask,
+  fetchTaskById,
+  fetchTasks,
+  updateChecklistItem,
+  updateTask,
+} from './tasks'
 
 function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  })
 }
 
 beforeEach(() => {
@@ -112,6 +123,22 @@ describe('updateTask', () => {
     const [url, init] = vi.mocked(fetch).mock.calls[0]
     expect(url).toContain('/tasks/T-1')
     expect(init?.method).toBe('PATCH')
+  })
+})
+
+describe('changeTaskAssignee', () => {
+  it('PATCHes /tasks/{id}/assignee with the selected member and task version', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ task_id: 'T-1' }))
+
+    await changeTaskAssignee('T-1', { assignee_id: 'U-2', expected_version: 3 })
+
+    const [url, init] = vi.mocked(fetch).mock.calls[0]
+    expect(url).toContain('/tasks/T-1/assignee')
+    expect(init?.method).toBe('PATCH')
+    expect(JSON.parse(init?.body as string)).toEqual({
+      assignee_id: 'U-2',
+      expected_version: 3,
+    })
   })
 })
 

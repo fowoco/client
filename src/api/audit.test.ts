@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { fetchAuditEvents, fetchTaskActivities } from './audit'
+import { fetchAuditEvents, fetchTaskActivities, fetchWorkerActivities } from './audit'
 
 function jsonResponse(body: unknown) {
-  return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  })
 }
 
 beforeEach(() => {
@@ -21,6 +24,19 @@ describe('fetchTaskActivities', () => {
 
     const [url] = vi.mocked(fetch).mock.calls[0]
     expect(url).toContain('/tasks/T-1/activities')
+  })
+})
+
+describe('fetchWorkerActivities', () => {
+  it('requests a worker-scoped, cursor-based activity page', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ items: [], next_cursor: null }))
+
+    await fetchWorkerActivities('W-1', 'cursor-1', 30)
+
+    const [url] = vi.mocked(fetch).mock.calls[0]
+    expect(url).toContain('/workers/W-1/activities?')
+    expect(url).toContain('limit=30')
+    expect(url).toContain('cursor=cursor-1')
   })
 })
 

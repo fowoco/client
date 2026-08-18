@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { WorkerActivityResponse } from '../../api/audit'
 import type { DocumentItemResponse, WorkerDocumentResponse } from '../../api/documents'
 import type { TaskSummaryResponse } from '../../api/tasks'
 import type { WorkerResponse } from '../../api/workers'
@@ -115,9 +116,13 @@ function mockWorkerAndDocuments(
   workerOverrides: Partial<WorkerResponse> = {},
   documents: DocumentItemResponse[] = [],
   tasks: TaskSummaryResponse[] = [],
+  activities: WorkerActivityResponse[] = [],
 ) {
   vi.mocked(fetch).mockImplementation((input) => {
     const url = String(input)
+    if (url.includes('/activities')) {
+      return Promise.resolve(jsonResponse({ items: activities, next_cursor: null }))
+    }
     if (url.includes('/documents')) {
       return Promise.resolve(
         jsonResponse({ items: documents, page: 0, size: 100, total_elements: documents.length }),
@@ -155,6 +160,9 @@ function registeredDocument(
 function mockWorkerError(status: number, code: string, message: string) {
   vi.mocked(fetch).mockImplementation((input) => {
     const url = String(input)
+    if (url.includes('/activities')) {
+      return Promise.resolve(jsonResponse({ items: [], next_cursor: null }))
+    }
     if (url.includes('/documents')) {
       return Promise.resolve(jsonResponse({ items: [], page: 0, size: 100, total_elements: 0 }))
     }
@@ -233,10 +241,47 @@ describe('WorkerDetailPage', () => {
     expect(await screen.findByText('진행 중인 업무가 없습니다')).toBeInTheDocument()
   })
 
+  it("shows the worker's guidance and response history with task links", async () => {
+    mockWorkerAndDocuments(
+      { display_name: '쩐티B' },
+      [],
+      [],
+      [
+        {
+          activity_id: 'A-1',
+          type: 'GUIDANCE_SENT',
+          task_id: 'T-1',
+          task_title: '여권 사본 요청',
+          summary: '근로자에게 보안 링크 안내를 전송했습니다.',
+          occurred_at: '2026-08-17T03:00:00Z',
+        },
+        {
+          activity_id: 'A-2',
+          type: 'WORKER_RESPONSE_SUBMITTED',
+          task_id: 'T-1',
+          task_title: '여권 사본 요청',
+          summary: '근로자가 요청 서류를 제출했습니다.',
+          occurred_at: '2026-08-17T04:00:00Z',
+        },
+      ],
+    )
+    renderPage('W-018')
+
+    expect(await screen.findByText('안내 전송')).toBeInTheDocument()
+    expect(screen.getByText('근로자 응답')).toBeInTheDocument()
+    expect(screen.getByText('근로자에게 보안 링크 안내를 전송했습니다.')).toBeInTheDocument()
+    const taskLinks = screen.getAllByRole('link', { name: '여권 사본 요청' })
+    expect(taskLinks).toHaveLength(2)
+    expect(taskLinks[0]).toHaveAttribute('href', '/tasks/T-1')
+  })
+
   it('opens the urgent verification flow without declaring a legal status', async () => {
     const user = userEvent.setup()
     vi.mocked(fetch).mockImplementation((input) => {
       const url = String(input)
+      if (url.includes('/activities')) {
+        return Promise.resolve(jsonResponse({ items: [], next_cursor: null }))
+      }
       if (url.includes('/stay-verifications')) {
         return Promise.resolve(jsonResponse([stayVerification()]))
       }
@@ -268,6 +313,9 @@ describe('WorkerDetailPage', () => {
     vi.mocked(fetch).mockImplementation((input, init) => {
       const url = String(input)
       const method = init?.method ?? 'GET'
+      if (url.includes('/activities')) {
+        return Promise.resolve(jsonResponse({ items: [], next_cursor: null }))
+      }
       if (url.includes('/stay-verifications/SV-1') && method === 'PATCH') {
         bodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>)
         return Promise.resolve(
@@ -321,6 +369,9 @@ describe('WorkerDetailPage', () => {
     vi.mocked(fetch).mockImplementation((input, init) => {
       const url = String(input)
       const method = init?.method ?? 'GET'
+      if (url.includes('/activities')) {
+        return Promise.resolve(jsonResponse({ items: [], next_cursor: null }))
+      }
       if (url.includes('/stay-verifications/SV-1') && method === 'PATCH') {
         return Promise.resolve(
           jsonResponse(
@@ -393,6 +444,9 @@ describe('WorkerDetailPage', () => {
     vi.mocked(fetch).mockImplementation((input, init) => {
       const url = String(input)
       const method = init?.method ?? 'GET'
+      if (url.includes('/activities')) {
+        return Promise.resolve(jsonResponse({ items: [], next_cursor: null }))
+      }
       if (url.includes('/documents') && method === 'GET') {
         documentsGetCount += 1
         const items =
@@ -432,6 +486,9 @@ describe('WorkerDetailPage', () => {
     vi.mocked(fetch).mockImplementation((input, init) => {
       const url = String(input)
       const method = init?.method ?? 'GET'
+      if (url.includes('/activities')) {
+        return Promise.resolve(jsonResponse({ items: [], next_cursor: null }))
+      }
       calls.push({ url, method })
       if (url.includes('/documents') && method === 'GET') {
         return Promise.resolve(jsonResponse({ items: [], page: 0, size: 100, total_elements: 0 }))
@@ -482,6 +539,9 @@ describe('WorkerDetailPage', () => {
     vi.mocked(fetch).mockImplementation((input, init) => {
       const url = String(input)
       const method = init?.method ?? 'GET'
+      if (url.includes('/activities')) {
+        return Promise.resolve(jsonResponse({ items: [], next_cursor: null }))
+      }
       calls.push({ url, method, body: init?.body as string | undefined })
       if (url.includes('/documents')) {
         return Promise.resolve(jsonResponse({ items: [], page: 0, size: 100, total_elements: 0 }))

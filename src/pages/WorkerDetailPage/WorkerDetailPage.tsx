@@ -13,6 +13,7 @@ import { TASK_STATUS_LABEL, TASK_STATUS_TONE } from '../../utils/taskStatus'
 import { getDocumentViewModel } from '../../view-models/documentViewModel'
 import { getOperationalDateViewModel } from '../../view-models/dateViewModel'
 import { RegisterDocumentModal } from './overlays/RegisterDocumentModal'
+import { StayVerificationModal } from './overlays/StayVerificationModal'
 import styles from './WorkerDetailPage.module.css'
 
 export function WorkerDetailPage() {
@@ -33,6 +34,7 @@ export function WorkerDetailPage() {
 
   const [registerModalOpen, setRegisterModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
+  const [stayVerificationOpen, setStayVerificationOpen] = useState(false)
 
   if (status === 'loading') {
     return (
@@ -85,7 +87,20 @@ export function WorkerDetailPage() {
       <div className={styles.headerRow}>
         <h1 className={styles.title}>{worker.display_name}</h1>
         {!stayExpiry.missing && stayExpiry.tone !== 'neutral' && (
-          <StatusLabel tone={stayExpiry.tone}>{stayExpiry.relative} 체류만료</StatusLabel>
+          <StatusLabel tone={stayExpiry.tone}>
+            {stayExpiry.expired
+              ? `기록상 ${stayExpiry.relative} 경과 · 긴급 확인`
+              : `${stayExpiry.relative} 체류만료`}
+          </StatusLabel>
+        )}
+        {stayExpiry.expired && (
+          <button
+            type="button"
+            className={styles.verificationButton}
+            onClick={() => setStayVerificationOpen(true)}
+          >
+            체류상태 확인 시작
+          </button>
         )}
       </div>
       <p className={styles.meta}>
@@ -206,6 +221,21 @@ export function WorkerDetailPage() {
         worker={worker}
         onClose={() => setEditModalOpen(false)}
         onSaved={refetch}
+      />
+
+      <StayVerificationModal
+        open={stayVerificationOpen}
+        worker={worker}
+        documents={workerDocuments}
+        onClose={() => {
+          setStayVerificationOpen(false)
+          refetch()
+          refetchDocuments()
+        }}
+        onRegisterEvidence={() => {
+          setStayVerificationOpen(false)
+          setRegisterModalOpen(true)
+        }}
       />
     </div>
   )

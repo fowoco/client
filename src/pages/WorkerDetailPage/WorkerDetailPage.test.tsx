@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DocumentItemResponse, WorkerDocumentResponse } from '../../api/documents'
 import type { TaskSummaryResponse } from '../../api/tasks'
 import type { WorkerResponse } from '../../api/workers'
+import type { StayVerificationResponse } from '../../api/stayVerifications'
 import { WorkerDetailPage } from './WorkerDetailPage'
 
 function jsonResponse(body: unknown, init: ResponseInit = {}) {
@@ -82,6 +83,30 @@ function task(overrides: Partial<TaskSummaryResponse> = {}): TaskSummaryResponse
     version: 1,
     created_at: '2026-08-01T00:00:00Z',
     updated_at: '2026-08-01T00:00:00Z',
+    ...overrides,
+  }
+}
+
+function stayVerification(
+  overrides: Partial<StayVerificationResponse> = {},
+): StayVerificationResponse {
+  return {
+    stay_verification_id: 'SV-1',
+    worker_id: 'W-018',
+    worker_display_name: '쩐티B',
+    source_stay_expiry_date: '2026-08-01',
+    verification_status: 'UNKNOWN',
+    status_checked_at: null,
+    extension_applied_at: null,
+    extension_receipt_document_id: null,
+    approval_result_document_id: null,
+    new_stay_expiry_date: null,
+    official_consultation_note: null,
+    employment_end_confirmed_at: null,
+    recheck_date: null,
+    employment_change_candidate_available: false,
+    suggested_workflow_id: null,
+    version: 0,
     ...overrides,
   }
 }
@@ -206,6 +231,146 @@ describe('WorkerDetailPage', () => {
     renderPage('W-018')
 
     expect(await screen.findByText('진행 중인 업무가 없습니다')).toBeInTheDocument()
+  })
+
+  it('opens the urgent verification flow without declaring a legal status', async () => {
+    const user = userEvent.setup()
+    vi.mocked(fetch).mockImplementation((input) => {
+      const url = String(input)
+      if (url.includes('/stay-verifications')) {
+        return Promise.resolve(jsonResponse([stayVerification()]))
+      }
+      if (url.includes('/documents')) {
+        return Promise.resolve(jsonResponse({ items: [], page: 0, size: 100, total_elements: 0 }))
+      }
+      if (url.includes('/tasks')) {
+        return Promise.resolve(jsonResponse({ items: [], page: 0, size: 20, total_elements: 0 }))
+      }
+      return Promise.resolve(jsonResponse(worker({ stay_expiry_date: '2026-08-01' })))
+    })
+    renderPage('W-018')
+
+    expect(await screen.findByText(/기록상 D\+/)).toHaveTextContent('긴급 확인')
+    await user.click(screen.getByRole('button', { name: '체류상태 확인 시작' }))
+
+    expect(await screen.findByRole('dialog', { name: '체류상태 긴급 확인' })).toBeInTheDocument()
+    expect(
+      screen.getByText(/법적 체류 상태나 퇴사 여부를 자동으로 확정하지 않습니다/),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: '운영 목록에서 안전 보관' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('requires an approval document and saves the approved expiry date', async () => {
+    const user = userEvent.setup()
+    const bodies: Record<string, unknown>[] = []
+    vi.mocked(fetch).mockImplementation((input, init) => {
+      const url = String(input)
+      const method = init?.method ?? 'GET'
+      if (url.includes('/stay-verifications/SV-1') && method === 'PATCH') {
+        bodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>)
+        return Promise.resolve(
+          jsonResponse(
+            stayVerification({
+              verification_status: 'APPROVED',
+              approval_result_document_id: 'D-1',
+              new_stay_expiry_date: '2027-08-01',
+              version: 1,
+            }),
+          ),
+        )
+      }
+      if (url.includes('/stay-verifications')) {
+        return Promise.resolve(jsonResponse([stayVerification()]))
+      }
+      if (url.includes('/documents')) {
+        return Promise.resolve(
+          jsonResponse({ items: [document()], page: 0, size: 100, total_elements: 1 }),
+        )
+      }
+      if (url.includes('/tasks')) {
+        return Promise.resolve(jsonResponse({ items: [], page: 0, size: 20, total_elements: 0 }))
+      }
+      return Promise.resolve(jsonResponse(worker({ stay_expiry_date: '2026-08-01' })))
+    })
+    renderPage('W-018')
+
+    await user.click(await screen.findByRole('button', { name: '체류상태 확인 시작' }))
+    await screen.findByRole('dialog', { name: '체류상태 긴급 확인' })
+    await user.click(screen.getByRole('radio', { name: '연장 승인 완료' }))
+
+    const save = screen.getByRole('button', { name: '확인 결과 저장' })
+    expect(save).toBeDisabled()
+    await user.selectOptions(screen.getByLabelText('승인 결과 증빙'), 'D-1')
+    await user.type(screen.getByLabelText('승인된 새 체류 만료일'), '2027-08-01')
+    await user.click(save)
+
+    expect(await screen.findByText('확인 결과와 근거를 저장했습니다.')).toBeInTheDocument()
+    expect(bodies).toContainEqual({
+      status: 'APPROVED',
+      expected_version: 0,
+      new_stay_expiry_date: '2027-08-01',
+      approval_result_document_id: 'D-1',
+    })
+  })
+
+  it('shows archive blockers only after HR confirms employment ended', async () => {
+    const user = userEvent.setup()
+    let workerGetCount = 0
+    vi.mocked(fetch).mockImplementation((input, init) => {
+      const url = String(input)
+      const method = init?.method ?? 'GET'
+      if (url.includes('/stay-verifications/SV-1') && method === 'PATCH') {
+        return Promise.resolve(
+          jsonResponse(
+            stayVerification({
+              verification_status: 'EMPLOYMENT_ENDED',
+              official_consultation_note: 'HR이 출국 사실 확인',
+              employment_end_confirmed_at: '2026-08-17T03:00:00Z',
+              employment_change_candidate_available: true,
+              suggested_workflow_id: 'WF-CHG-001',
+              version: 1,
+            }),
+          ),
+        )
+      }
+      if (url.includes('/archive-eligibility')) {
+        return Promise.resolve(
+          jsonResponse({
+            worker_id: 'W-018',
+            archivable: false,
+            blockers: ['ACTIVE_EMPLOYMENT_STATUS'],
+            worker_version: 1,
+          }),
+        )
+      }
+      if (url.includes('/stay-verifications')) {
+        return Promise.resolve(jsonResponse([stayVerification()]))
+      }
+      if (url.includes('/documents')) {
+        return Promise.resolve(jsonResponse({ items: [], page: 0, size: 100, total_elements: 0 }))
+      }
+      if (url.includes('/tasks')) {
+        return Promise.resolve(jsonResponse({ items: [], page: 0, size: 20, total_elements: 0 }))
+      }
+      workerGetCount += 1
+      return Promise.resolve(jsonResponse(worker({ stay_expiry_date: '2026-08-01' })))
+    })
+    renderPage('W-018')
+
+    await user.click(await screen.findByRole('button', { name: '체류상태 확인 시작' }))
+    await user.click(await screen.findByRole('radio', { name: '출국 또는 고용 종료 확인' }))
+    expect(screen.queryByText('운영 목록 안전 보관')).not.toBeInTheDocument()
+    await user.type(screen.getByLabelText('확인 메모 (필수)'), 'HR이 출국 사실 확인')
+    await user.click(screen.getByRole('button', { name: '확인 결과 저장' }))
+
+    expect(await screen.findByText('운영 목록 안전 보관')).toBeInTheDocument()
+    expect(screen.getByText('근무상태가 아직 재직 또는 휴직입니다.')).toBeInTheDocument()
+    expect(workerGetCount).toBe(1)
+    expect(
+      screen.queryByRole('button', { name: '운영 목록에서 안전 보관' }),
+    ).not.toBeInTheDocument()
   })
 
   it('shows a loading state', () => {

@@ -66,6 +66,7 @@ export function SignupPage() {
   const [policyError, setPolicyError] = useState<string | null>(null)
 
   const passwordStrength = getPasswordStrength(password)
+  const accountProtection = signupPolicy?.account_protection
 
   const loadSignupPolicy = useCallback(async () => {
     setPolicyLoading(true)
@@ -299,6 +300,13 @@ export function SignupPage() {
               {fieldErrors.password ??
                 `영문과 숫자를 포함해 ${signupPolicy?.password_policy.min_length ?? 8}자 이상 입력해 주세요.`}
             </p>
+            {accountProtection && (
+              <p className={styles.helperText}>
+                계정 보호 · 로그인 {accountProtection.max_failed_attempts}회 실패 시{' '}
+                {Math.ceil(accountProtection.lock_duration_seconds / 60)}분 잠금 · 비밀번호{' '}
+                {accountProtection.password_max_age_days}일 사용
+              </p>
+            )}
           </div>
 
           <div className={styles.field}>

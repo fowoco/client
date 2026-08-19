@@ -20,6 +20,12 @@
   gap: 20px;
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .panelHeader p,
 .notice {
   margin: 6px 0 0;

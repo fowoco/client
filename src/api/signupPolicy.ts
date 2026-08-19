@@ -13,6 +13,11 @@ export interface SignupPolicy {
     require_letter: boolean
     require_digit: boolean
   }
+  account_protection: {
+    max_failed_attempts: number
+    lock_duration_seconds: number
+    password_max_age_days: number
+  }
   agreements: {
     service_terms: AgreementPolicy
     privacy_policy: AgreementPolicy

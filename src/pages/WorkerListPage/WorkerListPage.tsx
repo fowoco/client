@@ -216,7 +216,7 @@ export function WorkerListPage() {
           ariaLabel="기한 필터"
         />
         <Button onClick={() => setRegisterModalOpen(true)}>＋ 근로자 등록</Button>
-        <span className={styles.maskingNote}>개인정보 마스킹 켜짐</span>
+        <span className={styles.maskingNote}>업무 최소정보 표시</span>
       </div>
 
       {status === 'loading' && (

@@ -1,7 +1,8 @@
-import { useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { apiFetch } from '../../api/client'
 import { ApiError, getErrorMessage, type ApiFieldError } from '../../api/errors'
+import { fetchSignupPolicy, type SignupPolicy } from '../../api/signupPolicy'
 import { Button } from '../../components/ui/Button/Button'
 import { Checkbox } from '../../components/ui/Checkbox/Checkbox'
 import { EyeIcon, EyeOffIcon } from '../../components/ui/icons/EyeIcons'
@@ -24,9 +25,6 @@ interface FieldErrors {
 interface SignupResponseBody {
   email: string
 }
-
-// 화면에 표시된 약관 버전. 약관 문구가 바뀌면 같이 올린다.
-const TERMS_VERSION = '1.0'
 
 const SERVER_FIELD_TO_SCREEN_FIELD: Record<string, keyof FieldErrors> = {
   company_name: 'workplace',
@@ -63,8 +61,28 @@ export function SignupPage() {
   const [marketingOptIn, setMarketingOptIn] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [submitting, setSubmitting] = useState(false)
+  const [signupPolicy, setSignupPolicy] = useState<SignupPolicy | null>(null)
+  const [policyLoading, setPolicyLoading] = useState(true)
+  const [policyError, setPolicyError] = useState<string | null>(null)
 
   const passwordStrength = getPasswordStrength(password)
+
+  const loadSignupPolicy = useCallback(async () => {
+    setPolicyLoading(true)
+    setPolicyError(null)
+    try {
+      setSignupPolicy(await fetchSignupPolicy())
+    } catch {
+      setSignupPolicy(null)
+      setPolicyError('회원가입 정책을 불러오지 못했습니다.')
+    } finally {
+      setPolicyLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadSignupPolicy()
+  }, [loadSignupPolicy])
 
   function validate(): FieldErrors {
     const errors: FieldErrors = {}
@@ -74,9 +92,23 @@ export function SignupPage() {
     if (phone.trim() && !PHONE_PATTERN.test(phone.trim())) {
       errors.phone = '연락처 형식을 확인해 주세요.'
     }
-    if (password.length < 8) errors.password = '비밀번호는 8자 이상이어야 합니다.'
+    if (!signupPolicy) {
+      errors.terms = '회원가입 정책을 먼저 불러와 주세요.'
+    } else if (
+      password.length < signupPolicy.password_policy.min_length ||
+      password.length > signupPolicy.password_policy.max_length
+    ) {
+      errors.password = `비밀번호는 ${signupPolicy.password_policy.min_length}자 이상 ${signupPolicy.password_policy.max_length}자 이하여야 합니다.`
+    } else if (
+      (signupPolicy.password_policy.require_letter && !/[A-Za-z]/.test(password)) ||
+      (signupPolicy.password_policy.require_digit && !/\d/.test(password))
+    ) {
+      errors.password = '비밀번호에는 영문과 숫자가 각각 하나 이상 포함되어야 합니다.'
+    }
     if (confirmPassword !== password) errors.confirmPassword = '비밀번호를 다시 입력해 주세요.'
-    if (!termsAgreed || !privacyAgreed) errors.terms = '필수 약관에 동의해 주세요.'
+    if (signupPolicy && (!termsAgreed || !privacyAgreed)) {
+      errors.terms = '필수 약관에 동의해 주세요.'
+    }
     return errors
   }
 
@@ -85,6 +117,7 @@ export function SignupPage() {
     const errors = validate()
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
+    if (!signupPolicy) return
 
     setSubmitting(true)
     try {
@@ -97,9 +130,18 @@ export function SignupPage() {
           email,
           password,
           agreements: {
-            service_terms: { agreed: termsAgreed, version: TERMS_VERSION },
-            privacy_policy: { agreed: privacyAgreed, version: TERMS_VERSION },
-            marketing: { agreed: marketingOptIn, version: TERMS_VERSION },
+            service_terms: {
+              agreed: termsAgreed,
+              version: signupPolicy.agreements.service_terms.version,
+            },
+            privacy_policy: {
+              agreed: privacyAgreed,
+              version: signupPolicy.agreements.privacy_policy.version,
+            },
+            marketing: {
+              agreed: marketingOptIn,
+              version: signupPolicy.agreements.marketing.version,
+            },
           },
         }),
         skipAuthRetry: true,
@@ -254,7 +296,8 @@ export function SignupPage() {
               </button>
             </div>
             <p className={fieldErrors.password ? styles.fieldError : styles.helperText}>
-              {fieldErrors.password ?? '영문과 숫자를 포함해 8자 이상 입력해 주세요.'}
+              {fieldErrors.password ??
+                `영문과 숫자를 포함해 ${signupPolicy?.password_policy.min_length ?? 8}자 이상 입력해 주세요.`}
             </p>
           </div>
 
@@ -313,40 +356,71 @@ export function SignupPage() {
           )}
 
           <div className={styles.termsGroup}>
+            {policyLoading && (
+              <p className={styles.policyStatus} role="status">
+                회원가입 정책을 확인하고 있습니다.
+              </p>
+            )}
+            {policyError && (
+              <div className={styles.policyError} role="alert">
+                <span>{policyError}</span>
+                <button type="button" onClick={() => void loadSignupPolicy()}>
+                  다시 시도
+                </button>
+              </div>
+            )}
             <div className={styles.termsRow}>
               <Checkbox
                 id="terms-agree"
                 label="[필수] 서비스 이용약관 동의"
                 checked={termsAgreed}
+                disabled={!signupPolicy}
                 onChange={(event) => setTermsAgreed(event.target.checked)}
               />
-              <button type="button" className={styles.termsLink}>
+              <Link
+                to={signupPolicy?.agreements.service_terms.content_path ?? '/legal/terms'}
+                target="_blank"
+                rel="noreferrer"
+                className={styles.termsLink}
+              >
                 약관 보기
-              </button>
+              </Link>
             </div>
             <div className={styles.termsRow}>
               <Checkbox
                 id="privacy-agree"
                 label="[필수] 개인정보 수집 및 이용 동의"
                 checked={privacyAgreed}
+                disabled={!signupPolicy}
                 onChange={(event) => setPrivacyAgreed(event.target.checked)}
               />
-              <button type="button" className={styles.termsLink}>
+              <Link
+                to={signupPolicy?.agreements.privacy_policy.content_path ?? '/legal/privacy'}
+                target="_blank"
+                rel="noreferrer"
+                className={styles.termsLink}
+              >
                 개인정보 보기
-              </button>
+              </Link>
             </div>
             <div className={styles.termsRow}>
               <Checkbox
                 id="marketing-opt-in"
                 label="[선택] 제품 소식 수신"
                 checked={marketingOptIn}
+                disabled={!signupPolicy}
                 onChange={(event) => setMarketingOptIn(event.target.checked)}
               />
             </div>
             {fieldErrors.terms && <p className={styles.fieldError}>{fieldErrors.terms}</p>}
           </div>
 
-          <Button type="submit" className={styles.submit} isLoading={submitting}>
+          <Button
+            type="submit"
+            className={styles.submit}
+            disabled={!signupPolicy || policyLoading}
+            isLoading={submitting}
+          >
             계정 만들기
           </Button>
 

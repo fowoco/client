@@ -146,8 +146,7 @@ export function IntroPage() {
               <h1 className={styles.headline}>
                 복잡한 HR 행정업무,
                 <br />
-                <span className={styles.headlineAccent}>Agent</span>가 준비하고 사람이
-                결정합니다.
+                <span className={styles.headlineAccent}>Agent</span>가 준비하고 사람이 결정합니다.
               </h1>
               <p className={styles.subtext}>
                 FOWOCO는 체류·계약·문서 업무를 분석해 필요한 정보와 초안을 준비합니다. 담당자는
@@ -260,8 +259,8 @@ export function IntroPage() {
             <p className={styles.sectionKicker}>SIX WORKFLOWS</p>
             <h2 className={styles.sectionTitle}>FOWOCO의 6대 Workflow</h2>
             <p className={styles.sectionSubtext}>
-              한 사람의 한 사건을 끝까지 묶는 Master Workflow 3종과, 여러 Case에서 반복
-              사용하는 Reusable Workflow 3종으로 구성됩니다.
+              한 사람의 한 사건을 끝까지 묶는 Master Workflow 3종과, 여러 Case에서 반복 사용하는
+              Reusable Workflow 3종으로 구성됩니다.
             </p>
             <div className={styles.workflowGrid}>
               {WORKFLOWS.map((workflow) => {
@@ -368,12 +367,12 @@ export function IntroPage() {
                 프로젝트 소개 · GitHub · 팀 소개 · 문의하기 · 외부 링크는 Prototype Only
               </p>
               <div className={styles.footerLegalActions}>
-                <button type="button" className={styles.footerAction}>
+                <Link to="/legal/privacy" className={styles.footerAction}>
                   개인정보처리방침
-                </button>
-                <button type="button" className={styles.footerAction}>
+                </Link>
+                <Link to="/legal/terms" className={styles.footerAction}>
                   서비스 이용약관
-                </button>
+                </Link>
               </div>
             </div>
           </div>

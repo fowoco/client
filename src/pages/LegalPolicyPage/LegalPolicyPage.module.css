@@ -1,0 +1,128 @@
+.page {
+  min-height: 100svh;
+  padding: 0 24px 64px;
+  background: var(--surface-subtle);
+  color: var(--text-primary);
+}
+
+.header {
+  width: min(880px, 100%);
+  min-height: 72px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.brand {
+  color: var(--brand-primary);
+  font-size: 20px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.nav {
+  display: flex;
+  gap: 20px;
+}
+
+.nav a {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.nav a[aria-current='page'] {
+  color: var(--brand-primary);
+}
+
+.document {
+  width: min(880px, 100%);
+  margin: 0 auto;
+  padding: 56px clamp(24px, 6vw, 72px);
+  border: 1px solid var(--border-default);
+  border-radius: var(--fowoco-radius-6);
+  background: var(--surface-default);
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--brand-primary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.document h1 {
+  margin: 10px 0 0;
+  font-size: clamp(30px, 5vw, 42px);
+  line-height: 1.2;
+}
+
+.summary {
+  margin: 16px 0 0;
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.meta {
+  margin: 12px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.notice {
+  margin-top: 32px;
+  padding: 16px 18px;
+  border-left: 3px solid var(--brand-primary);
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.sections {
+  margin-top: 36px;
+  display: grid;
+  gap: 30px;
+}
+
+.sections section {
+  padding-bottom: 30px;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.sections h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.sections p {
+  margin: 10px 0 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.documentFooter {
+  margin-top: 36px;
+}
+
+.documentFooter a {
+  color: var(--brand-primary);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+@media (max-width: 560px) {
+  .page {
+    padding-inline: 12px;
+  }
+
+  .document {
+    padding-block: 36px;
+  }
+}

@@ -8,6 +8,7 @@ import { IntroPage } from './pages/IntroPage/IntroPage'
 import { LinkExpiredPage } from './pages/LinkExpiredPage/LinkExpiredPage'
 import { LinkRequestPage } from './pages/LinkRequestPage/LinkRequestPage'
 import { LinkUploadPage } from './pages/LinkUploadPage/LinkUploadPage'
+import { LegalPolicyPage } from './pages/LegalPolicyPage/LegalPolicyPage'
 import { LoginPage } from './pages/LoginPage/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage/NotFoundPage'
 import { OnboardingImportPage } from './pages/OnboardingImportPage/OnboardingImportPage'
@@ -71,6 +72,16 @@ export const router = createBrowserRouter([
   { path: '/', element: <IntroPage />, errorElement: <NotFoundPage /> },
   { path: '/login', element: <LoginPage />, errorElement: <NotFoundPage /> },
   { path: '/signup', element: <SignupPage />, errorElement: <NotFoundPage /> },
+  {
+    path: '/legal/terms',
+    element: <LegalPolicyPage kind="terms" />,
+    errorElement: <NotFoundPage />,
+  },
+  {
+    path: '/legal/privacy',
+    element: <LegalPolicyPage kind="privacy" />,
+    errorElement: <NotFoundPage />,
+  },
   { path: '/forgot-password', element: <ForgotPasswordPage />, errorElement: <NotFoundPage /> },
   { path: '/email-sent', element: <EmailSentPage />, errorElement: <NotFoundPage /> },
   { path: '/reset-password', element: <ResetPasswordPage />, errorElement: <NotFoundPage /> },

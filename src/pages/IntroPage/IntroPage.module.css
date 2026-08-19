@@ -370,7 +370,9 @@
   max-width: 640px;
   background: var(--fowoco-white);
   border-radius: 28px;
-  box-shadow: 0 24px 0 -8px rgba(7, 94, 91, 0.08), 0 32px 48px rgba(7, 94, 91, 0.16);
+  box-shadow:
+    0 24px 0 -8px rgba(7, 94, 91, 0.08),
+    0 32px 48px rgba(7, 94, 91, 0.16);
   overflow: hidden;
 }
 
@@ -984,6 +986,7 @@
   background: none;
   border: none;
   cursor: pointer;
+  text-decoration: none;
 }
 
 @media (max-width: 960px) {

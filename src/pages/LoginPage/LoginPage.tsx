@@ -69,9 +69,7 @@ export function LoginPage() {
           ))}
         </ul>
 
-        <p className={styles.disclaimer}>
-          Agent는 자동 승인·법률 판단·급여 지급을 하지 않습니다.
-        </p>
+        <p className={styles.disclaimer}>Agent는 자동 승인·법률 판단·급여 지급을 하지 않습니다.</p>
       </aside>
 
       <div className={styles.formSide}>
@@ -82,9 +80,7 @@ export function LoginPage() {
           </p>
 
           {justSignedUp && (
-            <p className={styles.successBanner}>
-              회원가입이 완료되었습니다. 로그인해 주세요.
-            </p>
+            <p className={styles.successBanner}>회원가입이 완료되었습니다. 로그인해 주세요.</p>
           )}
 
           <div className={styles.field}>
@@ -149,7 +145,12 @@ export function LoginPage() {
 
           {error && <p className={styles.errorMessage}>{error}</p>}
 
-          <Button type="submit" className={styles.submit} disabled={!canSubmit} isLoading={submitting}>
+          <Button
+            type="submit"
+            className={styles.submit}
+            disabled={!canSubmit}
+            isLoading={submitting}
+          >
             로그인
           </Button>
 
@@ -184,12 +185,12 @@ export function LoginPage() {
           </div>
 
           <div className={styles.legalRow}>
-            <button type="button" className={styles.legalLink}>
+            <Link to="/legal/privacy" className={styles.legalLink}>
               개인정보처리방침
-            </button>
-            <button type="button" className={styles.legalLink}>
+            </Link>
+            <Link to="/legal/terms" className={styles.legalLink}>
               서비스 이용약관
-            </button>
+            </Link>
           </div>
 
           <p className={styles.terms}>

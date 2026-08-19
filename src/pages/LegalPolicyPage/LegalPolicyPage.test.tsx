@@ -15,6 +15,11 @@ beforeEach(() => {
             require_letter: true,
             require_digit: true,
           },
+          account_protection: {
+            max_failed_attempts: 5,
+            lock_duration_seconds: 900,
+            password_max_age_days: 180,
+          },
           agreements: {
             service_terms: { version: '2.0', required: true, content_path: '/legal/terms' },
             privacy_policy: {

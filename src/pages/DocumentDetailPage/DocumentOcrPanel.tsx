@@ -11,6 +11,8 @@ import type { DocumentType } from '../../api/documents'
 import { ApiError, getErrorMessage } from '../../api/errors'
 import { Button } from '../../components/ui/Button/Button'
 import { StatusLabel, type StatusTone } from '../../components/ui/StatusLabel/StatusLabel'
+import { useAuthStore } from '../../store/authStore'
+import { isSensitiveOcrField, maskSensitiveValue } from '../../utils/privacyMasking'
 import styles from './DocumentOcrPanel.module.css'
 
 const POLL_INTERVAL_MS = 1500
@@ -123,12 +125,15 @@ function messageFor(error: unknown) {
 
 export function DocumentOcrPanel({ documentId, documentType, fileId }: DocumentOcrPanelProps) {
   const supported = documentType === 'PASSPORT_COPY' || documentType === 'ARC'
+  const userRole = useAuthStore((state) => state.user?.role)
+  const canRevealSensitiveValues = userRole === 'ADMIN' || userRole === 'HR'
   const [panelState, setPanelState] = useState<PanelState>('loading')
   const [run, setRun] = useState<DocumentOcrRunResponse | null>(null)
   const [fieldDrafts, setFieldDrafts] = useState<Record<string, string>>({})
   const [rejectReason, setRejectReason] = useState('')
   const [requestError, setRequestError] = useState<string | null>(null)
   const [busyAction, setBusyAction] = useState<'create' | 'approve' | 'reject' | null>(null)
+  const [sensitiveValuesVisible, setSensitiveValuesVisible] = useState(false)
   const requestKeyRef = useRef<string | null>(null)
 
   const applyRun = useCallback(
@@ -192,6 +197,16 @@ export function DocumentOcrPanel({ documentId, documentType, fileId }: DocumentO
       window.clearTimeout(timer)
     }
   }, [applyRun, documentId, run])
+
+  useEffect(() => {
+    if (!sensitiveValuesVisible) return
+    const timer = window.setTimeout(() => setSensitiveValuesVisible(false), 60_000)
+    return () => window.clearTimeout(timer)
+  }, [sensitiveValuesVisible])
+
+  useEffect(() => {
+    if (!canRevealSensitiveValues) setSensitiveValuesVisible(false)
+  }, [canRevealSensitiveValues])
 
   const changedFields = useMemo(() => {
     if (!run?.result || (documentType !== 'PASSPORT_COPY' && documentType !== 'ARC')) return {}
@@ -277,11 +292,22 @@ export function DocumentOcrPanel({ documentId, documentType, fileId }: DocumentO
           <h2 id="document-ocr-title">문서 OCR</h2>
           <p>원본에서 정보를 추출한 뒤 담당자가 수정하고 검토 상태를 확정합니다.</p>
         </div>
-        {run && (
-          <StatusLabel tone={STATUS_PRESENTATION[run.status].tone}>
-            {STATUS_PRESENTATION[run.status].label}
-          </StatusLabel>
-        )}
+        <div className={styles.headerActions}>
+          {run?.result && canRevealSensitiveValues && (
+            <Button
+              variant="secondary"
+              aria-pressed={sensitiveValuesVisible}
+              onClick={() => setSensitiveValuesVisible((visible) => !visible)}
+            >
+              {sensitiveValuesVisible ? '민감정보 숨기기' : '민감정보 보기'}
+            </Button>
+          )}
+          {run && (
+            <StatusLabel tone={STATUS_PRESENTATION[run.status].tone}>
+              {STATUS_PRESENTATION[run.status].label}
+            </StatusLabel>
+          )}
+        </div>
       </div>
 
       {requestError && (
@@ -365,6 +391,10 @@ export function DocumentOcrPanel({ documentId, documentType, fileId }: DocumentO
                   </span>
                   {editable && REVIEWABLE_STATUSES.includes(run.status) ? (
                     <input
+                      type={
+                        isSensitiveOcrField(field) && !sensitiveValuesVisible ? 'password' : 'text'
+                      }
+                      autoComplete="off"
                       value={draftValue}
                       placeholder={originalValue ? undefined : '원본을 확인해 입력해 주세요.'}
                       onChange={(event) =>
@@ -372,13 +402,20 @@ export function DocumentOcrPanel({ documentId, documentType, fileId }: DocumentO
                       }
                     />
                   ) : (
-                    <output>{draftValue}</output>
+                    <output>
+                      {sensitiveValuesVisible ? draftValue : maskSensitiveValue(field, draftValue)}
+                    </output>
                   )}
                   {editable &&
                     REVIEWABLE_STATUSES.includes(run.status) &&
                     originalValue &&
                     draftValue !== originalValue && (
-                      <small className={styles.originalValue}>OCR 추출값 · {originalValue}</small>
+                      <small className={styles.originalValue}>
+                        OCR 추출값 ·{' '}
+                        {sensitiveValuesVisible
+                          ? originalValue
+                          : maskSensitiveValue(field, originalValue)}
+                      </small>
                     )}
                 </label>
               )

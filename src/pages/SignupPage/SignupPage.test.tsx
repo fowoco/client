@@ -44,6 +44,11 @@ function signupPolicyResponse(
       require_letter: true,
       require_digit: true,
     },
+    account_protection: {
+      max_failed_attempts: 5,
+      lock_duration_seconds: 900,
+      password_max_age_days: 180,
+    },
     agreements: {
       service_terms: {
         version: serviceTermsVersion,
@@ -101,6 +106,9 @@ describe('SignupPage', () => {
     renderPage()
 
     await waitFor(() => expect(screen.getByRole('button', { name: '계정 만들기' })).toBeEnabled())
+    expect(
+      screen.getByText('계정 보호 · 로그인 5회 실패 시 15분 잠금 · 비밀번호 180일 사용'),
+    ).toBeInTheDocument()
 
     await user.type(screen.getByLabelText('이름'), '김경민')
     await user.type(screen.getByLabelText('업무용 이메일'), 'mini@naver.com')

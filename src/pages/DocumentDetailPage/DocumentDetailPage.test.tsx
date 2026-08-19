@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DocumentDetailResponse, DocumentItemResponse } from '../../api/documents'
 import type { DocumentOcrRunResponse } from '../../api/documentOcr'
+import { useAuthStore } from '../../store/authStore'
 import { DocumentDetailPage } from './DocumentDetailPage'
 
 vi.mock('./PdfPreviewCanvas', () => ({
@@ -148,9 +149,11 @@ function renderPage(documentId: string) {
 
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn())
+  useAuthStore.setState({ user: null, status: 'ready' })
 })
 
 afterEach(() => {
+  useAuthStore.setState({ user: null, status: 'ready' })
   vi.useRealTimers()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
@@ -234,6 +237,16 @@ describe('DocumentDetailPage', () => {
   it('runs OCR, polls until ready, submits only HR corrections, and marks review complete', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    useAuthStore.setState({
+      user: {
+        name: 'HR 담당자',
+        phone: null,
+        email: 'hr@example.com',
+        workplace: '한빛정밀',
+        role: 'HR',
+      },
+      status: 'ready',
+    })
     const fileDocument = detail({
       worker_document_id: 'D-1',
       display_name: '응웬반A',
@@ -265,6 +278,13 @@ describe('DocumentDetailPage', () => {
     expect(await screen.findByText('OCR 결과를 확인하는 중입니다.')).toBeInTheDocument()
 
     await vi.advanceTimersByTimeAsync(1600)
+    const registrationNumberInput = await screen.findByDisplayValue('900101-5000000')
+    expect(registrationNumberInput).toHaveAttribute('type', 'password')
+    await user.click(screen.getByRole('button', { name: '민감정보 보기' }))
+    expect(registrationNumberInput).toHaveAttribute('type', 'text')
+    await user.click(screen.getByRole('button', { name: '민감정보 숨기기' }))
+    expect(registrationNumberInput).toHaveAttribute('type', 'password')
+
     const expiryInput = await screen.findByDisplayValue('2026-12-01')
     await user.clear(expiryInput)
     await user.type(expiryInput, '2026-12-31')

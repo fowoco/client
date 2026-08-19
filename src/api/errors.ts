@@ -36,6 +36,9 @@ const ERROR_MESSAGES: Record<string, string> = {
   VALIDATION_FAILED: '입력값을 다시 확인해 주세요.',
   AUTHENTICATION_REQUIRED: '로그인이 필요합니다.',
   INVALID_CREDENTIALS: '이메일 또는 비밀번호가 올바르지 않습니다.',
+  ACCOUNT_TEMPORARILY_LOCKED:
+    '로그인 시도가 반복되어 계정이 잠시 잠겼습니다. 잠시 후 다시 시도해 주세요.',
+  PASSWORD_EXPIRED: '비밀번호 사용기간이 만료되었습니다. 비밀번호를 재설정해 주세요.',
   INVALID_REFRESH_TOKEN: '로그인이 만료되었습니다. 다시 로그인해 주세요.',
   ACCESS_DENIED: '이 작업에 대한 권한이 없습니다.',
   RESOURCE_NOT_FOUND: '요청한 정보를 찾을 수 없습니다.',

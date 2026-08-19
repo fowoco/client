@@ -62,6 +62,7 @@ import { TASK_SOURCE_LABEL, TASK_STATUS_LABEL, TASK_STATUS_TONE } from '../../ut
 import { getDocumentViewModel } from '../../view-models/documentViewModel'
 import { getOperationalDateViewModel } from '../../view-models/dateViewModel'
 import {
+  buildWorkerGuideReviewMessage,
   getWorkerGuideReviewPresentation,
   getWorkerGuideReviewState,
 } from '../../view-models/workerGuideReviewViewModel'
@@ -166,6 +167,7 @@ interface DocumentRequestDraftForm {
   taskId: string
   sourceVersion: number | null
   guideReviewRequired: boolean
+  dirty: boolean
   language: string
   documentTypes: DocumentType[]
   message: string
@@ -345,16 +347,27 @@ export function CaseDetailPage() {
     ])
     const savedVersion = documentRequestDraft?.version ?? null
     const preferredLanguage = worker?.preferred_language?.trim() || 'ko'
-    const guideReviewRequired = task
-      ? getWorkerGuideReviewState(task.business_data).required
-      : false
+    const guideReviewState = task
+      ? getWorkerGuideReviewState(task.business_data)
+      : { required: false, failureCode: null, draft: null }
+    const guideReviewRequired = guideReviewState.required
+    const guideReviewMessage = guideReviewRequired
+      ? buildWorkerGuideReviewMessage(guideReviewState.draft)
+      : ''
+    const guideReviewLanguage = guideReviewRequired
+      ? (guideReviewState.draft?.targetLanguage ?? preferredLanguage)
+      : preferredLanguage
 
     setDocumentRequestDraftForm((current) => {
       if (documentRequestDraft) {
+        if (current?.taskId === taskId && current.sourceVersion === savedVersion && current.dirty) {
+          return current
+        }
         return {
           taskId,
           sourceVersion: savedVersion,
           guideReviewRequired,
+          dirty: false,
           language: documentRequestDraft.language,
           documentTypes: documentRequestDraft.document_types,
           message: documentRequestDraft.message ?? '',
@@ -369,16 +382,25 @@ export function CaseDetailPage() {
           ...current.documentTypes,
           ...inferredDocumentTypes,
         ])
+        if (current.dirty) {
+          return {
+            ...current,
+            documentTypes,
+          }
+        }
         const canUseDefaultMessage = !guideReviewRequired && current.language === 'ko'
         const message =
           current.message &&
           current.message !== defaultDocumentRequestMessage(current.documentTypes)
             ? current.message
-            : canUseDefaultMessage
-              ? defaultDocumentRequestMessage(documentTypes)
-              : ''
+            : guideReviewMessage
+              ? guideReviewMessage
+              : canUseDefaultMessage
+                ? defaultDocumentRequestMessage(documentTypes)
+                : ''
         return {
           ...current,
+          language: guideReviewState.draft?.targetLanguage ?? current.language,
           documentTypes,
           message,
         }
@@ -387,12 +409,14 @@ export function CaseDetailPage() {
         taskId,
         sourceVersion: null,
         guideReviewRequired,
-        language: preferredLanguage,
+        dirty: false,
+        language: guideReviewLanguage,
         documentTypes: inferredDocumentTypes,
         message:
-          !guideReviewRequired && preferredLanguage === 'ko'
+          guideReviewMessage ||
+          (!guideReviewRequired && guideReviewLanguage === 'ko'
             ? defaultDocumentRequestMessage(inferredDocumentTypes)
-            : '',
+            : ''),
       }
     })
     setDocumentRequestDraftVersion((current) => {
@@ -718,7 +742,7 @@ export function CaseDetailPage() {
       setDocumentRequestDraftVersion({ taskId: task.task_id, version: savedDraft.version })
       setDocumentRequestDraftForm((current) =>
         current?.taskId === task.task_id
-          ? { ...current, sourceVersion: savedDraft.version, message }
+          ? { ...current, sourceVersion: savedDraft.version, dirty: false, message }
           : current,
       )
       await refetchDocumentRequestDraft()
@@ -942,6 +966,8 @@ export function CaseDetailPage() {
   const guideReview = guideReviewState.required
     ? getWorkerGuideReviewPresentation(guideReviewState.failureCode)
     : null
+  const guideReviewDraftAvailable =
+    guideReviewState.required && buildWorkerGuideReviewMessage(guideReviewState.draft) !== ''
   const approvalBadge = getApprovalBadge(task.status)
   const requiredChecklist = task.checklist_items.filter((item) => item.required)
   const completedRequiredChecklist = requiredChecklist.filter((item) => item.completed).length
@@ -1492,8 +1518,11 @@ export function CaseDetailPage() {
                   <div className={styles.documentRequestReview} role="alert">
                     <strong>{guideReview.title}</strong>
                     <p>
-                      {guideReview.description} 대상 언어를 확인하고 안내문을 직접 작성해 저장해
-                      주세요. 저장 전에는 근로자에게 전달되지 않습니다.
+                      {guideReview.description}{' '}
+                      {guideReviewDraftAvailable
+                        ? '자동 생성된 초안의 대상 언어와 내용을 확인·수정해 저장해 주세요.'
+                        : '대상 언어를 확인하고 안내문을 직접 작성해 저장해 주세요.'}{' '}
+                      저장 전에는 근로자에게 전달되지 않습니다.
                     </p>
                   </div>
                 )}
@@ -1508,7 +1537,7 @@ export function CaseDetailPage() {
                   onChange={(event) =>
                     setDocumentRequestDraftForm((current) =>
                       current?.taskId === task.task_id
-                        ? { ...current, language: event.target.value }
+                        ? { ...current, language: event.target.value, dirty: true }
                         : current,
                     )
                   }
@@ -1539,7 +1568,7 @@ export function CaseDetailPage() {
                   onChange={(event) =>
                     setDocumentRequestDraftForm((current) =>
                       current?.taskId === task.task_id
-                        ? { ...current, message: event.target.value }
+                        ? { ...current, message: event.target.value, dirty: true }
                         : current,
                     )
                   }

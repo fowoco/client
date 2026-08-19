@@ -737,6 +737,98 @@ describe('CaseDetailPage', () => {
     ).toBe(false)
   })
 
+  it('prefills the AI bilingual guide draft for HR review and saves it', async () => {
+    const user = userEvent.setup()
+    mockTaskAndActivities(
+      {
+        business_data: {
+          renewal_execution: {
+            guide_review_required: true,
+            guide_failure_code: 'LANGUAGE_ASSISTANT_REVIEW_REQUIRED',
+            guide_review_draft: {
+              target_language: 'mn',
+              standard_korean_text: '다음 요청 내용을 확인해 주세요.',
+              easy_korean_text: '여권 사본을 준비해 주세요.',
+              translated_text: 'Паспортын хуулбараа бэлдэнэ үү.',
+              warning_codes: ['RETRIEVAL_UNAVAILABLE'],
+            },
+          },
+        },
+      },
+      [],
+      { missing: ['PASSPORT_COPY'], completion_blocked: true },
+    )
+    renderPage()
+    await screen.findByText('응웬반A 체류연장 준비')
+
+    await user.click(screen.getByRole('tab', { name: CASE_TABS[2] }))
+
+    expect(screen.getByLabelText('안내 언어')).toHaveValue('mn')
+    expect(screen.getByLabelText('근로자 안내문')).toHaveValue(
+      '[쉬운 한국어]\n여권 사본을 준비해 주세요.\n\n[대상 언어 안내]\nПаспортын хуулбараа бэлдэнэ үү.',
+    )
+
+    await user.click(screen.getByRole('button', { name: '요청 초안 저장' }))
+
+    const saveCall = await waitFor(() => {
+      const call = vi
+        .mocked(fetch)
+        .mock.calls.find(
+          ([url, init]) =>
+            String(url).includes('/document-request-draft') && init?.method === 'PUT',
+        )
+      expect(call).toBeDefined()
+      return call!
+    })
+    expect(JSON.parse(String(saveCall[1]?.body))).toMatchObject({
+      language: 'mn',
+      message:
+        '[쉬운 한국어]\n여권 사본을 준비해 주세요.\n\n[대상 언어 안내]\nПаспортын хуулбараа бэлдэнэ үү.',
+    })
+  })
+
+  it('keeps the saved HR draft instead of replacing it with an AI review draft', async () => {
+    const user = userEvent.setup()
+    mockTaskAndActivities(
+      {
+        business_data: {
+          renewal_execution: {
+            guide_review_required: true,
+            guide_failure_code: 'LANGUAGE_ASSISTANT_REVIEW_REQUIRED',
+            guide_review_draft: {
+              target_language: 'mn',
+              easy_korean_text: 'AI가 만든 안내',
+              translated_text: 'AI орчуулга',
+            },
+          },
+        },
+      },
+      [],
+      { missing: ['PASSPORT_COPY'], completion_blocked: true },
+      [],
+      [],
+      null,
+      null,
+      {
+        draft_id: 'draft-1',
+        language: 'vi',
+        document_types: ['PASSPORT_COPY'],
+        message: 'HR이 검토하고 저장한 안내문',
+        version: 3,
+        review_status: 'DRAFT',
+        updated_at: '2026-08-08T00:00:00Z',
+      },
+    )
+    renderPage()
+    await screen.findByText('응웬반A 체류연장 준비')
+
+    await user.click(screen.getByRole('tab', { name: CASE_TABS[2] }))
+
+    expect(screen.getByLabelText('안내 언어')).toHaveValue('vi')
+    expect(screen.getByLabelText('근로자 안내문')).toHaveValue('HR이 검토하고 저장한 안내문')
+    expect(screen.queryByDisplayValue(/AI가 만든 안내/)).not.toBeInTheDocument()
+  })
+
   it('shows real unread worker responses and marks them as reviewed', async () => {
     const user = userEvent.setup()
     mockTaskAndActivities(

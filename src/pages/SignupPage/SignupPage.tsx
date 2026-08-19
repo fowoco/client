@@ -411,6 +411,14 @@ export function SignupPage() {
                 disabled={!signupPolicy}
                 onChange={(event) => setMarketingOptIn(event.target.checked)}
               />
+              <Link
+                to={signupPolicy?.agreements.marketing.content_path ?? '/legal/marketing'}
+                target="_blank"
+                rel="noreferrer"
+                className={styles.termsLink}
+              >
+                수신 안내
+              </Link>
             </div>
             {fieldErrors.terms && <p className={styles.fieldError}>{fieldErrors.terms}</p>}
           </div>

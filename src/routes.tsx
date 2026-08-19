@@ -82,6 +82,11 @@ export const router = createBrowserRouter([
     element: <LegalPolicyPage kind="privacy" />,
     errorElement: <NotFoundPage />,
   },
+  {
+    path: '/legal/marketing',
+    element: <LegalPolicyPage kind="marketing" />,
+    errorElement: <NotFoundPage />,
+  },
   { path: '/forgot-password', element: <ForgotPasswordPage />, errorElement: <NotFoundPage /> },
   { path: '/email-sent', element: <EmailSentPage />, errorElement: <NotFoundPage /> },
   { path: '/reset-password', element: <ResetPasswordPage />, errorElement: <NotFoundPage /> },

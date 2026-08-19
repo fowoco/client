@@ -55,7 +55,11 @@ function signupPolicyResponse(
         required: true,
         content_path: '/legal/privacy',
       },
-      marketing: { version: marketingVersion, required: false, content_path: null },
+      marketing: {
+        version: marketingVersion,
+        required: false,
+        content_path: '/legal/marketing',
+      },
     },
   })
 }
@@ -211,7 +215,7 @@ describe('SignupPage', () => {
     expect(fetch).toHaveBeenCalledTimes(1)
   })
 
-  it('links to the readable terms and privacy pages', async () => {
+  it('links to every readable agreement page', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(signupPolicyResponse())
     renderPage()
 
@@ -222,6 +226,10 @@ describe('SignupPage', () => {
     expect(screen.getByRole('link', { name: '개인정보 보기' })).toHaveAttribute(
       'href',
       '/legal/privacy',
+    )
+    expect(screen.getByRole('link', { name: '수신 안내' })).toHaveAttribute(
+      'href',
+      '/legal/marketing',
     )
   })
 

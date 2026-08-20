@@ -55,6 +55,12 @@ const ERROR_MESSAGES: Record<string, string> = {
   // 화면에는 그 원문 대신 이 문구를 보여준다.
   UNKNOWN_ERROR: '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.',
   EMAIL_ALREADY_REGISTERED: '이미 가입된 이메일입니다.',
+  RENEWAL_EXECUTION_NOT_ALLOWED:
+    '현재 업무 단계에서는 Agent를 다시 실행할 수 없습니다. 화면에 안내된 다음 행동을 진행해 주세요.',
+  RENEWAL_REQUEST_CONTRACT_INVALID:
+    '업무 정보가 Agent 요청 계약과 맞지 않습니다. 새로고침한 뒤 입력 내용을 확인해 주세요.',
+  RENEWAL_WORKFLOW_MISMATCH:
+    '업무 유형과 Agent Workflow가 일치하지 않습니다. 업무 설정을 확인해 주세요.',
 }
 
 const DEFAULT_MESSAGE = '알 수 없는 오류가 발생했습니다.'

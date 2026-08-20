@@ -1308,7 +1308,12 @@ describe('CaseDetailPage', () => {
 
   it('keeps the Renewal result mounted while the Task refetch is loading', async () => {
     const user = userEvent.setup()
-    mockTaskAndActivities({ status: 'DRAFT' })
+    mockTaskAndActivities({
+      status: 'DRAFT',
+      next_action: 'RUN_RENEWAL',
+      available_actions: ['RUN_RENEWAL'],
+      blocked_reason: null,
+    })
     const defaultFetch = vi.mocked(fetch).getMockImplementation()
     let taskFetchCount = 0
     const askHrResponse: RenewalExecutionResponse = {

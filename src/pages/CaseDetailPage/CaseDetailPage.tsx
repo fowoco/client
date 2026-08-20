@@ -28,6 +28,7 @@ import {
   changeTaskAssignee,
   fetchTaskById,
   updateChecklistItem,
+  type TaskAvailableAction,
   type TaskType,
 } from '../../api/tasks'
 import { fetchWorkerById } from '../../api/workers'
@@ -146,6 +147,57 @@ const RENEWAL_TASK_TYPES = new Set<TaskType>([
   'EMPLOYMENT_PERIOD_EXTENSION',
   'STAY_PERIOD_EXTENSION',
 ])
+
+const NEXT_ACTION_PRESENTATION: Record<
+  TaskAvailableAction,
+  { label: string; description: string }
+> = {
+  RUN_RENEWAL: {
+    label: 'Renewal 실행',
+    description: 'Agent가 현재 정보와 누락 항목을 다시 확인할 수 있습니다.',
+  },
+  PROVIDE_REQUIRED_INFORMATION: {
+    label: '필수 정보 보완',
+    description: '업무 진행에 필요한 정보를 먼저 입력해 주세요.',
+  },
+  COMPLETE_CHECKLIST: {
+    label: '체크리스트 확인',
+    description: '남아 있는 필수 체크리스트를 완료해 주세요.',
+  },
+  REVIEW_OCR: {
+    label: 'OCR 결과 검토',
+    description: '근로자가 제출한 서류의 OCR 결과를 확인해 주세요.',
+  },
+  REVIEW_WORKER_GUIDE: {
+    label: '근로자 안내문 검토',
+    description: '대상 언어와 안내 내용을 확인한 뒤 초안을 저장해 주세요.',
+  },
+  REVIEW_GENERATED_DOCUMENT: {
+    label: '생성 문서 검토',
+    description: 'Agent가 만든 문서를 확인한 뒤 승인 절차를 진행해 주세요.',
+  },
+  REQUEST_APPROVAL: {
+    label: '승인 요청',
+    description:
+      'Agent 결과가 반영되어 기존 승인이 무효화되었습니다. 현재 버전으로 다시 승인받아 주세요.',
+  },
+  APPROVE: {
+    label: '승인 검토',
+    description: '담당자가 제출한 현재 업무 버전을 검토해 주세요.',
+  },
+  ISSUE_WORKER_LINK: {
+    label: '근로자 링크 발급',
+    description: '승인된 요청을 근로자에게 전달할 보안 링크를 준비해 주세요.',
+  },
+  REVIEW_WORKER_RESPONSE: {
+    label: '근로자 응답 확인',
+    description: '근로자가 제출한 답변과 서류를 확인해 주세요.',
+  },
+  COMPLETE_TASK: {
+    label: '완료 처리',
+    description: '실행 결과와 증빙을 확인한 뒤 업무를 완료해 주세요.',
+  },
+}
 
 async function fetchTaskWorkerLinkDeliveryOrNull(
   taskId: string,
@@ -981,8 +1033,10 @@ export function CaseDetailPage() {
     !isRenewalTask ||
     (typeof task.business_data.renewal_execution === 'object' &&
       task.business_data.renewal_execution !== null)
-  const canRunRenewal = isRenewalTask && task.status !== 'COMPLETED' && task.status !== 'CANCELLED'
-  const renewalPreparationRequired = canRunRenewal && !renewalPrepared
+  const availableActions = task.available_actions ?? []
+  const nextAction = task.next_action ?? null
+  const nextActionPresentation = nextAction ? NEXT_ACTION_PRESENTATION[nextAction] : null
+  const canRunRenewal = availableActions.includes('RUN_RENEWAL')
   const approvalReady =
     task.status === 'APPROVED' ||
     task.status === 'WAITING_WORKER' ||
@@ -992,11 +1046,7 @@ export function CaseDetailPage() {
     Boolean(documentRequestDraftForm?.message.trim())
   const taskCompleted = task.status === 'COMPLETED'
   const approvalSatisfied = approvalReady || taskCompleted
-  const canRequestApproval =
-    (task.status === 'DRAFT' || task.status === 'NEEDS_INFO') &&
-    checklistReady &&
-    informationReady &&
-    renewalPrepared
+  const canRequestApproval = availableActions.includes('REQUEST_APPROVAL')
   const canComplete =
     !taskCompleted && approvalReady && checklistReady && informationReady && documentsReady
   const completionBlockers = [
@@ -1045,14 +1095,20 @@ export function CaseDetailPage() {
       setActiveTab('활동이력')
       return
     }
-    if (renewalPreparationRequired) {
-      setRenewalOverlayOpen(true)
-      return
+    if (nextAction === 'RUN_RENEWAL') return setRenewalOverlayOpen(true)
+    if (nextAction === 'REQUEST_APPROVAL') return handleOpenApprovalRequest()
+    if (nextAction === 'APPROVE') return handleOpenReview()
+    if (
+      nextAction === 'REVIEW_OCR' ||
+      nextAction === 'REVIEW_WORKER_GUIDE' ||
+      nextAction === 'REVIEW_GENERATED_DOCUMENT'
+    ) {
+      return setActiveTab('문서')
     }
-    if (task.status === 'READY_FOR_REVIEW') {
-      handleOpenReview()
-      return
+    if (nextAction === 'ISSUE_WORKER_LINK' || nextAction === 'REVIEW_WORKER_RESPONSE') {
+      return setActiveTab('소통')
     }
+    if (nextAction === 'COMPLETE_TASK' && canComplete) return handleOpenExternalCompletion()
     if (!documentsReady) {
       setActiveTab('문서')
       return
@@ -1151,6 +1207,12 @@ export function CaseDetailPage() {
 
       {activeTab === '현재 단계' && (
         <div id="case-panel-0" role="tabpanel" aria-labelledby="case-tab-0">
+          {nextActionPresentation && (
+            <div className={styles.nextActionNotice} role="status">
+              <strong>다음 행동 · {nextActionPresentation.label}</strong>
+              <span>{nextActionPresentation.description}</span>
+            </div>
+          )}
           <div className={styles.summaryRow}>
             <AgentSummary
               headline={agentHeadline}
@@ -1158,13 +1220,15 @@ export function CaseDetailPage() {
               actionLabel={
                 taskCompleted
                   ? '활동 이력 확인'
-                  : renewalPreparationRequired
-                    ? 'Renewal 실행'
-                    : task.status === 'READY_FOR_REVIEW'
-                      ? '검토하기'
-                      : !documentsReady
-                        ? '문서 확인'
-                        : '항목 확인'
+                  : nextAction === 'APPROVE'
+                    ? '검토하기'
+                    : nextAction === 'REQUEST_APPROVAL'
+                      ? '승인 준비 확인'
+                      : nextActionPresentation
+                        ? nextActionPresentation.label
+                        : !documentsReady
+                          ? '문서 확인'
+                          : '항목 확인'
               }
               onAction={handleAgentAction}
             />
@@ -1789,8 +1853,8 @@ export function CaseDetailPage() {
 
       <div className={styles.actionDock}>
         <span className={styles.nextStep}>
-          {task.status === 'READY_FOR_REVIEW'
-            ? '다음 행동 · 승인 검토'
+          {nextActionPresentation
+            ? `다음 행동 · ${nextActionPresentation.label}`
             : task.status === 'COMPLETED'
               ? '이 업무는 완료되었습니다.'
               : task.status === 'CANCELLED'
@@ -1799,7 +1863,7 @@ export function CaseDetailPage() {
                   ? '다음 행동 · 실행 결과와 증빙 확인'
                   : '다음 행동 · 필수 조건 확인 후 승인 요청'}
         </span>
-        {task.status === 'READY_FOR_REVIEW' && (
+        {availableActions.includes('APPROVE') && (
           <Button onClick={handleOpenReview} disabled={actionPending}>
             승인 검토
           </Button>

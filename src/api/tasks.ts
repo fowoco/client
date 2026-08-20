@@ -22,6 +22,18 @@ export type TaskType =
   | 'WORK_INSTRUCTION'
 export type TaskTargetType = 'WORKER' | 'COMPANY'
 export type TaskSource = 'MANUAL' | 'SYSTEM_DDAY' | 'AI_CANDIDATE'
+export type TaskAvailableAction =
+  | 'RUN_RENEWAL'
+  | 'PROVIDE_REQUIRED_INFORMATION'
+  | 'COMPLETE_CHECKLIST'
+  | 'REVIEW_OCR'
+  | 'REVIEW_WORKER_GUIDE'
+  | 'REVIEW_GENERATED_DOCUMENT'
+  | 'REQUEST_APPROVAL'
+  | 'APPROVE'
+  | 'ISSUE_WORKER_LINK'
+  | 'REVIEW_WORKER_RESPONSE'
+  | 'COMPLETE_TASK'
 
 export interface TaskChecklistItemResponse {
   checklist_item_id: string
@@ -53,6 +65,9 @@ export interface TaskDetailResponse {
   version: number
   missing_required_slots: string[]
   checklist_items: TaskChecklistItemResponse[]
+  next_action: TaskAvailableAction | null
+  available_actions: TaskAvailableAction[]
+  blocked_reason: string | null
   created_by: string
   updated_by: string
   created_at: string

@@ -43,7 +43,7 @@ function errorResponse(status: number, code: string, message: string) {
 }
 
 function task(overrides: Partial<TaskDetailResponse> = {}): TaskDetailResponse {
-  return {
+  const result: TaskDetailResponse = {
     task_id: 'T-1',
     target_type: 'WORKER',
     worker_id: 'W-1',
@@ -83,12 +83,43 @@ function task(overrides: Partial<TaskDetailResponse> = {}): TaskDetailResponse {
         version: 1,
       },
     ],
+    next_action: 'APPROVE',
+    available_actions: ['APPROVE'],
+    blocked_reason: 'HR_REVIEW_REQUIRED',
     created_by: 'u-1',
     updated_by: 'u-1',
     created_at: '2026-07-01T00:00:00Z',
     updated_at: '2026-07-01T00:00:00Z',
     ...overrides,
   }
+  if (overrides.status && overrides.next_action === undefined) {
+    const decision = {
+      DRAFT: ['REQUEST_APPROVAL', ['REQUEST_APPROVAL'], 'APPROVAL_REQUIRED_BEFORE_CONTINUATION'],
+      NEEDS_INFO: [
+        'REQUEST_APPROVAL',
+        ['REQUEST_APPROVAL'],
+        'APPROVAL_REQUIRED_BEFORE_CONTINUATION',
+      ],
+      READY_FOR_REVIEW: ['APPROVE', ['APPROVE'], 'HR_REVIEW_REQUIRED'],
+      APPROVED: ['ISSUE_WORKER_LINK', ['ISSUE_WORKER_LINK'], null],
+      WAITING_WORKER: [
+        'REVIEW_WORKER_RESPONSE',
+        ['REVIEW_WORKER_RESPONSE'],
+        'WORKER_RESPONSE_PENDING',
+      ],
+      WAITING_EXTERNAL: ['COMPLETE_TASK', ['COMPLETE_TASK'], 'EXTERNAL_EVIDENCE_REQUIRED'],
+      COMPLETED: [null, [], 'TASK_TERMINAL'],
+      CANCELLED: [null, [], 'TASK_TERMINAL'],
+    }[overrides.status] as [
+      TaskDetailResponse['next_action'],
+      TaskDetailResponse['available_actions'],
+      string | null,
+    ]
+    result.next_action = decision[0]
+    result.available_actions = decision[1]
+    result.blocked_reason = decision[2]
+  }
+  return result
 }
 
 function activity(overrides: Partial<AuditEventResponse> = {}): AuditEventResponse {
@@ -1110,6 +1141,7 @@ describe('CaseDetailPage', () => {
   })
 
   it('allows an approval request before missing worker documents are collected', async () => {
+    const user = userEvent.setup()
     mockTaskAndActivities(
       {
         status: 'DRAFT',
@@ -1135,6 +1167,9 @@ describe('CaseDetailPage', () => {
 
     expect(screen.getByRole('button', { name: '승인 요청' })).toBeEnabled()
     expect(screen.getByText('누락 1건 · 만료 0건')).toBeInTheDocument()
+    expect(screen.getAllByText('다음 행동 · 승인 요청').length).toBeGreaterThan(0)
+    await user.click(screen.getByRole('button', { name: '더보기 ···' }))
+    expect(screen.queryByRole('menuitem', { name: 'Renewal 실행' })).not.toBeInTheDocument()
   })
 
   it('requires Renewal preparation before requesting approval for a renewal task', async () => {
@@ -1142,6 +1177,9 @@ describe('CaseDetailPage', () => {
     mockTaskAndActivities({
       status: 'DRAFT',
       business_data: {},
+      next_action: 'RUN_RENEWAL',
+      available_actions: ['RUN_RENEWAL'],
+      blocked_reason: null,
       checklist_items: [
         {
           checklist_item_id: 'chk-1',
@@ -1163,16 +1201,20 @@ describe('CaseDetailPage', () => {
     expect(screen.getByRole('dialog', { name: 'Renewal Agent 실행' })).toBeInTheDocument()
   })
 
-  it('keeps Renewal retry available while waiting for worker information', async () => {
+  it('guides the user to review worker responses instead of rerunning Renewal', async () => {
     const user = userEvent.setup()
-    mockTaskAndActivities({ status: 'WAITING_WORKER' })
+    mockTaskAndActivities({
+      status: 'WAITING_WORKER',
+      next_action: 'REVIEW_WORKER_RESPONSE',
+      available_actions: ['REVIEW_WORKER_RESPONSE'],
+      blocked_reason: 'WORKER_RESPONSE_PENDING',
+    })
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
     await user.click(screen.getByRole('button', { name: '더보기 ···' }))
-    await user.click(screen.getByRole('menuitem', { name: 'Renewal 실행' }))
-
-    expect(screen.getByRole('dialog', { name: 'Renewal Agent 실행' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Renewal 실행' })).not.toBeInTheDocument()
+    expect(screen.getAllByText('다음 행동 · 근로자 응답 확인').length).toBeGreaterThan(0)
   })
 
   it('approves through the API instead of setting a local success state', async () => {
@@ -1211,7 +1253,12 @@ describe('CaseDetailPage', () => {
 
   it('opens and closes the more menu', async () => {
     const user = userEvent.setup()
-    mockTaskAndActivities({ status: 'DRAFT' })
+    mockTaskAndActivities({
+      status: 'DRAFT',
+      next_action: 'RUN_RENEWAL',
+      available_actions: ['RUN_RENEWAL'],
+      blocked_reason: null,
+    })
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
@@ -1230,7 +1277,11 @@ describe('CaseDetailPage', () => {
 
   it('does not show Renewal 실행 for non-renewal task types', async () => {
     const user = userEvent.setup()
-    mockTaskAndActivities({ task_type: 'DOCUMENT_REQUEST' })
+    mockTaskAndActivities({
+      task_type: 'DOCUMENT_REQUEST',
+      next_action: 'REQUEST_APPROVAL',
+      available_actions: ['REQUEST_APPROVAL'],
+    })
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 
@@ -1240,7 +1291,12 @@ describe('CaseDetailPage', () => {
 
   it('opens the Renewal execution modal from the more menu', async () => {
     const user = userEvent.setup()
-    mockTaskAndActivities({ status: 'DRAFT' })
+    mockTaskAndActivities({
+      status: 'DRAFT',
+      next_action: 'RUN_RENEWAL',
+      available_actions: ['RUN_RENEWAL'],
+      blocked_reason: null,
+    })
     renderPage()
     await screen.findByText('응웬반A 체류연장 준비')
 

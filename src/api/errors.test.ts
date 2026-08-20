@@ -16,7 +16,9 @@ function makeBody(overrides: Partial<ConstructorParameters<typeof ApiError>[0]> 
 
 describe('ApiError', () => {
   it('exposes status/code/requestId/fieldErrors from the response body', () => {
-    const error = new ApiError(makeBody({ field_errors: [{ field: 'email', message: '형식이 올바르지 않습니다.' }] }))
+    const error = new ApiError(
+      makeBody({ field_errors: [{ field: 'email', message: '형식이 올바르지 않습니다.' }] }),
+    )
 
     expect(error.status).toBe(404)
     expect(error.code).toBe('RESOURCE_NOT_FOUND')
@@ -45,6 +47,24 @@ describe('getErrorMessage', () => {
   it('maps EMAIL_ALREADY_REGISTERED to a Korean message', () => {
     const error = new ApiError(makeBody({ code: 'EMAIL_ALREADY_REGISTERED', message: 'raw' }))
     expect(getErrorMessage(error)).toBe('이미 가입된 이메일입니다.')
+  })
+
+  it.each([
+    [
+      'RENEWAL_EXECUTION_NOT_ALLOWED',
+      '현재 업무 단계에서는 Agent를 다시 실행할 수 없습니다. 화면에 안내된 다음 행동을 진행해 주세요.',
+    ],
+    [
+      'RENEWAL_REQUEST_CONTRACT_INVALID',
+      '업무 정보가 Agent 요청 계약과 맞지 않습니다. 새로고침한 뒤 입력 내용을 확인해 주세요.',
+    ],
+    [
+      'RENEWAL_WORKFLOW_MISMATCH',
+      '업무 유형과 Agent Workflow가 일치하지 않습니다. 업무 설정을 확인해 주세요.',
+    ],
+  ])('maps %s to an actionable Korean message', (code, message) => {
+    const error = new ApiError(makeBody({ code, message: 'raw' }))
+    expect(getErrorMessage(error)).toBe(message)
   })
 })
 

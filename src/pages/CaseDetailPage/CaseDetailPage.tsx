@@ -984,7 +984,7 @@ export function CaseDetailPage() {
     }
   }
 
-  if (taskStatus === 'loading') {
+  if (taskStatus === 'loading' && !task) {
     return (
       <div className={styles.stateWrap}>
         <EmptyState

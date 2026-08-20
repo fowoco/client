@@ -10,6 +10,7 @@ import type {
   DocumentReadinessResponse,
   DocumentRequestDraftResponse,
 } from '../../api/documents'
+import type { RenewalExecutionResponse } from '../../api/renewal'
 import type { TaskDetailResponse } from '../../api/tasks'
 import type { WorkerLinkDeliveryResponse, WorkerResponseItemResponse } from '../../api/workerLinks'
 import { ToastViewport } from '../../components/ui/ToastViewport/ToastViewport'
@@ -1303,6 +1304,101 @@ describe('CaseDetailPage', () => {
     await user.click(screen.getByRole('menuitem', { name: 'Renewal 실행' }))
 
     expect(screen.getByRole('dialog', { name: 'Renewal Agent 실행' })).toBeInTheDocument()
+  })
+
+  it('keeps the Renewal result mounted while the Task refetch is loading', async () => {
+    const user = userEvent.setup()
+    mockTaskAndActivities({
+      status: 'DRAFT',
+      next_action: 'RUN_RENEWAL',
+      available_actions: ['RUN_RENEWAL'],
+      blocked_reason: null,
+    })
+    const defaultFetch = vi.mocked(fetch).getMockImplementation()
+    let taskFetchCount = 0
+    const askHrResponse: RenewalExecutionResponse = {
+      request_id: 'R-1',
+      task_id: 'T-1',
+      task_status: 'NEEDS_INFO',
+      task_version: 4,
+      intent: 'EXPIRY_RENEWAL',
+      workflow_id: 'WF-STY-001',
+      confidence: 0.9,
+      scenario: 'ask_hr',
+      outcome: 'NEEDS_INFO',
+      missing_slots: [
+        'wage',
+        'working_hours',
+        'job_description',
+        'work_location',
+        'contract_period',
+      ],
+      requested_fields: [
+        { key: 'wage', source_hint: 'USER_INPUT' },
+        { key: 'working_hours', source_hint: 'USER_INPUT' },
+        { key: 'job_description', source_hint: 'USER_INPUT' },
+        { key: 'work_location', source_hint: 'USER_INPUT' },
+        { key: 'contract_period', source_hint: 'USER_INPUT' },
+      ],
+      case_signals: ['REQUEST_CONTRACT_SLOTS', 'NEEDS_INFO'],
+      generated_documents: [],
+      worker_message_draft_id: null,
+      worker_message_draft_version: null,
+      guide_review_required: false,
+      guide_failure_code: null,
+      guide_review_draft: null,
+      human_review_required: true,
+    }
+
+    vi.mocked(fetch).mockImplementation((input, init) => {
+      const url = String(input)
+      if (url.endsWith('/tasks/T-1/renewal-run')) {
+        return Promise.resolve(jsonResponse(askHrResponse))
+      }
+      if (url.endsWith('/tasks/T-1')) {
+        taskFetchCount += 1
+        if (taskFetchCount > 1) return new Promise(() => {})
+      }
+      return defaultFetch!(input, init)
+    })
+
+    renderPage()
+    await screen.findByText('응웬반A 체류연장 준비')
+    await user.click(screen.getByRole('button', { name: '더보기 ···' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Renewal 실행' }))
+    await user.type(
+      screen.getByPlaceholderText('예: 응웬반A 체류기간 연장 준비해줘'),
+      '최신 정보 기준으로 다시 분석해줘',
+    )
+    await user.click(screen.getByRole('button', { name: '실행' }))
+
+    await waitFor(() => expect(taskFetchCount).toBe(2))
+    const dialog = screen.getByRole('dialog', { name: 'Renewal Agent 실행' })
+    expect(screen.queryByText('업무 정보를 불러오는 중입니다')).not.toBeInTheDocument()
+    expect(within(dialog).getByLabelText('월 임금(원)')).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('주당 근로시간')).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('담당 업무')).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('근무 장소')).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('계약 기간')).toBeInTheDocument()
+    expect(
+      within(dialog).getByRole('button', { name: '답변 제출하고 다시 실행' }),
+    ).toBeInTheDocument()
+
+    await user.type(within(dialog).getByLabelText('월 임금(원)'), '2500000')
+    expect(within(dialog).getByLabelText('월 임금(원)')).toHaveValue(2500000)
+    await user.click(within(dialog).getByRole('button', { name: '답변 제출하고 다시 실행' }))
+
+    await waitFor(() => {
+      const renewalCalls = vi
+        .mocked(fetch)
+        .mock.calls.filter(([url]) => String(url).endsWith('/tasks/T-1/renewal-run'))
+      expect(renewalCalls).toHaveLength(2)
+      expect(JSON.parse(String(renewalCalls[1][1]?.body))).toEqual({
+        instruction: '최신 정보 기준으로 다시 분석해줘',
+        expected_version: 4,
+        slot_answers: { wage: '2500000' },
+      })
+    })
   })
 
   it('changes the task assignee from the more menu', async () => {
